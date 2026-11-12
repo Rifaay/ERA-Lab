@@ -27,7 +27,8 @@ racm-backup-*.json
 *.sw?
 
 # Local tool files: caches and launch settings hold paths from this PC
-.impeccable/
+.impeccable/*
+!.impeccable/surfaces/
 .claude/
 
 # Keys: only the publishable key may reach the browser, and no key goes in git
