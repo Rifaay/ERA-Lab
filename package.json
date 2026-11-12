@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/single-file.mjs",
     "lint": "eslint .",
-    "test": "node --test src/storage.test.js src/range.test.js",
+    "test": "node --test src/storage.test.js src/range.test.js supabase/rls.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
