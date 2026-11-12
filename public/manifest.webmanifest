@@ -1,0 +1,15 @@
+{
+  "name": "RACM Coaching",
+  "short_name": "RACM",
+  "description": "Archery coaching: plan, range sessions, assessment and reports. Data stays on this device.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0C0C10",
+  "theme_color": "#0C0C10",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
