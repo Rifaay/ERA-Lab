@@ -56,9 +56,11 @@ p { color: var(--g600); font-size: 14px; max-width: 70ch; }
 /* ── Shell ────────────────────────────────────────────────────── */
 .app { display: flex; flex-direction: column; height: 100svh; overflow: hidden; }
 .topbar { height: var(--topbar-h); flex: none; background: var(--black); color: var(--white); display: flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo-tile { width: 40px; height: 40px; flex: none; display: grid; place-items: center; background: var(--white); border-radius: var(--r-sm); } /* the mark's outlines are black: it needs white behind it */
 .wordmark { font-family: var(--font-head); font-weight: 800; font-size: 24px; letter-spacing: .08em; }
 .topbar-spacer { flex: 1; }
-.archer-btn { display: flex; align-items: center; gap: 6px; min-height: var(--tap); max-width: 46vw; padding: 0 12px; background: none; color: var(--white); border: 1.5px solid var(--g500); border-radius: var(--r-md); font: 600 14px var(--font-body); cursor: pointer; }
+.archer-btn { display: flex; align-items: center; gap: 6px; min-height: var(--tap); max-width: 38vw; padding: 0 12px; background: none; color: var(--white); border: 1.5px solid var(--g500); border-radius: var(--r-md); font: 600 14px var(--font-body); cursor: pointer; }
 .archer-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .archer-btn:hover { border-color: var(--white); }
 .icon-btn { width: var(--tap); height: var(--tap); display: grid; place-items: center; background: none; border: 0; border-radius: var(--r-md); color: inherit; cursor: pointer; }

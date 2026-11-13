@@ -56,6 +56,7 @@ Sizes: page heading 30 px (home and archer headings scale 34 to 52 px), section 
 - **On-track row:** name, last session line, arrow average with a rising, falling or steady arrow.
 - **Cycle row:** stage label, latest fact, supporting line, figure, chevron. Opens that stage for the archer.
 - **Buttons:** blue filled (primary), blue outlined (secondary), red outlined (destructive). Selected choices are black with white text.
+- **Logo:** the ERA archer mark on a white tile at the start of the header, next to the RACM wordmark, and as the app icon on a white square. Its outlines are black, so it never sits directly on black and is never recoloured.
 - **Icons:** 24 px grid, 1.5 px stroke, never filled (`src/icons.jsx`). The archery icons are the brand's own. No emoji or text symbols as icons.
 
 ## States and behaviour

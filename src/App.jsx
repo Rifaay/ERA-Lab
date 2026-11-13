@@ -3,6 +3,7 @@ import { t } from "./i18n";
 import { getAthletes } from "./storage";
 import { AppContext } from "./context";
 import Icon from "./icons";
+import Logo from "./Logo";
 import AthleteProfile    from "./screens/AthleteProfile";
 import Range             from "./screens/Range";
 import SessionLogger     from "./screens/SessionLogger";
@@ -81,7 +82,7 @@ export default function App() {
     <AppContext.Provider value={ctx}>
       <div className="app" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <header className="topbar">
-          <span className="wordmark">RACM</span>
+          <span className="brand"><span className="logo-tile"><Logo size={36} /></span><span className="wordmark">RACM</span></span>
           <span className="topbar-spacer" />
           <button className="archer-btn" onClick={() => setPicking(!picking)} aria-expanded={picking}>
             <span>{selected ? selected.name : tr.shell.chooseArcher}</span><Icon name="down" size={16} />

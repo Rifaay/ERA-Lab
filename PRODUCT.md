@@ -46,7 +46,7 @@ The owner's personal brand design system is binding: "Ahmed Rifaay — Design Sy
 - **Type:** Barlow Condensed (display, uppercase for interactive components), Inter (body and UI), Noto Kufi Arabic (Arabic). The system says never to substitute them.
 - **Spacing:** 8 px base, multiples of 4. Radius: 4 inputs, 8 buttons and cards, 12 panels, 16 modals, pill for badges only.
 - **Icons:** stroke only, 1.5 px, never filled; the system ships twelve custom archery icons and names Lucide for interface icons.
-- **Logo:** the owner says a logo exists. No logo file was found in the brand folder; its location is still to be given.
+- **Logo:** the Egyptian Recurve Archery (ERA) mark, a red archer drawing a bow, supplied by the owner as a vector file on 2026-11-13. Three lockups exist: mark with wordmark, mark with the black ERA square, and a vertical badge. The app uses the mark alone, colours unchanged (`src/Logo.jsx`, `public/favicon.svg`). The wordmark is set in a display face ("Mythology Of Egypt") that is not embedded in the file, so it is not used in the app.
 
 ## Evidence on Hand
 
