@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { t } from "./i18n";
 import { getAthletes } from "./storage";
 import { AppContext } from "./context";
@@ -6,6 +6,7 @@ import Icon from "./icons";
 import Logo from "./Logo";
 import AthleteProfile    from "./screens/AthleteProfile";
 import Range             from "./screens/Range";
+import Review            from "./screens/Review";
 import SessionLogger     from "./screens/SessionLogger";
 import RubricAssessment  from "./screens/RubricAssessment";
 import Exercises         from "./screens/Exercises";
@@ -17,11 +18,12 @@ import PdfReport         from "./screens/PdfReport";
 import Settings          from "./screens/Settings";
 import "./index.css";
 
-// The coaching cycle is the navigation: five stages, each holding the screens that belong to it.
+// The coaching cycle is the navigation: six stages, each holding the screens that belong to it.
 const STAGES = [
   { key: "home",   icon: "archer",   screens: ["dashboard", "archer", "profile", "settings"] },
   { key: "plan",   icon: "calendar", screens: ["planner", "goals", "exercises"] },
   { key: "range",  icon: "target",   screens: ["range"] },
+  { key: "review", icon: "clip",     screens: ["review"] },
   { key: "assess", icon: "shield",   screens: ["rubric", "session"] },
   { key: "report", icon: "file",     screens: ["report"] },
 ];
@@ -64,7 +66,11 @@ export default function App() {
   const athletes = useMemo(() => getAthletes(), [athletesTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = athletes.find((a) => a.id === selectedId) || null;
   const stage = stageOf(screen);
-  const go = (next) => { setPicking(false); setScreen(next); };
+  const reviewDirty = useRef(null); // set by the Review screen while it is open
+  const go = (next) => {
+    if (screen === "review" && next !== "review" && reviewDirty.current?.() && !window.confirm(tr.review.leave)) return;
+    setPicking(false); setScreen(next);
+  };
 
   const openArcher = (id) => { setSelectedId(id); go("archer"); };
   const pickArcher = (id) => { setSelectedId(id); setPicking(false); if (screen === "dashboard" || screen === "settings") setScreen("archer"); };
@@ -82,7 +88,7 @@ export default function App() {
     <AppContext.Provider value={ctx}>
       <div className="app" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <header className="topbar">
-          <span className="brand"><span className="logo-tile"><Logo size={36} /></span><span className="wordmark">RACM</span></span>
+          <span className="brand"><span className="logo-tile"><Logo size={36} /></span><span className="wordmark">ERA LAB</span></span>
           <span className="topbar-spacer" />
           <button className="archer-btn" onClick={() => setPicking(!picking)} aria-expanded={picking}>
             <span>{selected ? selected.name : tr.shell.chooseArcher}</span><Icon name="down" size={16} />
@@ -102,6 +108,7 @@ export default function App() {
             {screen === "archer"    && <Archer            tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
             {screen === "profile"   && <AthleteProfile    lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
             {screen === "range"     && <Range key={selectedId} tr={tr} selectedId={selectedId} />}
+            {screen === "review"    && <Review selectedId={selectedId} guardRef={reviewDirty} />}
             {screen === "session"   && <SessionLogger     lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "rubric"    && <RubricAssessment  lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "exercises" && <Exercises         lang={lang} tr={tr} selectedId={selectedId} />}
@@ -112,7 +119,7 @@ export default function App() {
             {picking && <ArcherPicker athletes={athletes} selectedId={selectedId} tr={tr} onPick={pickArcher} onNew={newArcher} onClose={() => setPicking(false)} />}
           </div>
 
-          <nav className="stage-nav" aria-label="RACM">
+          <nav className="stage-nav" aria-label="ERA Lab">
             {STAGES.map((s) => (
               <button key={s.key} className={`stage-btn ${s.key === "range" ? "go" : ""} ${stage.key === s.key ? "active" : ""}`}
                 aria-current={stage.key === s.key ? "page" : undefined} onClick={() => go(s.screens[0])}>

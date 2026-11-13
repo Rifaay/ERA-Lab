@@ -13,7 +13,7 @@ web
 
 ## Product Purpose
 
-RACM (Rifaay Archery Coaching Methodology) is a structured, data-driven coaching method for recurve and barebow archery. The app is its working tool: it follows the coaching cycle from plan to range to assessment to progress to report, so a coach can see who needs attention and whether each athlete is improving. Success is a coach running real sessions from it instead of paper and separate tools.
+ERA Lab is the app; ERA stands for Egyptian Recurve Archery. It applies RACM (Rifaay Archery Coaching Methodology), a structured, data-driven coaching method for recurve and barebow archery. The app is the method's working tool: it follows the coaching cycle from plan to range to assessment to progress to report, so a coach can see who needs attention and whether each athlete is improving. Success is a coach running real sessions from it instead of paper and separate tools.
 
 ## Positioning
 
@@ -29,7 +29,8 @@ It carries one coach's own methodology end to end: four stages (Beginner, Builde
 
 ## Capabilities and Constraints
 
-- Screens today: athlete profile, Range (Setup, Range, Review), sessions, rubric assessment, exercises, goals, periodization planner, coach dashboard, PDF report, settings.
+- Six stages: Home (who needs you, archer screen, profile, settings), Plan (planner, goals, exercises), Range (setup, range, review of the session), Review (video), Assess (rubric, sessions), Report (PDF).
+- Review (video): opens an athlete folder on a PC, marks eight shot phases, fault tags and body points on a clip, links the clip to its arrow, saves labels next to the clip and a short record in the app.
 - Range: one press-slide-lift on the target records an arrow with position, score and time; ends roll over; miss, score-only keypad, undo, move.
 - English and Arabic, with right-to-left layout.
 - React 19 with Vite; no UI library; one stylesheet. A strict content security policy allows no network calls except Google Fonts.
@@ -40,7 +41,7 @@ It carries one coach's own methodology end to end: four stages (Beginner, Builde
 
 The owner's personal brand design system is binding: "Ahmed Rifaay — Design System" v3, June 2026 (kept outside this repository, with the v2 PDF).
 
-- **Name:** RACM. Wordmark in the brand system: "AHMED RIFAAY" with "أحمد رفاعي".
+- **Name:** the app is **ERA Lab** (the owner's choice, 2026-11-13). RACM remains the name of the methodology. Stored data keeps its `racm_` keys so existing records still load. Wordmark in the brand system: "AHMED RIFAAY" with "أحمد رفاعي".
 - **Colours:** black `#000000`, blue `#0004FF` (primary, interactive), red `#FF0000` (energy, urgency), yellow `#FFFF00` (accent), white `#FFFFFF`; grey scale `#F8F8F8` to `#0D0D0D`; light blue `#6496FF` for dark grounds; success `#00E676`.
 - **Colour rules:** yellow only on black or very dark grounds, as a spotlight and never a stage; never blue and red together; white on red only for large bold text; one blue primary action per section.
 - **Type:** Barlow Condensed (display, uppercase for interactive components), Inter (body and UI), Noto Kufi Arabic (Arabic). The system says never to substitute them.

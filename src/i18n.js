@@ -1,7 +1,7 @@
 export const t = {
   en: {
-    appTitle: "RACM",
-    appSub:   "Rifaay Archery Coaching",
+    appTitle: "ERA Lab",
+    appSub:   "Egyptian Recurve Archery",
     noAthlete: "Select an athlete from the sidebar",
     newAthlete: "New athlete",
     searchAthletes: "Search athletes…",
@@ -18,7 +18,8 @@ export const t = {
       report:    "Report",
       settings:  "Settings",
     },
-    stages: { home: "Home", plan: "Plan", range: "Range", assess: "Assess", report: "Report" },
+    stages: { home: "Home", plan: "Plan", range: "Range", review: "Review", assess: "Assess", report: "Report" },
+    review: { leave: "This clip has labels you have not saved. Leave without saving?" },
     shell: {
       chooseArcher: "Choose archer", searchArchers: "Search archers", newArcher: "New archer", close: "Close",
       settings: "Settings", noArchers: "No archers yet.", language: "Switch to Arabic",
@@ -36,7 +37,9 @@ export const t = {
       emptyTitle: "Add your first archer", emptyText: "Every plan, session and assessment belongs to an archer.", emptyAction: "Add an archer",
     },
     archer: {
-      plan: "Plan", range: "Range", assess: "Assess", goals: "Goals", report: "Report",
+      plan: "Plan", range: "Range", assess: "Assess", goals: "Goals", report: "Report", review: "Review",
+      noReview: "No clips reviewed yet", noReviewHint: "Open a clip and mark the shot", reviewOne: "1 clip reviewed", reviewMany: "{n} clips reviewed",
+      topFault: "Most common: {name} ({n})", noFaults: "No faults tagged",
       stage: "Stage {n}", week: "Week {n}", noPlan: "No plan for this week", planHint: "Open the planner to set phases",
       nextEvent: "Next: {name}, week {week}",
       noSession: "No sessions yet", noSessionHint: "Start one from the range", sessions30: "{n} sessions in 30 days",
@@ -209,8 +212,8 @@ export const t = {
   },
 
   ar: {
-    appTitle: "RACM",
-    appSub:   "ريفاي لتدريب الرماية",
+    appTitle: "ERA Lab",
+    appSub:   "الرماية المصرية بالقوس المنحني",
     noAthlete: "اختر رياضياً من القائمة الجانبية",
     newAthlete: "رياضي جديد",
     searchAthletes: "بحث…",
@@ -227,7 +230,8 @@ export const t = {
       report:    "التقرير",
       settings:  "الإعدادات",
     },
-    stages: { home: "الرئيسية", plan: "الخطة", range: "الميدان", assess: "التقييم", report: "التقرير" },
+    stages: { home: "الرئيسية", plan: "الخطة", range: "الميدان", review: "الفيديو", assess: "التقييم", report: "التقرير" },
+    review: { leave: "لهذا المقطع علامات لم تُحفظ. هل تريد المغادرة دون حفظ؟" },
     shell: {
       chooseArcher: "اختر رامياً", searchArchers: "ابحث عن رامٍ", newArcher: "رامٍ جديد", close: "إغلاق",
       settings: "الإعدادات", noArchers: "لا يوجد رماة بعد.", language: "التحويل إلى الإنجليزية",
@@ -245,7 +249,9 @@ export const t = {
       emptyTitle: "أضف أول رامٍ", emptyText: "كل خطة وجلسة وتقييم يخص رامياً.", emptyAction: "أضف رامياً",
     },
     archer: {
-      plan: "الخطة", range: "الميدان", assess: "التقييم", goals: "الأهداف", report: "التقرير",
+      plan: "الخطة", range: "الميدان", assess: "التقييم", goals: "الأهداف", report: "التقرير", review: "الفيديو",
+      noReview: "لم يُراجَع أي مقطع بعد", noReviewHint: "افتح مقطعاً وحدد مراحل الرمية", reviewOne: "مقطع واحد تمت مراجعته", reviewMany: "{n} مقاطع تمت مراجعتها",
+      topFault: "الأكثر تكراراً: {name} ({n})", noFaults: "لا أخطاء مسجلة",
       stage: "المرحلة {n}", week: "الأسبوع {n}", noPlan: "لا خطة لهذا الأسبوع", planHint: "افتح المخطط لتحديد المراحل",
       nextEvent: "التالي: {name}، الأسبوع {week}",
       noSession: "لا توجد جلسات بعد", noSessionHint: "ابدأ جلسة من الميدان", sessions30: "{n} جلسات في ٣٠ يوماً",

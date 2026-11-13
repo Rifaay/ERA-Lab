@@ -1,5 +1,5 @@
 {
-  "name": "racm-app",
+  "name": "era-lab",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/single-file.mjs",
     "lint": "eslint .",
-    "test": "node --test src/storage.test.js src/range.test.js supabase/rls.test.js",
+    "test": "node --test src/storage.test.js src/range.test.js src/insights.test.js src/review.test.js supabase/rls.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

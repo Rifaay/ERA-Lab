@@ -58,7 +58,7 @@ p { color: var(--g600); font-size: 14px; max-width: 70ch; }
 .topbar { height: var(--topbar-h); flex: none; background: var(--black); color: var(--white); display: flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .logo-tile { width: 40px; height: 40px; flex: none; display: grid; place-items: center; background: var(--white); border-radius: var(--r-sm); } /* the mark's outlines are black: it needs white behind it */
-.wordmark { font-family: var(--font-head); font-weight: 800; font-size: 24px; letter-spacing: .08em; }
+.wordmark { font-family: var(--font-head); font-weight: 800; font-size: 22px; letter-spacing: .06em; white-space: nowrap; }
 .topbar-spacer { flex: 1; }
 .archer-btn { display: flex; align-items: center; gap: 6px; min-height: var(--tap); max-width: 38vw; padding: 0 12px; background: none; color: var(--white); border: 1.5px solid var(--g500); border-radius: var(--r-md); font: 600 14px var(--font-body); cursor: pointer; }
 .archer-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -75,13 +75,13 @@ p { color: var(--g600); font-size: 14px; max-width: 70ch; }
 .screen.flush > * { max-width: none; }
 
 /* Stage navigation: the coaching cycle, always in the same place. */
-.stage-nav { flex: none; height: var(--nav-h); background: var(--black); display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); }
+.stage-nav { flex: none; height: var(--nav-h); background: var(--black); display: grid; grid-template-columns: repeat(6, 1fr); padding-bottom: env(safe-area-inset-bottom); }
 .stage-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: 0; color: var(--g300); font: 600 12px var(--font-body); cursor: pointer; }
 .stage-btn:hover { color: var(--white); }
 .stage-btn.active { color: var(--white); }
 .stage-btn.active .icon { stroke-width: 2.2; }
 .stage-btn.go { color: var(--yellow); }
-.stage-btn.go .disc { width: 46px; height: 46px; margin-top: -22px; display: grid; place-items: center; background: var(--yellow); color: var(--black); border-radius: 50%; box-shadow: 0 0 0 4px var(--black); transition: transform .18s var(--ease); }
+.stage-btn.go .disc { width: 44px; height: 44px; margin-top: -20px; display: grid; place-items: center; background: var(--yellow); color: var(--black); border-radius: 50%; box-shadow: 0 0 0 4px var(--black); transition: transform .18s var(--ease); }
 .stage-btn.go:active .disc { transform: scale(.94); }
 
 /* Screens inside one stage */
@@ -331,4 +331,12 @@ button.row:hover .row-name { color: var(--blue); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+/* Narrow phones: the header still has to hold the logo, the name, the archer, the language and settings. */
+@media (max-width: 430px) {
+  .topbar { gap: 4px; padding: 0 4px 0 12px; }
+  .brand { gap: 8px; }
+  .wordmark { font-size: 20px; letter-spacing: .04em; }
+  .archer-btn { max-width: 27vw; padding: 0 8px; }
+  .lang-toggle { padding: 0 6px; }
 }

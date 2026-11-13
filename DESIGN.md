@@ -49,7 +49,7 @@ Sizes: page heading 30 px (home and archer headings scale 34 to 52 px), section 
 
 ## Components
 
-- **Shell:** black header (wordmark, archer picker, language, settings) and a black stage bar with five stages: Home, Plan, Range, Assess, Report. Range is a yellow disc. From 900 px the bar becomes a rail on the leading side.
+- **Shell:** black header (wordmark, archer picker, language, settings) and a black stage bar with six stages: Home, Plan, Range, Review, Assess, Report. Range is a yellow disc. From 900 px the bar becomes a rail on the leading side.
 - **Sub-navigation:** pills under the header for stages with more than one screen (Plan: planner, goals, exercises. Assess: rubric, sessions).
 - **End strip:** an end's arrow values as square cells in target colours (gold, red, blue, black, white) on a black bar. The signature of the app; used on Home, the archer screen and the Range screen. Always left-to-right, in both languages.
 - **Attention row:** name, the reason in red in plain words, the last end strip, and one outlined action that goes to the screen that fixes it.
@@ -58,6 +58,13 @@ Sizes: page heading 30 px (home and archer headings scale 34 to 52 px), section 
 - **Buttons:** blue filled (primary), blue outlined (secondary), red outlined (destructive). Selected choices are black with white text.
 - **Logo:** the ERA archer mark on a white tile at the start of the header, next to the RACM wordmark, and as the app icon on a white square. Its outlines are black, so it never sits directly on black and is never recoloured.
 - **Icons:** 24 px grid, 1.5 px stroke, never filled (`src/icons.jsx`). The archery icons are the brand's own. No emoji or text symbols as icons.
+
+## Review stage (video)
+
+Video review is a dark room: black ground, white text, light blue `#6496FF` for actions on black, and the brand's yellow
+for the next phase to mark, which is allowed because everything there sits on black. Phase colours are data, not brand.
+Its styles are generated into `src/review/review.css` and scoped to `.lab`, so they neither reach the rest of the app nor inherit from it.
+It keeps its own three-pane layout (clips, video, phases) and, on a phone, its own Clips / Video / Phases tabs above the stage bar.
 
 ## States and behaviour
 

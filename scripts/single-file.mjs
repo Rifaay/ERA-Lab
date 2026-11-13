@@ -1,4 +1,4 @@
-// Builds dist/RACM-offline.html: the whole app in one file, to copy to a phone and open with no connection.
+// Builds dist/ERA-Lab-offline.html: the whole app in one file, to copy to a phone and open with no connection.
 // Run after `vite build` (npm run build does both).
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -25,5 +25,5 @@ html = html
 
 if (!html.includes(hash(code)) || !html.includes(hash(style))) throw new Error("the security policy was not updated, so the file would refuse its own script");
 if (/(src|href)="\.\/assets\//.test(html)) throw new Error("something in dist/index.html still points at a separate file");
-writeFileSync(new URL("RACM-offline.html", dist), html);
-console.log(`dist/RACM-offline.html  ${(html.length / 1024).toFixed(0)} kB`);
+writeFileSync(new URL("ERA-Lab-offline.html", dist), html);
+console.log(`dist/ERA-Lab-offline.html  ${(html.length / 1024).toFixed(0)} kB`);

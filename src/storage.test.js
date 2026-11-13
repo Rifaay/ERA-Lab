@@ -102,6 +102,8 @@ test("deleting an athlete removes all their records, keeps everyone else's, and 
     s.saveGoal({ id: `g-${id}`, athleteId: id });
     s.saveProgressLog({ goalId: `g-${id}` });
     s.saveCheckIn({ goalId: `g-${id}` });
+    s.saveReview({ id: `clip-${id}.mp4`, athleteId: id });
+    s.saveReview({ id: `clip-${id}.mp4`, athleteId: id, verdict: "good" }); // saving a clip twice keeps one record
   }
   s.saveRange({ live: { athlete_id: "a" }, setups: { a: { bow: "x" }, b: { bow: "y" } } });
   s.deleteAthlete("a");
@@ -114,4 +116,5 @@ test("deleting an athlete removes all their records, keeps everyone else's, and 
   assert.deepEqual(s.getGoals().map((x) => x.id), ["g-b"]);
   assert.deepEqual(s.getProgressLogs().map((x) => x.goalId), ["g-b"]);
   assert.deepEqual(s.getCheckIns().map((x) => x.goalId), ["g-b"]);
+  assert.deepEqual(s.getReviews(), [{ id: "clip-b.mp4", athleteId: "b", verdict: "good" }]);
 });

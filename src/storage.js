@@ -9,6 +9,7 @@ const KEY = {
   exercises:     "racm_exercises",
   goalTemplates: "racm_goal_templates",
   settings:      "racm_settings",
+  reviews:       "racm_reviews", // one short record per reviewed clip; the full labels stay next to the clip on disk
   range:         "racm_range", // {live: the session being shot, setups: {athleteId: last setup}}
 };
 
@@ -57,7 +58,7 @@ export const deleteAthlete = (id) => {
   exportBackup();
   const goalIds = new Set(getGoals().filter((g) => g.athleteId === id).map((g) => g.id));
   const theirs = (x) => x.athleteId === id || goalIds.has(x.goalId);
-  for (const k of ["sessions", "assessments", "plans", "goals", "progressLogs", "checkIns"]) {
+  for (const k of ["sessions", "assessments", "plans", "goals", "progressLogs", "checkIns", "reviews"]) {
     store(KEY[k], load(KEY[k], "[]").filter((x) => !theirs(x)));
   }
   const range = getRange();
@@ -70,6 +71,10 @@ export const deleteAthlete = (id) => {
 // ── Range (live session and each athlete's last setup) ─────────────────────
 export const getRange  = () => load(KEY.range, "{}");
 export const saveRange = (r) => store(KEY.range, r);
+
+// ── Video reviews ─────────────────────────────────────────────────────────
+export const getReviews = () => load(KEY.reviews, "[]");
+export const saveReview = (r) => upsert(KEY.reviews, r); // saving a clip again replaces its record
 
 // ── Sessions ─────────────────────────────────────────────────────────────
 export const getSessions = () => load(KEY.sessions, "[]");
@@ -165,6 +170,7 @@ export const exportBackup = () => {
     checkIns:      getCheckIns(),
     exercises:     getExercises(),
     goalTemplates: getGoalTemplates(),
+    reviews:       getReviews(),
     settings:      getSettings(),
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -176,7 +182,7 @@ export const exportBackup = () => {
   URL.revokeObjectURL(url);
 };
 
-const BACKUP_LISTS = ["athletes", "sessions", "assessments", "plans", "goals", "progressLogs", "checkIns", "exercises", "goalTemplates"];
+const BACKUP_LISTS = ["athletes", "sessions", "assessments", "plans", "goals", "progressLogs", "checkIns", "exercises", "goalTemplates", "reviews"];
 const isRecords = (a) => Array.isArray(a) && a.every((x) => x && typeof x === "object" && !Array.isArray(x));
 
 export const importBackup = (jsonString) => {

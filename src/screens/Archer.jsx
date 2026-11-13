@@ -1,5 +1,6 @@
-import { getAthletes, getSessions, getAssessments, getGoals, getPlan, calcWACategory } from "../storage";
+import { getAthletes, getSessions, getAssessments, getGoals, getPlan, getReviews, calcWACategory } from "../storage";
 import { athleteFacts, daysSince } from "../insights";
+import { reviewFacts } from "../review";
 import Icon from "../icons";
 import EndStrip from "../EndStrip";
 
@@ -30,6 +31,7 @@ export default function Archer({ tr, lang, selectedId, onGo }) {
 
   const now = new Date();
   const f = athleteFacts(athlete, { sessions: getSessions(), assessments: getAssessments(), goals: getGoals() }, now);
+  const rv = reviewFacts(getReviews(), athlete.id);
   const when = (days) => (days === 0 ? h.today : days === 1 ? h.yesterday : fill(h.daysAgo, { days }));
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const shortDate = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(locale, { day: "numeric", month: "short" }); };
@@ -68,6 +70,11 @@ export default function Archer({ tr, lang, selectedId, onGo }) {
           fig={f.avg != null ? f.avg.toFixed(2) : ""}>
           {f.lastEnd && <span style={{ display: "block", margin: "6px 0" }}><EndStrip scores={f.lastEnd} /></span>}
         </Row>
+        <Row onGo={onGo} to="review" label={a.review}
+          fact={!rv.count ? a.noReview : rv.count === 1 ? a.reviewOne : fill(a.reviewMany, { n: rv.count })}
+          sub={!rv.count ? a.noReviewHint : rv.topFault ? fill(a.topFault, { name: rv.topFault.name, n: rv.topFault.count }) : a.noFaults}
+          warn={rv.faulty > 0 && rv.faulty === rv.count}
+          fig={rv.count || ""} />
         <Row onGo={onGo} to="rubric" label={a.assess}
           fact={f.rubric == null ? a.noRubric : f.prevRubric == null ? fill(a.rubricIs, { to: f.rubric.toFixed(1) }) : fill(a.rubricFrom, { to: f.rubric.toFixed(1), from: f.prevRubric.toFixed(1) })}
           sub={f.rubricDate ? fill(a.assessed, { when: when(daysSince(f.rubricDate, now)).toLowerCase() }) : null}
