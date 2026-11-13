@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getAthletes, getExercises, saveExercise, deleteExercise, getGoals, uid } from "../storage";
+import Icon from "../icons";
 
 const BLANK = { id: "", name: "", category: "technique", sets: "", reps: "", frequency: "", goalLink: "", videoUrl: "", notes: "" };
 
@@ -48,7 +49,7 @@ function ExForm({ athleteId, existing, tr, onSaved, onCancel }) {
       </label>
       <div className="btn-row">
         <button className="btn-primary small" onClick={handleSave} disabled={!form.name.trim()}>{e.save}</button>
-        <button className="btn-ghost small" onClick={onCancel}>✕</button>
+        <button className="btn-ghost small" onClick={onCancel}><Icon name="x" size={16} /></button>
       </div>
     </div>
   );
@@ -74,7 +75,7 @@ export default function Exercises({ lang, tr, selectedId }) {
   if (!athlete) return (
     <div className="screen">
       <div className="no-athlete">
-        <div className="no-athlete-icon">💪</div>
+        <div className="no-athlete-icon"><Icon name="archer" size={56} /></div>
         <div className="no-athlete-text">{e.noAthlete}</div>
       </div>
     </div>
@@ -132,7 +133,7 @@ export default function Exercises({ lang, tr, selectedId }) {
                   {ex.sets && <span> {ex.sets} sets</span>}
                   {ex.reps && <span> × {ex.reps}</span>}
                   {ex.frequency && <span> · {ex.frequency}</span>}
-                  {linkedGoal && <span> · 🎯 {linkedGoal.name}</span>}
+                  {linkedGoal && <span> · {linkedGoal.name}</span>}
                 </div>
                 {ex.notes && <p style={{ fontSize: 11, color: "var(--txm)", marginTop: 4 }}>{ex.notes}</p>}
                 {/^https?:\/\//i.test(ex.videoUrl) && <a className="ex-video" href={ex.videoUrl} target="_blank" rel="noreferrer">▶ Video</a>}

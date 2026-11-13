@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-13T04:34:06.174Z",
+        "reason": "brand commitment: the owner's design system pins Inter as the body face and says never to substitute it (PRODUCT.md)"
+      }
+    ]
+  }
+}

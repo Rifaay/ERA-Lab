@@ -1,0 +1,88 @@
+import { getAthletes, getSessions, getAssessments, getGoals, getPlan, calcWACategory } from "../storage";
+import { athleteFacts, daysSince } from "../insights";
+import Icon from "../icons";
+import EndStrip from "../EndStrip";
+
+const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+
+function Row({ to, label, fact, sub, warn, fig, children, onGo }) {
+  return (
+  <button className="cycle-row" onClick={() => onGo(to)}>
+    <span className="cycle-label">{label}</span>
+    <span>
+      <span className="cycle-fact" style={{ display: "block" }}>{fact}</span>
+      {children}
+      {sub && <span className={`cycle-sub ${warn ? "warn" : ""}`} style={{ display: "block" }}>{sub}</span>}
+    </span>
+    <span className="cycle-fig">{fig}</span>
+    <Icon name="next" size={18} />
+  </button>
+  );
+}
+
+// One archer's coaching cycle on one screen: plan, range, assessment, goals, report. Each row opens its stage.
+export default function Archer({ tr, lang, selectedId, onGo }) {
+  const a = tr.archer, h = tr.home;
+  const athlete = getAthletes().find((x) => x.id === selectedId);
+  if (!athlete) return (
+    <div className="screen"><div className="no-athlete"><div className="no-athlete-icon"><Icon name="archer" size={56} /></div><div className="no-athlete-text">{tr.session.noAthlete}</div></div></div>
+  );
+
+  const now = new Date();
+  const f = athleteFacts(athlete, { sessions: getSessions(), assessments: getAssessments(), goals: getGoals() }, now);
+  const when = (days) => (days === 0 ? h.today : days === 1 ? h.yesterday : fill(h.daysAgo, { days }));
+  const locale = lang === "ar" ? "ar-EG" : "en-GB";
+  const shortDate = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(locale, { day: "numeric", month: "short" }); };
+
+  // The planner numbers weeks 1 to 52 from 1 January.
+  const week = Math.min(52, Math.floor((now - new Date(now.getFullYear(), 0, 1)) / (7 * 86400000)) + 1);
+  const plan = getPlan(athlete.id, now.getFullYear());
+  const phase = plan.weeks?.[week];
+  const nextEvent = (plan.tournaments || []).filter((t) => t.week >= week).sort((x, y) => x.week - y.week)[0];
+
+  const stageNum = Number(athlete.stage || 0);
+  const wa = calcWACategory(athlete.discipline, athlete.gender, athlete.ageBand);
+  const meta = [`${fill(a.stage, { n: stageNum + 1 })} ${tr.profile.stages[stageNum]?.split("— ")[1] || ""}`.trim(),
+    athlete.discipline === "barebow" ? tr.profile.barebow : tr.profile.recurve, wa].filter(Boolean).join(" · ");
+
+  const goal = f.overdue[0] || [...f.openGoals].sort((x, y) => (x.dueDate || "9").localeCompare(y.dueDate || "9"))[0];
+  const dueIn = goal?.dueDate ? -daysSince(goal.dueDate, now) : null;
+
+
+  return (
+    <div className="screen">
+      <div className="archer-head">
+        <button className="btn-ghost small" style={{ marginBottom: 16 }} onClick={() => onGo("dashboard")}><Icon name="prev" size={16} />{a.back}</button>
+        <h2>{athlete.name}</h2>
+        <p>{meta}</p>
+      </div>
+
+      <div>
+        <Row onGo={onGo} to="planner" label={a.plan}
+          fact={phase ? `${fill(a.week, { n: week })} · ${tr.planner.phases[phase] || phase}` : a.noPlan}
+          sub={nextEvent ? fill(a.nextEvent, { name: nextEvent.name, week: nextEvent.week }) : phase ? null : a.planHint} />
+        <Row onGo={onGo} to="session" label={a.range}
+          fact={f.last ? [f.last.score ? `${f.last.score}${f.last.outOf ? ` / ${f.last.outOf}` : ""}` : f.last.type, when(f.lastDays)].join(" · ") : a.noSession}
+          sub={f.last ? fill(a.sessions30, { n: f.sessions30 }) : a.noSessionHint}
+          warn={f.reasons.some((r) => r.kind === "idle")}
+          fig={f.avg != null ? f.avg.toFixed(2) : ""}>
+          {f.lastEnd && <span style={{ display: "block", margin: "6px 0" }}><EndStrip scores={f.lastEnd} /></span>}
+        </Row>
+        <Row onGo={onGo} to="rubric" label={a.assess}
+          fact={f.rubric == null ? a.noRubric : f.prevRubric == null ? fill(a.rubricIs, { to: f.rubric.toFixed(1) }) : fill(a.rubricFrom, { to: f.rubric.toFixed(1), from: f.prevRubric.toFixed(1) })}
+          sub={f.rubricDate ? fill(a.assessed, { when: when(daysSince(f.rubricDate, now)).toLowerCase() }) : null}
+          warn={f.rubricTrend === "down"}
+          fig={f.rubric != null ? f.rubric.toFixed(1) : ""} />
+        <Row onGo={onGo} to="goals" label={a.goals}
+          fact={goal ? goal.name : a.noGoals}
+          sub={!goal ? null : f.overdue.length ? fill(a.overdue, { name: shortDate(goal.dueDate) }) : dueIn != null ? fill(a.due, { when: shortDate(goal.dueDate) }) : f.openGoals.length === 1 ? a.goalOne : fill(a.goalsOpen, { n: f.openGoals.length })}
+          warn={f.overdue.length > 0}
+          fig={f.openGoals.length || ""} />
+        <Row onGo={onGo} to="report" label={a.report} fact={a.reportFact} sub={a.reportHint} />
+      </div>
+
+      <button className="btn-primary wide-btn" onClick={() => onGo("range")}><Icon name="target" size={22} />{a.start}</button>
+      <button className="btn-ghost" style={{ width: "100%" }} onClick={() => onGo("profile")}>{a.profile}</button>
+    </div>
+  );
+}

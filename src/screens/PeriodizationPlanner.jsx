@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { getAthletes, getPlan, savePlan, uid } from "../storage";
+import Icon from "../icons";
 
 const PHASES = [
   { key: "gpp",        color: "#3498db" },
@@ -70,7 +71,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
   if (!athlete) return (
     <div className="screen">
       <div className="no-athlete">
-        <div className="no-athlete-icon">📅</div>
+        <div className="no-athlete-icon"><Icon name="calendar" size={56} /></div>
         <div className="no-athlete-text">{pl.noAthlete}</div>
       </div>
     </div>
@@ -104,7 +105,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
           >{pl.phases[ph.key]}</button>
         ))}
         {armed && (
-          <button className="btn-ghost small" onClick={() => setArmed(null)}>✕ {armed}</button>
+          <button className="btn-ghost small" onClick={() => setArmed(null)}><Icon name="x" size={16} />{armed}</button>
         )}
       </div>
 
@@ -125,7 +126,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
               <span className="wk-num" style={{ color: ph ? ph.color : "var(--txm)" }}>W{w}</span>
               <span className="wk-date" style={{ color: "var(--txh)" }}>{getWeekMondayISO(year, w)}</span>
               {isTour && <span className="wk-dot" title="Tournament">🏆</span>}
-              {isRam && !isTour && <span className="wk-dot" title="Ramadan">☽</span>}
+              {isRam && !isTour && <span className="wk-dot" title="Ramadan"><Icon name="moon" size={10} /></span>}
             </div>
           );
         })}
@@ -155,7 +156,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
               <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", background: "var(--bgp)", borderRadius: "var(--rad)" }}>
                 <span className="badge amber">W{t.week}</span>
                 <span style={{ fontSize: 13, flex: 1 }}>{t.name}</span>
-                <button className="del-btn" onClick={() => removeTournament(t.id)}>✕</button>
+                <button className="del-btn" onClick={() => removeTournament(t.id)}><Icon name="x" size={16} /></button>
               </div>
             ))}
           </div>

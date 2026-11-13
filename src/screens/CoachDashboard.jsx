@@ -1,145 +1,84 @@
-import { useState } from "react";
-import { getAthletes, getSessions, getAssessments, getGoals, calcWACategory } from "../storage";
+import { useMemo } from "react";
+import { getAthletes, getSessions, getAssessments, getGoals } from "../storage";
+import { roster } from "../insights";
+import Icon from "../icons";
+import EndStrip from "../EndStrip";
 
-const STAGE_COLORS = ["#72728A", "#40A0FF", "#FFC020", "#D4FF00"];
+const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+const one = (n) => n.toFixed(1), two = (n) => n.toFixed(2);
 
-function daysBetween(dateStr, now) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return Math.floor((now - new Date(y, m - 1, d)) / 86400000);
-}
+// Home: who needs the coach this week, and why. Then everyone on track.
+export default function CoachDashboard({ tr, lang, tick, onOpen, onGo, onNew }) {
+  const h = tr.home;
+  const { need, onTrack, total } = useMemo(() => {
+    const athletes = getAthletes();
+    return { ...roster(athletes, { sessions: getSessions(), assessments: getAssessments(), goals: getGoals() }), total: athletes.length };
+  }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
-export default function CoachDashboard({ lang, tr }) {
-  const db = tr.dashboard;
-  const [athletes] = useState(getAthletes);
-  const sessions    = getSessions();
-  const assessments = getAssessments();
-  const goals       = getGoals();
-  const now         = new Date();
+  const locale = lang === "ar" ? "ar-EG" : "en-GB";
+  const today = new Date().toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
+  const shortDate = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(locale, { day: "numeric", month: "short" }); };
+  const when = (days) => (days === 0 ? h.today : days === 1 ? h.yesterday : fill(h.daysAgo, { days }));
 
-  if (!athletes.length) return (
+  if (!total) return (
     <div className="screen">
-      <div className="no-athlete">
-        <div className="no-athlete-icon">📊</div>
-        <div className="no-athlete-text">{db.noAthletes}</div>
+      <div className="empty">
+        <Icon name="archer" size={56} />
+        <h2>{h.emptyTitle}</h2>
+        <p>{h.emptyText}</p>
+        <button className="btn-primary" onClick={onNew}><Icon name="plus" size={18} />{h.emptyAction}</button>
       </div>
     </div>
   );
 
-  const totalSessions30 = sessions.filter((s) => daysBetween(s.date, now) <= 30).length;
-  const totalRamadan    = sessions.filter((s) => s.ramadan).length;
-  const activeGoals     = goals.filter((g) => !g.completed).length;
+  // Each reason names what to do about it, and where.
+  const why = (r) => ({
+    none:   [h.whyNone, "range"],
+    idle:   [fill(h.whyIdle, { days: r.days }), "planner"],
+    rubric: [fill(h.whyRubric, { from: one(r.from ?? 0), to: one(r.to ?? 0) }), "rubric"],
+    goal:   [fill(h.whyGoal, { name: r.name }), "goals"],
+    score:  [fill(h.whyScore, { from: two(r.from ?? 0), to: two(r.to ?? 0) }), "session"],
+  })[r.kind];
+
+  const sessionLine = (f) => !f.last ? h.whyNone
+    : [when(f.lastDays), f.last.score ? `${f.last.score}${f.last.outOf ? ` / ${f.last.outOf}` : ""}` : null, +f.last.arrows ? fill(h.arrows, { n: f.last.arrows }) : null].filter(Boolean).join(" · ");
 
   return (
-    <div className="screen">
-      <h2>{db.title}</h2>
-
-      {/* Summary chips */}
-      <div className="stat-row" style={{ marginBottom: 16 }}>
-        <div className="stat-chip">
-          <div className="stat-num">{athletes.length}</div>
-          <div className="stat-label">{db.athletes}</div>
-        </div>
-        <div className="stat-chip">
-          <div className="stat-num">{totalSessions30}</div>
-          <div className="stat-label">{db.sessions30}</div>
-        </div>
-        <div className="stat-chip">
-          <div className="stat-num">{activeGoals}</div>
-          <div className="stat-label">{db.goalsActive}</div>
-        </div>
-        <div className="stat-chip">
-          <div className="stat-num" style={{ color: "var(--a)" }}>{totalRamadan}</div>
-          <div className="stat-label">{db.ramadanSessions}</div>
-        </div>
+    <div className="screen flush">
+      <div className="hero">
+        <h2>{need.length === 0 ? h.needNone : need.length === 1 ? h.needOne : fill(h.needMany, { n: need.length })}</h2>
+        <p>{today} · {total === 1 ? h.rosterOne : fill(h.rosterMany, { n: total })}</p>
       </div>
 
-      {/* Per-athlete cards */}
-      {athletes.map((athlete) => {
-        const aSessions    = sessions.filter((s) => s.athleteId === athlete.id);
-        const aAssessments = assessments.filter((a) => a.athleteId === athlete.id);
-        const aGoals       = goals.filter((g) => g.athleteId === athlete.id);
-
-        const sessions30 = aSessions.filter((s) => daysBetween(s.date, now) <= 30).length;
-        const sessions90 = aSessions.filter((s) => daysBetween(s.date, now) <= 90).length;
-
-        const lastSession = aSessions.length
-          ? aSessions.reduce((l, s) => (s.date > l ? s.date : l), aSessions[0].date)
-          : null;
-
-        const sorted = [...aAssessments].sort((a, b) => b.date.localeCompare(a.date));
-        const calcAvg = (a) => {
-          if (!a) return null;
-          const vals = Object.values(a.scores || {}).filter(Boolean);
-          return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
-        };
-        const latestAvg = calcAvg(sorted[0]);
-        const prevAvg   = calcAvg(sorted[1]);
-        const trend = latestAvg !== null && prevAvg !== null
-          ? latestAvg > prevAvg + 0.1 ? "↑" : latestAvg < prevAvg - 0.1 ? "↓" : "→"
-          : null;
-
-        const stageNum = Number(athlete.stage || 0);
-        const stageColor = STAGE_COLORS[stageNum] || STAGE_COLORS[0];
-        const waCategory = calcWACategory(athlete.discipline, athlete.gender, athlete.ageBand);
-        const initials = athlete.name.slice(0, 2).toUpperCase();
-        const activeAGoals = aGoals.filter((g) => !g.completed).length;
-
-        return (
-          <div key={athlete.id} className="card" style={{ marginBottom: 10 }}>
-            {/* Athlete header */}
-            <div className="db-row" style={{ marginBottom: 10 }}>
-              <div className="db-avatar" style={{ background: stageColor + "22", color: stageColor }}>{initials}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="db-name">{athlete.name}</div>
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 2 }}>
-                  <span className="badge" style={{ background: stageColor + "22", color: stageColor }}>S{stageNum + 1}</span>
-                  {athlete.discipline && <span className="badge blue">{athlete.discipline === "barebow" ? "BB" : "RC"}</span>}
-                  {athlete.ageBand && <span className="badge gray">{tr.profile.ageBands[athlete.ageBand]}</span>}
-                  {waCategory && <span className="badge amber">{waCategory}</span>}
-                </div>
-              </div>
+      <div className="list">
+        {need.length > 0 && <h3>{h.needs}</h3>}
+        {need.map((f) => {
+          const [text, to] = why(f.reasons[0]);
+          return (
+            <div key={f.athlete.id} className="row">
+              <button className="row-main" onClick={() => onOpen(f.athlete.id)}>
+                <span className="row-name">{f.athlete.name}</span>
+                <span className="row-why">{text}{f.reasons.length > 1 && ` · ${fill(h.more, { n: f.reasons.length - 1 })}`}</span>
+              </button>
+              <button className="btn-ghost small" onClick={() => onGo(f.athlete.id, to)}>{h.act[to]}</button>
+              {f.lastEnd && <span className="row-strip"><EndStrip scores={f.lastEnd} />{fill(h.lastEnd, { date: shortDate(f.lastEndDate) })}</span>}
             </div>
+          );
+        })}
 
-            {/* Stage bar */}
-            <div className="db-stage-bar" style={{ marginBottom: 10 }}>
-              {[0,1,2,3].map((i) => (
-                <div
-                  key={i}
-                  className="db-seg"
-                  style={{ background: i <= stageNum ? stageColor : "var(--bgp)", height: 6, flex: 1, borderRadius: 3 }}
-                />
-              ))}
-            </div>
-
-            {/* Stats */}
-            <div className="db-stats" style={{ gap: 8 }}>
-              <div className="db-stat">
-                <div className="db-stat-val">{sessions30}</div>
-                <div className="db-stat-label">{db.sessions30}</div>
-              </div>
-              <div className="db-stat">
-                <div className="db-stat-val">{sessions90}</div>
-                <div className="db-stat-label">{db.sessions90}</div>
-              </div>
-              <div className="db-stat">
-                <div className="db-stat-val" style={{ color: latestAvg ? (latestAvg >= 4 ? "var(--t)" : latestAvg >= 3 ? "var(--a)" : "var(--r)") : "var(--txm)" }}>
-                  {latestAvg !== null ? latestAvg.toFixed(1) : db.noRubric}
-                  {trend && <span style={{ fontSize: 11 }}>{trend}</span>}
-                </div>
-                <div className="db-stat-label">{db.latestRubric}</div>
-              </div>
-              <div className="db-stat">
-                <div className="db-stat-val">{lastSession ? `${daysBetween(lastSession, now)}d` : db.noSession}</div>
-                <div className="db-stat-label">{db.lastSession}</div>
-              </div>
-              <div className="db-stat">
-                <div className="db-stat-val" style={{ color: activeAGoals > 0 ? "var(--p)" : "var(--txm)" }}>{activeAGoals}</div>
-                <div className="db-stat-label">{db.goalsActive}</div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+        {onTrack.length > 0 && <h3>{h.onTrack}</h3>}
+        {onTrack.map((f) => (
+          <button key={f.athlete.id} className="row" onClick={() => onOpen(f.athlete.id)}>
+            <span>
+              <span className="row-name" style={{ display: "block" }}>{f.athlete.name}</span>
+              <span className="row-line">{sessionLine(f)}</span>
+            </span>
+            {f.avg != null
+              ? <span className={`row-fig ${f.trend === "down" ? "down" : ""}`}>{two(f.avg)}{f.trend && <Icon name={f.trend === "up" ? "up" : f.trend === "down" ? "fall" : "flat"} size={20} label={h[f.trend]} />}</span>
+              : <span className="row-line">{h.noScore}</span>}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

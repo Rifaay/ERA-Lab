@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getAthletes, getSessions, saveSession, deleteSession, uid } from "../storage";
+import Icon from "../icons";
 
 const BLANK = {
   date: new Date().toISOString().slice(0, 10),
@@ -55,7 +56,7 @@ export default function SessionLogger({ lang, tr, selectedId }) {
   if (!athlete) return (
     <div className="screen">
       <div className="no-athlete">
-        <div className="no-athlete-icon">🏹</div>
+        <div className="no-athlete-icon"><Icon name="target" size={56} /></div>
         <div className="no-athlete-text">{s.noAthlete}</div>
       </div>
     </div>
@@ -151,14 +152,14 @@ export default function SessionLogger({ lang, tr, selectedId }) {
                   <span className="badge gray">{sess.date}</span>
                   <span className="badge blue">{sess.type}</span>
                   {sess.duration && <span className="badge gray">{sess.duration}m</span>}
-                  {sess.arrows && <span className="badge lime">{sess.arrows}↑</span>}
+                  {sess.arrows && <span className="badge gray">{sess.arrows} {tr.range.arrowsWord}</span>}
                   {sess.score && <span className="badge teal">{sess.score}{sess.outOf ? `/${sess.outOf}` : ""}</span>}
                   {sess.quality && <span className="badge gray">Q{sess.quality}</span>}
-                  {sess.ramadan && <span className="badge amber">☽</span>}
+                  {sess.ramadan && <span className="badge amber"><Icon name="moon" size={13} label={tr.session.ramadan} /></span>}
                 </div>
                 <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   {sess.range && <button className="btn-ghost small" onClick={() => downloadRange(sess.range)}>{tr.range.file}</button>}
-                  <button className="del-btn" onClick={() => handleDelete(sess.id)}>✕</button>
+                  <button className="del-btn" onClick={() => handleDelete(sess.id)}><Icon name="x" size={16} /></button>
                 </span>
               </div>
               {sess.notes && <p style={{ fontSize: 11, color: "var(--txm)", marginTop: 4 }}>{sess.notes}</p>}

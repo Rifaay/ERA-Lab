@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "source": "src/index.css",
+  "colors": {
+    "black": "#000000", "white": "#FFFFFF",
+    "blue": "#0004FF", "bluePress": "#0003B8", "blueTint": "#EDEEFF",
+    "red": "#FF0000", "redText": "#C40000", "redTint": "#FFE9E9",
+    "yellow": "#FFFF00",
+    "greenText": "#006B3A", "greenTint": "#E4F5EC",
+    "g50": "#F8F8F8", "g100": "#F0F0F0", "g200": "#E0E0E0", "g300": "#C0C0C0", "g400": "#909090", "g500": "#606060", "g600": "#404040", "g800": "#1A1A1A",
+    "edge": "#767676"
+  },
+  "fonts": { "display": "Barlow Condensed", "body": "Inter", "arabic": "Noto Kufi Arabic" },
+  "radius": { "sm": 4, "md": 8, "lg": 12, "pill": 999 },
+  "spacing": { "base": 4, "gutterPhone": 16, "gutterWide": 32, "contentMax": 760 },
+  "touchTarget": 44
+}

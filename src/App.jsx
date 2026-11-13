@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { t } from "./i18n";
-import { getAthletes, calcAgeBand, calcWACategory } from "./storage";
+import { getAthletes } from "./storage";
 import { AppContext } from "./context";
+import Icon from "./icons";
 import AthleteProfile    from "./screens/AthleteProfile";
 import Range             from "./screens/Range";
 import SessionLogger     from "./screens/SessionLogger";
@@ -10,76 +11,44 @@ import Exercises         from "./screens/Exercises";
 import GoalsTracker      from "./screens/GoalsTracker";
 import PeriodizationPlanner from "./screens/PeriodizationPlanner";
 import CoachDashboard    from "./screens/CoachDashboard";
+import Archer            from "./screens/Archer";
 import PdfReport         from "./screens/PdfReport";
 import Settings          from "./screens/Settings";
 import "./index.css";
 
-const NAV_ROW1 = ["profile", "range", "session", "rubric", "exercises"];
-const NAV_ROW2 = ["goals", "planner", "dashboard", "report", "settings"];
+// The coaching cycle is the navigation: five stages, each holding the screens that belong to it.
+const STAGES = [
+  { key: "home",   icon: "archer",   screens: ["dashboard", "archer", "profile", "settings"] },
+  { key: "plan",   icon: "calendar", screens: ["planner", "goals", "exercises"] },
+  { key: "range",  icon: "target",   screens: ["range"] },
+  { key: "assess", icon: "shield",   screens: ["rubric", "session"] },
+  { key: "report", icon: "file",     screens: ["report"] },
+];
+const stageOf = (screen) => STAGES.find((s) => s.screens.includes(screen));
 
-const STAGE_COLORS = ["#72728A", "#40A0FF", "#FFC020", "#D4FF00"];
-
-function Sidebar({ athletes, selectedId, onSelect, lang, tr, sidebarOpen }) {
+function ArcherPicker({ athletes, selectedId, tr, onPick, onNew, onClose }) {
   const [q, setQ] = useState("");
-
-  const filtered = useMemo(() =>
-    athletes.filter((a) => a.name.toLowerCase().includes(q.toLowerCase())),
-    [athletes, q]
-  );
-
-  const selected = athletes.find((a) => a.id === selectedId);
-
+  const shown = useMemo(() => athletes.filter((a) => a.name.toLowerCase().includes(q.toLowerCase())), [athletes, q]);
   return (
-    <aside className={`sidebar ${sidebarOpen ? "" : "collapsed"}`}>
-      <div className="sb-header">
-        <input
-          className="sb-search"
-          placeholder={tr.searchAthletes}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <button
-          className="sb-add-btn"
-          title={tr.newAthlete}
-          onClick={() => onSelect("__new__")}
-        >+</button>
+    <div className="picker" role="dialog" aria-label={tr.shell.chooseArcher}>
+      <div className="picker-head">
+        <div className="picker-search">
+          <Icon name="search" size={18} />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr.shell.searchArchers} aria-label={tr.shell.searchArchers} />
+        </div>
+        <button className="icon-btn" onClick={onClose} aria-label={tr.shell.close}><Icon name="x" /></button>
       </div>
-      <div className="sb-list">
-        {filtered.length === 0 && (
-          <p className="sb-empty">{tr.searchAthletes}</p>
-        )}
-        {filtered.map((a) => {
-          const stageNum = Number(a.stage || 0);
-          const color = STAGE_COLORS[stageNum] || STAGE_COLORS[0];
-          const initials = a.name.slice(0, 2).toUpperCase();
-          const waLabel = calcWACategory(a.discipline, a.gender, a.ageBand);
-
-          return (
-            <div
-              key={a.id}
-              className={`sb-item ${selectedId === a.id ? "active" : ""}`}
-              onClick={() => onSelect(a.id)}
-            >
-              <div className="sb-avatar" style={{ background: color + '22', color }}>
-                {initials}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div className="sb-name">{a.name}</div>
-                <div className="sb-meta">
-                  <span className="sb-pill">S{stageNum + 1}</span>
-                  {a.discipline && (
-                    <span className="sb-pill teal">
-                      {a.discipline === "barebow" ? "BB" : "RC"}
-                    </span>
-                  )}
-                  {waLabel && <span className="sb-pill amber">{waLabel}</span>}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="picker-list">
+        {shown.map((a) => (
+          <button key={a.id} className={`picker-row ${a.id === selectedId ? "active" : ""}`} onClick={() => onPick(a.id)}>
+            <b>{a.name}</b>
+            <small>{tr.archer.stage.replace("{n}", Number(a.stage || 0) + 1)} · {a.discipline === "barebow" ? tr.profile.barebow : tr.profile.recurve}</small>
+          </button>
+        ))}
+        {!shown.length && <p style={{ padding: "24px 0" }}>{tr.shell.noArchers}</p>}
+        <button className="btn-ghost" style={{ marginTop: 16 }} onClick={onNew}><Icon name="plus" size={18} />{tr.shell.newArcher}</button>
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -87,111 +56,70 @@ export default function App() {
   const [lang, setLang] = useState("en");
   const [screen, setScreen] = useState("dashboard");
   const [selectedId, setSelectedId] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 600); // on a phone the list would cover the screen
-  const [athletesTick, setAthletesTick] = useState(0); // force re-read after save
+  const [picking, setPicking] = useState(false);
+  const [athletesTick, setAthletesTick] = useState(0); // bump to re-read after a save
 
   const tr = t[lang];
-  const isRtl = lang === "ar";
-  const athletes = useMemo(() => getAthletes(), [athletesTick]);
-  const selectedAthlete = athletes.find((a) => a.id === selectedId) || null;
+  const athletes = useMemo(() => getAthletes(), [athletesTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  const selected = athletes.find((a) => a.id === selectedId) || null;
+  const stage = stageOf(screen);
+  const go = (next) => { setPicking(false); setScreen(next); };
 
-  const handleSelectAthlete = (id) => {
-    if (id === "__new__") {
-      setSelectedId("");
-      setScreen("profile");
-    } else {
-      setSelectedId(id); // stay on the current screen, just change athlete
-    }
-    // On mobile, close sidebar after selection
-    if (window.innerWidth <= 600) setSidebarOpen(false);
-  };
-
+  const openArcher = (id) => { setSelectedId(id); go("archer"); };
+  const pickArcher = (id) => { setSelectedId(id); setPicking(false); if (screen === "dashboard" || screen === "settings") setScreen("archer"); };
+  const newArcher = () => { setSelectedId(""); go("profile"); };
   const handleAthleteSaved = () => {
     setAthletesTick((n) => n + 1);
-    // If a new athlete was just created, auto-select them
     const latest = getAthletes();
-    if (latest.length && !selectedId) {
-      setSelectedId(latest[latest.length - 1].id);
-    }
+    if (latest.length && !selectedId) setSelectedId(latest[latest.length - 1].id); // a new archer becomes the current one
   };
 
   const ctx = { selectedId, setSelectedId, lang, setLang };
+  const subs = stage.key === "home" ? [] : stage.screens;
 
   return (
     <AppContext.Provider value={ctx}>
-      <div className={`app`} dir={isRtl ? "rtl" : "ltr"}>
-        {/* ── TOP BAR ── */}
-        <div className="topbar">
-          <button className="sb-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
-          <div>
-            <div className="topbar-logo">{tr.appTitle}</div>
-            <div className="topbar-sub">{tr.appSub}</div>
-          </div>
-          <div className="topbar-spacer" />
-          {selectedAthlete ? (
-            <div className="topbar-athlete" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <div>
-                <div className="topbar-athlete-name">{selectedAthlete.name}</div>
-                <div className="topbar-athlete-sub">
-                  S{Number(selectedAthlete.stage || 0) + 1} · {selectedAthlete.discipline === "barebow" ? "BB" : "RC"}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <span className="topbar-no-athlete">{tr.noAthlete}</span>
-          )}
-          <button
-            className="lang-toggle"
-            onClick={() => setLang(lang === "en" ? "ar" : "en")}
-          >{tr.langToggle}</button>
-        </div>
+      <div className="app" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+        <header className="topbar">
+          <span className="wordmark">RACM</span>
+          <span className="topbar-spacer" />
+          <button className="archer-btn" onClick={() => setPicking(!picking)} aria-expanded={picking}>
+            <span>{selected ? selected.name : tr.shell.chooseArcher}</span><Icon name="down" size={16} />
+          </button>
+          <button className="lang-toggle" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={tr.shell.language}>{tr.langToggle}</button>
+          <button className="icon-btn" onClick={() => go("settings")} aria-label={tr.shell.settings}><Icon name="settings" /></button>
+        </header>
 
-        {/* ── BODY ── */}
         <div className="app-body">
-          <Sidebar
-            athletes={athletes}
-            selectedId={selectedId}
-            onSelect={handleSelectAthlete}
-            lang={lang}
-            tr={tr}
-            sidebarOpen={sidebarOpen}
-          />
-
           <div className="main-area">
-            {/* ── SCREEN NAV ── */}
-            <nav className="screen-nav">
-              <div className="nav-row">
-                {NAV_ROW1.map((s) => (
-                  <button
-                    key={s}
-                    className={`nav-btn ${screen === s ? "active" : ""}`}
-                    onClick={() => setScreen(s)}
-                  >{tr.nav[s]}</button>
-                ))}
-              </div>
-              <div className="nav-row">
-                {NAV_ROW2.map((s) => (
-                  <button
-                    key={s}
-                    className={`nav-btn ${screen === s ? "active" : ""}`}
-                    onClick={() => setScreen(s)}
-                  >{tr.nav[s]}</button>
-                ))}
-              </div>
-            </nav>
-
-            {/* ── SCREEN CONTENT ── */}
-            {screen === "profile"   && <AthleteProfile   lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
+            {subs.length > 1 && (
+              <nav className="subnav" aria-label={tr.stages[stage.key]}>
+                {subs.map((s) => <button key={s} className={screen === s ? "active" : ""} aria-current={screen === s ? "page" : undefined} onClick={() => go(s)}>{tr.nav[s]}</button>)}
+              </nav>
+            )}
+            {screen === "dashboard" && <CoachDashboard   tr={tr} lang={lang} tick={athletesTick} onOpen={openArcher} onGo={(id, to) => { setSelectedId(id); go(to); }} onNew={newArcher} />}
+            {screen === "archer"    && <Archer            tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
+            {screen === "profile"   && <AthleteProfile    lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
             {screen === "range"     && <Range key={selectedId} tr={tr} selectedId={selectedId} />}
             {screen === "session"   && <SessionLogger     lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "rubric"    && <RubricAssessment  lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "exercises" && <Exercises         lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "goals"     && <GoalsTracker      lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "planner"   && <PeriodizationPlanner lang={lang} tr={tr} selectedId={selectedId} />}
-            {screen === "dashboard" && <CoachDashboard    lang={lang} tr={tr} />}
             {screen === "report"    && <PdfReport         lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "settings"  && <Settings          lang={lang} tr={tr} onDataCleared={() => { setSelectedId(""); setAthletesTick((n) => n + 1); }} />}
+            {picking && <ArcherPicker athletes={athletes} selectedId={selectedId} tr={tr} onPick={pickArcher} onNew={newArcher} onClose={() => setPicking(false)} />}
           </div>
+
+          <nav className="stage-nav" aria-label="RACM">
+            {STAGES.map((s) => (
+              <button key={s.key} className={`stage-btn ${s.key === "range" ? "go" : ""} ${stage.key === s.key ? "active" : ""}`}
+                aria-current={stage.key === s.key ? "page" : undefined} onClick={() => go(s.screens[0])}>
+                {s.key === "range" ? <span className="disc"><Icon name={s.icon} size={26} /></span> : <Icon name={s.icon} size={24} />}
+                {tr.stages[s.key]}
+              </button>
+            ))}
+          </nav>
         </div>
       </div>
     </AppContext.Provider>

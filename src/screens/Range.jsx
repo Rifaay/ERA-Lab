@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { getAthletes, getRange, saveRange, saveSession, uid } from "../storage";
 import { useApp } from "../context";
+import { ringOf } from "../insights";
+import Icon from "../icons";
 import { FACES, rings, scoreOf, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
 
 // Stored values stay in English whatever the screen language; labels come from the translations by position.
@@ -157,7 +159,7 @@ export default function Range({ tr, selectedId }) {
     </div>
   );
   if (!athlete) return (
-    <div className="screen"><div className="no-athlete"><div className="no-athlete-icon">🏹</div><div className="no-athlete-text">{r.noAthlete}</div></div></div>
+    <div className="screen"><div className="no-athlete"><div className="no-athlete-icon"><Icon name="target" size={56} /></div><div className="no-athlete-text">{r.noAthlete}</div></div></div>
   );
 
   const stepIndex = { setup: 0, range: 1, review: 2, done: 2 }[step];
@@ -294,14 +296,14 @@ export default function Range({ tr, selectedId }) {
     <div className="screen">
       {header}
       <div className="rg-endbar">
-        <button className="btn-ghost" aria-label={r.prevEnd} disabled={view === 0} onClick={() => { setView(view - 1); setPick(null); }}>◀</button>
+        <button aria-label={r.prevEnd} disabled={view === 0} onClick={() => { setView(view - 1); setPick(null); }}><Icon name="prev" /></button>
         <b>{r.end} {e.end}</b>
-        <button className="btn-ghost" aria-label={r.nextEnd} onClick={nextEnd}>▶</button>
-        <span className="rg-tot">{endSum(e)} · {r.total} {live.ends.reduce((t, x) => t + endSum(x), 0)}</span>
+        <button aria-label={r.nextEnd} onClick={nextEnd}><Icon name="next" /></button>
+        <span className="rg-tot">{endSum(e)}<small>{r.total} {live.ends.reduce((t, x) => t + endSum(x), 0)}</small></span>
       </div>
       <div className="rg-arrows">
         {e.arrows.map((a, i) => (
-          <button key={i} type="button" className={`rg-arrow ${i === pick ? "on" : ""}`} aria-pressed={i === pick} onClick={() => setPick(pick === i ? null : i)}>{a.score ?? "·"}<small>A{a.arrow}</small></button>
+          <button key={i} type="button" className={`rg-arrow ${a.score == null ? "ring-none" : `ring-${ringOf(a.score)}`} ${i === pick ? "on" : ""}`} aria-pressed={i === pick} aria-label={`${r.end} ${e.end}, A${a.arrow}: ${a.score ?? ""}`} onClick={() => setPick(pick === i ? null : i)}>{a.score ?? "·"}</button>
         ))}
       </div>
       <p className="rg-hint" role="status">

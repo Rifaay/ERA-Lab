@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getAthletes, getSessions, getAssessments, getGoals, getExercises, getProgressLogs, calcWACategory } from "../storage";
+import Icon from "../icons";
 
 export default function PdfReport({ lang, tr, selectedId }) {
   const rp = tr.report;
@@ -15,7 +16,7 @@ export default function PdfReport({ lang, tr, selectedId }) {
   if (!athlete) return (
     <div className="screen">
       <div className="no-athlete">
-        <div className="no-athlete-icon">📄</div>
+        <div className="no-athlete-icon"><Icon name="file" size={56} /></div>
         <div className="no-athlete-text">{rp.noAthlete}</div>
       </div>
     </div>

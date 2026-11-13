@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getAthletes, getAssessments, saveAssessment, uid } from "../storage";
+import Icon from "../icons";
 
 const DOMAIN_MAP = {
   recurve: {
@@ -16,14 +17,12 @@ const DOMAIN_MAP = {
   },
 };
 
-const DOMAIN_COLORS = { technical: "#40A0FF", physical: "#FFC020", mental: "#D4FF00", competition: "#00E5A0" };
 
 function ScoreBtn({ val, current, onClick }) {
   return (
     <button
       className={`score-btn ${current === val ? "selected" : ""}`}
       onClick={() => onClick(val)}
-      style={current === val ? { background: DOMAIN_COLORS["technical"] || "var(--p)", color: "var(--bgp)" } : {}}
     >{val}</button>
   );
 }
@@ -64,7 +63,7 @@ export default function RubricAssessment({ lang, tr, selectedId }) {
   if (!athlete) return (
     <div className="screen">
       <div className="no-athlete">
-        <div className="no-athlete-icon">📊</div>
+        <div className="no-athlete-icon"><Icon name="shield" size={56} /></div>
         <div className="no-athlete-text">{r.noAthlete || "Select an athlete first."}</div>
       </div>
     </div>
@@ -91,8 +90,7 @@ export default function RubricAssessment({ lang, tr, selectedId }) {
           {domains.map((d) => {
             const avg = domainAvg(d);
             return (
-              <button key={d} className={`tab ${tab === d ? "active" : ""}`} onClick={() => setTab(d)}
-                style={tab === d ? { color: DOMAIN_COLORS[d] || "var(--p)" } : {}}>
+              <button key={d} className={`tab ${tab === d ? "active" : ""}`} onClick={() => setTab(d)}>
                 {r.domains[d]} {avg && <span style={{ opacity: .7 }}>({avg})</span>}
               </button>
             );
@@ -112,7 +110,6 @@ export default function RubricAssessment({ lang, tr, selectedId }) {
                     <button
                       key={n}
                       className={`score-btn ${cur === n ? "selected" : ""}`}
-                      style={cur === n ? { background: DOMAIN_COLORS[tab] || "var(--p)", color: "var(--bgp)", borderColor: DOMAIN_COLORS[tab] || "var(--p)" } : {}}
                       onClick={() => setScore(key, n)}
                     >{n}</button>
                   ))}

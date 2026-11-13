@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Icon from "../icons";
 import {
   getAthletes, getGoals, saveGoal, deleteGoal,
   getProgressLogs, saveProgressLog, deleteProgressLog,
@@ -77,7 +78,7 @@ function GoalForm({ athleteId, existing, templates, tr, onSaved, onCancel }) {
         <div className="btn-row">
           <button className="btn-primary small" onClick={handleSave} disabled={!form.name.trim()}>{g.save}</button>
           <button className="btn-ghost small" onClick={handleSaveAsTemplate}>{g.addTemplate}</button>
-          <button className="btn-ghost small" onClick={onCancel}>✕</button>
+          <button className="btn-ghost small" onClick={onCancel}><Icon name="x" size={16} /></button>
         </div>
       </div>
     </div>
@@ -183,11 +184,11 @@ function CheckInPanel({ goal, tr }) {
           <div className="ci-header">
             <span style={{ fontSize: 11, color: "var(--txm)" }}>{c.date}</span>
             <span className={`badge ${STATUS_CLASS[c.status]}`}>{g.ciStatuses[c.status]}</span>
-            <button className="del-btn" onClick={() => handleDelete(c.id)}>✕</button>
+            <button className="del-btn" onClick={() => handleDelete(c.id)}><Icon name="x" size={16} /></button>
           </div>
-          {c.improved && <p className="ci-line">✅ {c.improved}</p>}
-          {c.needsWork && <p className="ci-line">⚠ {c.needsWork}</p>}
-          {c.action && <p className="ci-line">→ {c.action}</p>}
+          {c.improved && <p className="ci-line"><b>{g.ciImproved}</b> {c.improved}</p>}
+          {c.needsWork && <p className="ci-line"><b>{g.ciNeedsWork}</b> {c.needsWork}</p>}
+          {c.action && <p className="ci-line">{c.action}</p>}
         </div>
       ))}
       <button className="btn-ghost small" onClick={() => setOpen(!open)}>{g.checkIn}</button>
@@ -224,7 +225,7 @@ function GoalCard({ goal, tr, onEdit, onDelete, onUpdate }) {
           <span className={`badge ${TYPE_CLASS[goal.type] || "gray"}`} style={{ marginLeft: 8 }}>{g.types[goal.type]}</span>
         </div>
         <div className="goal-actions">
-          <button className="btn-ghost small" onClick={() => onEdit(goal)}>✏</button>
+          <button className="btn-ghost small" onClick={() => onEdit(goal)}>{g.editGoal}</button>
           <button className="btn-ghost small danger" onClick={() => onDelete(goal.id)}>{g.deleteGoal}</button>
         </div>
       </div>
@@ -276,7 +277,7 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
   if (!athlete) return (
     <div className="screen">
       <div className="no-athlete">
-        <div className="no-athlete-icon">🎯</div>
+        <div className="no-athlete-icon"><Icon name="target" size={56} /></div>
         <div className="no-athlete-text">{g.noAthlete}</div>
       </div>
     </div>
