@@ -64,6 +64,20 @@ test("under-18s and athletes with no birth date stay on the device, with everyth
   assert.equal(s.settings.main.coachName, "Coach");
 });
 
+test("the emailed sign-in link signs in and is wiped from the address", async () => {
+  const { finishLinkSignIn } = await import("./sync.js");
+  mem = new Map();
+  const replaced = [];
+  globalThis.history = { replaceState: (_, __, url) => replaced.push(url) };
+  globalThis.location = { href: "https://x.test/ERA-Lab/#access_token=AT&refresh_token=RT&expires_in=3600&type=magiclink", hash: "#access_token=AT&refresh_token=RT&expires_in=3600&type=magiclink" };
+  globalThis.fetch = async (url, { headers }) => ({ ok: headers.Authorization === "Bearer AT", status: 200, text: async () => JSON.stringify({ id: "u1", email: "c@x" }) });
+  assert.equal(await finishLinkSignIn(), true);
+  assert.deepEqual(replaced, ["https://x.test/ERA-Lab/"]);
+  assert.equal(JSON.parse(mem.get("racm_auth")).refresh, "RT");
+  globalThis.location = { href: "https://x.test/ERA-Lab/", hash: "" };
+  assert.equal(await finishLinkSignIn(), false, "an ordinary visit does nothing");
+});
+
 test("two devices: adds, deletions and conflicts carry over; children never reach the cloud", async () => {
   on("phone");
   st.saveAthlete(adult); st.saveAthlete(child);

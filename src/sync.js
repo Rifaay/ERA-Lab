@@ -85,11 +85,22 @@ const call = async (path, { method = "GET", body, token, prefer } = {}, f = fetc
 };
 
 export const account = () => get(AUTH, null)?.email || "";
-export const sendCode = (email) => call("/auth/v1/otp", { method: "POST", body: { email, create_user: true } });
-export const verifyCode = async (email, code) => {
-  const s = await call("/auth/v1/verify", { method: "POST", body: { type: "email", email, token: code.trim() } });
+// The email carries a link back to this page (Supabase's own sender) or a code (once Resend sends with a custom template).
+const here = () => location.href.split("#")[0];
+export const sendCode = (email) => call(`/auth/v1/otp?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, create_user: true } });
+const keep = (s) => {
   if (get(STATE, {}).user !== s.user.id) { put(STATE, { user: s.user.id, base: {} }); } // another account: compare from scratch
   put(AUTH, { email: s.user.email, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000 });
+};
+export const verifyCode = async (email, code) => keep(await call("/auth/v1/verify", { method: "POST", body: { type: "email", email, token: code.trim() } }));
+// Opening the emailed link lands here with the session in the address (#access_token=…). Keep it, then wipe the address.
+export const finishLinkSignIn = async () => {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (!h.get("access_token") || !h.get("refresh_token")) return h.get("error_description") || false;
+  history.replaceState(null, "", here());
+  const user = await call("/auth/v1/user", { token: h.get("access_token") });
+  keep({ user, access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: Number(h.get("expires_in")) || 3600 });
+  return true;
 };
 const token = async (f) => {
   const a = get(AUTH, null);

@@ -186,6 +186,7 @@ export const exportBackup = () => {
   a.download = `racm-backup-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  localStorage.setItem("racm_last_backup", new Date().toISOString());
 };
 
 const BACKUP_LISTS = ["athletes", "sessions", "assessments", "plans", "goals", "progressLogs", "checkIns", "exercises", "goalTemplates", "reviews"];

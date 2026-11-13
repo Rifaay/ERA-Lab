@@ -1,15 +1,19 @@
 import { useState } from "react";
 import Account from "./Account";
 import { configured } from "../sync";
+import { getErrors, clearErrors, downloadErrors } from "../errors";
 import { getSettings, saveSettings, exportBackup, importBackup, storageUsageKB, clearAllData } from "../storage";
 
-export default function Settings({ lang, tr, onDataCleared }) {
+export default function Settings({ tr, onDataCleared, onGo }) {
   const s = tr.settings;
   const [settings, setSettings] = useState(getSettings);
   const [saved, setSaved] = useState(false);
   const [restoreMsg, setRestoreMsg] = useState("");
   const [usageKB, setUsageKB] = useState(storageUsageKB);
   const [confirmText, setConfirmText] = useState("");
+  const [errorCount, setErrorCount] = useState(() => getErrors().length);
+  const daysSinceBackup = () => { const t = localStorage.getItem("racm_last_backup"); return t ? Math.floor((Date.now() - new Date(t)) / 864e5) : null; };
+  const [backupDays, setBackupDays] = useState(daysSinceBackup);
 
   const set = (k, v) => setSettings((x) => ({ ...x, [k]: v }));
 
@@ -67,13 +71,31 @@ export default function Settings({ lang, tr, onDataCleared }) {
       <div className="card settings-section">
         <div className="settings-label">{s.backup}</div>
         <div className="btn-row">
-          <button className="btn-ghost" onClick={exportBackup}>{s.backupBtn}</button>
+          <button className="btn-ghost" onClick={() => { exportBackup(); setBackupDays(daysSinceBackup()); }}>{s.backupBtn}</button>
           <label className="btn-ghost" style={{ cursor: "pointer" }}>
             {s.restoreBtn}
             <input type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
           </label>
         </div>
         {restoreMsg && <p className="success-msg" style={{ marginTop: 6 }}>{restoreMsg}</p>}
+        <p className={backupDays == null || backupDays > 7 ? "error-msg" : "muted"} style={{ marginTop: 8 }}>
+          {backupDays == null ? s.noBackup : s.lastBackup.replace("{days}", backupDays)}
+        </p>
+      </div>
+
+      {/* Problems: the device's own error log, no outside service */}
+      <div className="card settings-section">
+        <div className="settings-label">{s.errors}</div>
+        <p className="muted" style={{ marginBottom: 10 }}>{errorCount ? s.errorsSome.replace("{n}", errorCount) : s.errorsNone}</p>
+        {errorCount > 0 && <div className="btn-row">
+          <button className="btn-ghost small" onClick={downloadErrors}>{s.errorsDownload}</button>
+          <button className="btn-ghost small" onClick={() => { clearErrors(); setErrorCount(0); }}>{s.errorsClear}</button>
+        </div>}
+      </div>
+
+      <div className="card settings-section">
+        <div className="settings-label">{s.legal}</div>
+        <button className="btn-ghost small" onClick={() => onGo("legal")}>{s.legalOpen}</button>
       </div>
 
       {/* Storage */}

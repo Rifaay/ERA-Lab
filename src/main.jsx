@@ -3,10 +3,12 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { exportBackup } from './storage'
+import { recordError } from './errors'
 
 class ErrorBoundary extends Component {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
+  componentDidCatch(error) { recordError(error, 'screen') }
   render() {
     if (!this.state.failed) return this.props.children
     return (
@@ -21,6 +23,9 @@ class ErrorBoundary extends Component {
     )
   }
 }
+
+window.addEventListener('error', (e) => recordError(e, 'page'))
+window.addEventListener('unhandledrejection', (e) => recordError(e, 'promise'))
 
 // Asks the browser not to evict athlete data when disk space runs low.
 navigator.storage?.persist?.()

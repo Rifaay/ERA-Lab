@@ -1,7 +1,10 @@
 # ERA Lab cloud copy (free tier)
 
 The app works without any of this: with no Supabase settings it keeps everything on the device.
-With them, Settings shows **Cloud copy**: sign in with a code sent by email, and the phone and the computer stay in step.
+With them, Settings shows **Cloud copy**: sign in by email, and the phone and the computer stay in step.
+
+**Set up on 2026-11-14:** project `ERA Lab` (`snljkhitklnfezxbhirv`, West EU / Ireland, free plan), both migrations run,
+Site URL `https://rifaay.github.io/ERA-Lab/`, GitHub variables set. Resend is not set up yet.
 
 | Piece | Service (free plan) | Job |
 |---|---|---|
@@ -15,11 +18,12 @@ review of theirs. The live range session and video files stay on the device too.
 
 ## Set it up once (about 20 minutes)
 
-1. **Supabase:** create a project at supabase.com (region: Frankfurt `eu-central-1` is the closest to Egypt).
+1. **Supabase:** create a project at supabase.com in an EU region. Turn off *Automatically expose new tables*.
    SQL Editor → run `migrations/0001_records.sql`, then `migrations/0002_reviews_and_ping.sql`.
-2. **Email code:** Authentication → Emails → *Magic Link* template: replace the body with
-   `<p>Your ERA Lab code: <b>{{ .Token }}</b></p>`. The app signs in with the code, not the link, so it works from the
-   offline file and the home-screen app too.
+2. **Sign-in email:** Authentication → URL Configuration → Site URL: the app's address. Supabase's own sender emails a
+   **link**; opening it on the same device signs in. Its template can only be edited once Resend (step 3) is the
+   sender: then add `<p>Or type this code: <b>{{ .Token }}</b></p>` to *Magic link or OTP*, so the offline file and
+   the home-screen app can sign in with the code.
 3. **Resend:** create an account at resend.com, add and verify a domain you own (a few DNS records), create an API key.
    In Supabase → Authentication → Emails → SMTP Settings: host `smtp.resend.com`, port `465`, user `resend`,
    password = the Resend API key, sender e.g. `ERA Lab <login@your-domain>`.

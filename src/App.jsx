@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
-import { configured, account, syncNow } from "./sync";
+import { configured, account, syncNow, finishLinkSignIn } from "./sync";
 import { t } from "./i18n";
 import { getAthletes } from "./storage";
 import { AppContext } from "./context";
@@ -17,11 +17,12 @@ import CoachDashboard    from "./screens/CoachDashboard";
 import Archer            from "./screens/Archer";
 import PdfReport         from "./screens/PdfReport";
 import Settings          from "./screens/Settings";
+import Legal             from "./screens/Legal";
 import "./index.css";
 
 // The coaching cycle is the navigation: six stages, each holding the screens that belong to it.
 const STAGES = [
-  { key: "home",   icon: "archer",   screens: ["dashboard", "archer", "profile", "settings"] },
+  { key: "home",   icon: "archer",   screens: ["dashboard", "archer", "profile", "settings", "legal"] },
   { key: "plan",   icon: "calendar", screens: ["planner", "goals", "exercises"] },
   { key: "range",  icon: "target",   screens: ["range"] },
   { key: "review", icon: "clip",     screens: ["review"] },
@@ -94,7 +95,10 @@ export default function App() {
     const later = () => { clearTimeout(timer); timer = setTimeout(sync, 5000); };
     const seen = () => document.visibilityState === "visible" && sync();
     const received = () => { setAthletesTick((n) => n + 1); if (!["range", "review"].includes(screenRef.current)) setDataTick((n) => n + 1); };
-    sync();
+    finishLinkSignIn() // arriving from the emailed sign-in link
+      .then((r) => { if (r === true) setScreen("settings"); else if (r) window.alert(r); })
+      .catch((e) => console.warn("Sign-in link failed", e))
+      .finally(sync);
     window.addEventListener("racm-change", later);
     window.addEventListener("online", sync);
     window.addEventListener("racm-synced", received);
@@ -143,7 +147,8 @@ export default function App() {
             {screen === "goals"     && <GoalsTracker      lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "planner"   && <PeriodizationPlanner lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "report"    && <PdfReport         lang={lang} tr={tr} selectedId={selectedId} />}
-            {screen === "settings"  && <Settings          lang={lang} tr={tr} onDataCleared={() => { setSelectedId(""); setAthletesTick((n) => n + 1); }} />}
+            {screen === "settings"  && <Settings          lang={lang} tr={tr} onDataCleared={() => { setSelectedId(""); setAthletesTick((n) => n + 1); }} onGo={go} />}
+            {screen === "legal"     && <Legal lang={lang} />}
             </Fragment>
             {picking && <ArcherPicker athletes={athletes} selectedId={selectedId} tr={tr} onPick={pickArcher} onNew={newArcher} onClose={() => setPicking(false)} />}
           </div>

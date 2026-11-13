@@ -30,6 +30,7 @@ export default function Account({ tr }) {
         {!codeSent && <button className="btn-primary small" style={{ alignSelf: "flex-start" }} disabled={busy || !email.includes("@")}
           onClick={() => run(async () => { await sendCode(email.trim()); setCodeSent(true); })}>{s.send}</button>}
         {codeSent && <>
+          <p className="success-msg" role="status">{s.sent}</p>
           <label>{s.code}
             <input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} maxLength={10} />
           </label>
