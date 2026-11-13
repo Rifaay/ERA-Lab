@@ -1,4 +1,6 @@
 import { useState } from "react";
+import Account from "./Account";
+import { configured } from "../sync";
 import { getSettings, saveSettings, exportBackup, importBackup, storageUsageKB, clearAllData } from "../storage";
 
 export default function Settings({ lang, tr, onDataCleared }) {
@@ -58,6 +60,8 @@ export default function Settings({ lang, tr, onDataCleared }) {
           {saved && <p className="success-msg">{s.saved}</p>}
         </div>
       </div>
+
+      {configured && <Account tr={tr} />}
 
       {/* Backup / Restore */}
       <div className="card settings-section">

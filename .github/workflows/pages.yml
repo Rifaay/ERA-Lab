@@ -29,6 +29,9 @@ jobs:
       - run: npm ci
       - run: npm test # a failing test stops the publish
       - run: npm run build
+        env: # repository variables; both are meant to be public. Empty: the app stays device-only.
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

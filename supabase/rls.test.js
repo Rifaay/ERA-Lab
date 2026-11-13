@@ -17,7 +17,7 @@ await db.exec(`
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claims', true)::jsonb ->> 'sub', '')::uuid $$;
 `);
-await db.exec(readFileSync(new URL("./migrations/0001_records.sql", import.meta.url), "utf8"));
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql"]) await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8"));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
 test.beforeEach(() => db.exec(`delete from records; insert into auth.users values ('${A}'), ('${B}') on conflict do nothing`));
@@ -71,6 +71,11 @@ test("bad records are rejected by the database", async () => {
     `('athletes', 'x', '{"a":"${"x".repeat(1_000_001)}"}')`,  // over 1 MB
   ];
   for (const v of bad) await assert.rejects(as(A, `insert into records (kind, id, data) values ${v}`), /violates check constraint/);
+});
+
+test("review records are accepted; ping is the only thing logged-out visitors may run", async () => {
+  await as(A, `insert into records (kind, id, data) values ('reviews', 'clip.mp4', '{}')`);
+  assert.equal((await as(null, "select public.ping() as p")).rows[0].p, 1);
 });
 
 test("deleting the account erases its data", async () => {

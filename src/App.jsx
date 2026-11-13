@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect, Fragment } from "react";
+import { configured, account, syncNow } from "./sync";
 import { t } from "./i18n";
 import { getAthletes } from "./storage";
 import { AppContext } from "./context";
@@ -81,6 +82,32 @@ export default function App() {
     if (latest.length && !selectedId) setSelectedId(latest[latest.length - 1].id); // a new archer becomes the current one
   };
 
+  // Cloud copy: sync when the app opens or comes back into view, when the connection returns, and 5 s after a change.
+  // Data received from another device re-opens the current screen, except Range and Review, which hold work in progress.
+  const [dataTick, setDataTick] = useState(0);
+  const screenRef = useRef(screen);
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+  useEffect(() => {
+    if (!configured) return;
+    let timer;
+    const sync = () => { clearTimeout(timer); if (account() && navigator.onLine) syncNow().catch((e) => console.warn("Sync failed", e)); };
+    const later = () => { clearTimeout(timer); timer = setTimeout(sync, 5000); };
+    const seen = () => document.visibilityState === "visible" && sync();
+    const received = () => { setAthletesTick((n) => n + 1); if (!["range", "review"].includes(screenRef.current)) setDataTick((n) => n + 1); };
+    sync();
+    window.addEventListener("racm-change", later);
+    window.addEventListener("online", sync);
+    window.addEventListener("racm-synced", received);
+    document.addEventListener("visibilitychange", seen);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("racm-change", later);
+      window.removeEventListener("online", sync);
+      window.removeEventListener("racm-synced", received);
+      document.removeEventListener("visibilitychange", seen);
+    };
+  }, []);
+
   const ctx = { selectedId, setSelectedId, lang, setLang };
   const subs = stage.key === "home" ? [] : stage.screens;
 
@@ -104,6 +131,7 @@ export default function App() {
                 {subs.map((s) => <button key={s} className={screen === s ? "active" : ""} aria-current={screen === s ? "page" : undefined} onClick={() => go(s)}>{tr.nav[s]}</button>)}
               </nav>
             )}
+            <Fragment key={dataTick}>
             {screen === "dashboard" && <CoachDashboard   tr={tr} lang={lang} tick={athletesTick} onOpen={openArcher} onGo={(id, to) => { setSelectedId(id); go(to); }} onNew={newArcher} />}
             {screen === "archer"    && <Archer            tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
             {screen === "profile"   && <AthleteProfile    lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
@@ -116,6 +144,7 @@ export default function App() {
             {screen === "planner"   && <PeriodizationPlanner lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "report"    && <PdfReport         lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "settings"  && <Settings          lang={lang} tr={tr} onDataCleared={() => { setSelectedId(""); setAthletesTick((n) => n + 1); }} />}
+            </Fragment>
             {picking && <ArcherPicker athletes={athletes} selectedId={selectedId} tr={tr} onPick={pickArcher} onNew={newArcher} onClose={() => setPicking(false)} />}
           </div>
 

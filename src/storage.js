@@ -34,11 +34,16 @@ const load = (k, def) => {
 const store = (k, v) => {
   try {
     localStorage.setItem(k, JSON.stringify(v));
+    window.dispatchEvent?.(new Event("racm-change")); // sync.js sends the change to the cloud copy
   } catch (e) {
     window.alert("Could not save: device storage is full. Download a backup and free up space.\nتعذّر الحفظ: مساحة التخزين ممتلئة. نزّل نسخة احتياطية ثم أفرغ مساحة.");
     throw e; // stop the caller from reporting a successful save
   }
 };
+
+// For sync.js: read or replace one kind as stored. Settings is an object, every other kind a list.
+export const readKind  = (kind) => load(KEY[kind], kind === "settings" ? '{"coachName":"","club":""}' : "[]");
+export const writeKind = (kind, v) => { localStorage.setItem(KEY[kind], JSON.stringify(v)); window.dispatchEvent?.(new Event("racm-synced")); };
 
 const upsert = (k, item) => {
   const list = load(k, "[]");
@@ -172,6 +177,7 @@ export const exportBackup = () => {
     goalTemplates: getGoalTemplates(),
     reviews:       getReviews(),
     settings:      getSettings(),
+    syncConflicts: JSON.parse(localStorage.getItem("racm_sync_conflicts") || "[]"), // cloud versions that lost to this device's
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url  = URL.createObjectURL(blob);
