@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getAthletes, getAssessments, saveAssessment, uid } from "../storage";
-import Icon from "../icons";
+import { useApp } from "../context";
 
 const DOMAIN_MAP = {
   recurve: {
@@ -29,6 +29,7 @@ function ScoreBtn({ val, current, onClick }) {
 
 export default function RubricAssessment({ lang, tr, selectedId }) {
   const r = tr.rubric;
+  const { setSelectedId } = useApp();
   const athletes = getAthletes();
   const athlete = athletes.find((a) => a.id === selectedId) || null;
   const discipline = athlete?.discipline || "recurve";
@@ -60,11 +61,19 @@ export default function RubricAssessment({ lang, tr, selectedId }) {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  // No archer chosen yet: list everyone with a profile so the coach picks who to assess here.
   if (!athlete) return (
     <div className="screen">
-      <div className="no-athlete">
-        <div className="no-athlete-icon"><Icon name="shield" size={56} /></div>
-        <div className="no-athlete-text">{r.noAthlete || "Select an athlete first."}</div>
+      <h2>{r.title}</h2>
+      <div className="card">
+        <h3>{r.pickArcher}</h3>
+        {athletes.map((a) => (
+          <button key={a.id} className="picker-row" onClick={() => setSelectedId(a.id)}>
+            <b>{a.name}</b>
+            <small>{tr.archer.stage.replace("{n}", Number(a.stage || 0) + 1)} · {a.discipline === "barebow" ? tr.profile.barebow : tr.profile.recurve}</small>
+          </button>
+        ))}
+        {!athletes.length && <p>{tr.shell.noArchers}</p>}
       </div>
     </div>
   );
@@ -77,6 +86,11 @@ export default function RubricAssessment({ lang, tr, selectedId }) {
       <h2>{r.title} — {athlete.name}</h2>
 
       <div className="card">
+        <label style={{ marginBottom: 12 }}>{r.archer}
+          <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+            {athletes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        </label>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
           <label style={{ flexDirection: "row", alignItems: "center", gap: 8, margin: 0, textTransform: "none", letterSpacing: 0 }}>
             <span style={{ fontSize: 12, color: "var(--txm)", fontWeight: 600 }}>{r.date}</span>

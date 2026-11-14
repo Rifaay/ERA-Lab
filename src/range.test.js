@@ -1,7 +1,7 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { scoreOf, scoreKeys, newSession, record, undoLast, summary, finish } from "./range.js";
+import { scoreOf, scoreKeys, newSession, record, undoLast, summary, finish, scorecard } from "./range.js";
 
 const setup = { type: "Technical", distance: "70", face: "122", perEnd: "3", wind: "Calm", temp: "", sleep: "7.5", goal: "hold expansion" };
 const start = 1_800_000_000_000;
@@ -73,4 +73,16 @@ test("finish gives the Sessions screen an entry with the totals and the full ses
     ["a1", "Technical", "30", "4", "25", "40", "70", "4", "good rhythm"]);
   assert.equal(entry.range.ends.length, 2);
   assert.match(entry.date, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("scorecard: end and running totals, score counts, halves and group size in cm", () => {
+  const s = fresh(); // 3 arrows per end on a 122 cm face (61 cm radius)
+  shoot(s, [{ x: 0, y: 0.1, score: "9", feel: 4 }, { x: 0, y: -0.1, score: "9", feel: 2 }, { score: "M" }, { score: "X" }, { score: "10" }]);
+  const c = scorecard(s);
+  assert.deepEqual(c.ends.map((e) => [e.sum, e.run]), [[18, 18], [20, 38]]);
+  assert.deepEqual([c.best, c.worst], [20, 18]);
+  assert.deepEqual(Object.fromEntries(c.dist).X + Object.fromEntries(c.dist)["9"] + Object.fromEntries(c.dist).M, 4);
+  assert.deepEqual([c.firstHalf, c.secondHalf], [6, 10]); // 9, 9, M | X, 10
+  assert.ok(Math.abs(c.spreadCm - 6.1) < 1e-9, "both plotted arrows sit 0.1 radius from their centre");
+  assert.equal(c.feel, 3);
 });

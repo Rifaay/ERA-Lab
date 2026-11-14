@@ -3,7 +3,8 @@ import { getAthletes, getRange, saveRange, saveSession, uid } from "../storage";
 import { useApp } from "../context";
 import { ringOf } from "../insights";
 import Icon from "../icons";
-import { FACES, rings, scoreOf, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
+import { FACES, RING_FILL, rings, scoreOf, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
+import Scorecard from "./Scorecard";
 
 // Stored values stay in English whatever the screen language; labels come from the translations by position.
 const WINDS = ["Calm", "Light", "Moderate", "Strong", "Gusty"];
@@ -14,7 +15,16 @@ const TYPES = ["Technical", "Physical", "Mental", "Competition", "Mixed"];
 const KEPT = ["distance", "face", "perEnd", "type", "place", "light", "bow", "drawWeight", "arrows", "drawLength", "eqNotes"]; // rarely change between sessions
 const BLANK = { distance: "70", face: "122", perEnd: "6", type: "Technical", place: "", wind: "Calm", windFrom: "", temp: "", light: "Sunny",
   bow: "", drawWeight: "", arrows: "", drawLength: "", eqNotes: "", readiness: null, confidence: null, focus: null, energy: null, sleep: "", goal: "" };
-const RING_FILL = ["#f7f3ea", "#f7f3ea", "#1b1b1b", "#1b1b1b", "#2e7fd8", "#2e7fd8", "#e2483d", "#e2483d", "#f2c40c", "#f2c40c"];
+
+// Prints only the hidden scorecard sheet; the page title becomes the PDF's suggested file name.
+const printScorecard = (s) => {
+  const title = document.title;
+  document.title = `Scorecard ${s.session_id}`;
+  document.documentElement.classList.add("sc-printing");
+  const done = () => { document.documentElement.classList.remove("sc-printing"); document.title = title; window.removeEventListener("afterprint", done); };
+  window.addEventListener("afterprint", done);
+  window.print();
+};
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 
@@ -94,7 +104,7 @@ function Target({ face, arrows, pick, onHit }) {
   );
 }
 
-export default function Range({ tr, selectedId }) {
+export default function Range({ tr, lang, selectedId }) {
   const r = tr.range;
   const { setSelectedId } = useApp();
   const athlete = getAthletes().find((a) => a.id === selectedId) || null;
@@ -144,10 +154,6 @@ export default function Range({ tr, selectedId }) {
   const discard = () => {
     if (!window.confirm(r.confirmDiscard)) return;
     saveRange({ ...getRange(), live: null }); setLive(null); setStep("setup");
-  };
-  const download = (session) => {
-    const a = document.createElement("a"), url = URL.createObjectURL(new Blob([JSON.stringify(session)], { type: "application/json" }));
-    a.href = url; a.download = `${session.session_id}.racm-session.json`; a.click(); URL.revokeObjectURL(url);
   };
 
   if (live && live.athlete_id !== selectedId) return (
@@ -241,10 +247,11 @@ export default function Range({ tr, selectedId }) {
         <p className="success-msg">{r.saved}</p>
         <p style={{ margin: "10px 0" }}>{r.fileNote}</p>
         <div className="btn-row">
-          <button className="btn-ghost" onClick={() => download(savedEntry.range)}>{r.file}</button>
+          <button className="btn-ghost" onClick={() => printScorecard(savedEntry.range)}>{r.file}</button>
           <button className="btn-primary" onClick={() => setStep("setup")}>{r.newSession}</button>
         </div>
       </div>
+      <Scorecard s={savedEntry.range} tr={tr} lang={lang} />
     </div>
   );
 

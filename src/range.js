@@ -82,6 +82,32 @@ export const summary = (s) => {
   };
 };
 
+export const RING_FILL = ["#f7f3ea", "#f7f3ea", "#1b1b1b", "#1b1b1b", "#2e7fd8", "#2e7fd8", "#e2483d", "#e2483d", "#f2c40c", "#f2c40c"]; // ring 1 to 10
+export const faceRadiusCm = (face) => (face === "40s" ? 10 : +face / 2); // a 3-spot's single face is 20 cm across
+
+// Everything the printed scorecard shows: per-end and running totals, how often each score came up,
+// first half against second half, and the group's centre and size in cm on the real face.
+export const scorecard = (s) => {
+  const sum = summary(s), R = faceRadiusCm(s.context.face);
+  let run = 0;
+  const ends = s.ends.filter((e) => e.arrows.length).map((e) => {
+    const total = e.arrows.reduce((t, a) => t + scoreValue(a.score), 0);
+    return { ...e, sum: total, run: (run += total) };
+  });
+  const all = ends.flatMap((e) => e.arrows).filter((a) => a.score != null);
+  const avg = (xs) => (xs.length ? xs.reduce((t, a) => t + scoreValue(a.score), 0) / xs.length : null);
+  const plotted = all.filter((a) => a.x != null), half = Math.ceil(all.length / 2), sums = ends.map((e) => e.sum);
+  return {
+    ...sum, ends, radiusCm: R,
+    dist: scoreKeys(s.context.face).map((k) => [k, all.filter((a) => a.score === k).length]),
+    best: sums.length ? Math.max(...sums) : null, worst: sums.length ? Math.min(...sums) : null,
+    firstHalf: avg(all.slice(0, half)), secondHalf: all.length > 1 ? avg(all.slice(half)) : null,
+    // average distance of each plotted arrow from the group's centre
+    spreadCm: plotted.length > 1 ? (plotted.reduce((t, a) => t + Math.hypot(a.x - sum.cx, a.y - sum.cy), 0) / plotted.length) * R : null,
+    feel: all.some((a) => a.feel) ? all.reduce((t, a) => t + (a.feel || 0), 0) / all.filter((a) => a.feel).length : null,
+  };
+};
+
 // Closes the session and returns the entry the Sessions screen, dashboard and report already understand.
 // The full session rides along in `range`, so backups, the Labeller file and athlete deletion all cover it.
 export const finish = (s, id, now = Date.now()) => {

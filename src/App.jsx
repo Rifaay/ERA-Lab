@@ -139,10 +139,10 @@ export default function App() {
             {screen === "dashboard" && <CoachDashboard   tr={tr} lang={lang} tick={athletesTick} onOpen={openArcher} onGo={(id, to) => { setSelectedId(id); go(to); }} onNew={newArcher} />}
             {screen === "archer"    && <Archer            tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
             {screen === "profile"   && <AthleteProfile    lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
-            {screen === "range"     && <Range key={selectedId} tr={tr} selectedId={selectedId} />}
+            {screen === "range"     && <Range key={selectedId} tr={tr} lang={lang} selectedId={selectedId} />}
             {screen === "review"    && <Review selectedId={selectedId} guardRef={reviewDirty} />}
             {screen === "session"   && <SessionLogger     lang={lang} tr={tr} selectedId={selectedId} />}
-            {screen === "rubric"    && <RubricAssessment  lang={lang} tr={tr} selectedId={selectedId} />}
+            {screen === "rubric"    && <RubricAssessment key={selectedId} lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "exercises" && <Exercises         lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "goals"     && <GoalsTracker      lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "planner"   && <PeriodizationPlanner lang={lang} tr={tr} selectedId={selectedId} />}
