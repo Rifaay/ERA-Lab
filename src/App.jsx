@@ -21,6 +21,7 @@ import Clips             from "./screens/Clips";
 import Settings          from "./screens/Settings";
 import Legal             from "./screens/Legal";
 import "./index.css";
+import "./motion.css";
 
 // The coaching cycle is the navigation: six stages, each holding the screens that belong to it.
 const STAGES = [

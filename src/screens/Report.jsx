@@ -86,7 +86,7 @@ export default function Report({ tr, lang, selectedId }) {
             <p className="st-note">{rp.saveHint}</p>
           </div>
 
-          {!valid ? <p className="muted">{rp.badRange}</p> : <div className="rp-paper">{doc}</div>}
+          {!valid ? <p className="muted">{rp.badRange}</p> : <div className="rp-paper" key={`${period.from}|${period.to}`}>{doc}</div>}
           {doc && createPortal(<div className="rd-print-root">{doc}</div>, document.body)}
         </>
       )}

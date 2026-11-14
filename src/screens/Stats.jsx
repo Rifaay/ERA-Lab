@@ -17,16 +17,27 @@ const f1 = (v) => (v == null ? "–" : v.toFixed(1));
 const KINDS = ["week", "month", "block", "all"];
 const CAUSES = ["misses", "fliers", "faults", "aim", "fatigue", "routine", "spread"];
 
+// A group ring placed and sized through style, so a change of period or session moves it smoothly (motion.css).
+// x, y, r in the face drawing's units (100 = the face's edge); children are drawn around its centre.
+function Ring({ x, y, r, className, children }) {
+  return (
+    <g className={`st-move ${className || ""}`} style={{ transform: `translate(${x}px, ${y}px)` }}>
+      <circle className="st-r" style={{ r: `${r}px` }} />
+      {children}
+    </g>
+  );
+}
+
 function Glyph({ now, before }) {
   // The archer's group as a ring on a plain face: this period solid, the period before dashed.
-  const c = (g) => g && <circle cx={g.cx * 100} cy={-g.cy * 100} r={Math.max(2, g.radius * 100)} />; // the inner half of the face: rings 10 to 6
+  const c = (g) => g && <Ring x={g.cx * 100} y={-g.cy * 100} r={Math.max(2, g.radius * 100)} />; // the inner half of the face: rings 10 to 6
   return (
     <svg className="st-glyph" viewBox="-52 -52 104 104" dir="ltr" aria-hidden="true">
       {[50, 40, 30, 20, 10].map((r) => <circle key={r} r={r} className="ring" />)}
       <line x1="-3" x2="3" className="ring" /><line y1="-3" y2="3" className="ring" />
       <g className="before">{c(before)}</g>
       <g className="now">{c(now)}</g>
-      {now && <circle cx={now.cx * 100} cy={-now.cy * 100} r="1.8" className="dot" />}
+      {now && <g className="st-move" style={{ transform: `translate(${now.cx * 100}px, ${-now.cy * 100}px)` }}><circle r="1.8" className="dot" /></g>}
     </svg>
   );
 }
@@ -59,7 +70,7 @@ function ShotMap({ st, prev, s, onPick, picked, compare }) {
         <svg viewBox="-110 -110 220 220" role="img" aria-label={fill(s.mapLabel, { n: shown.length })}>
           {Array.from({ length: n }, (_, i) => <circle key={i} r={(100 * (n - i)) / n} fill={RING_FILL[10 - n + i]} stroke={10 - n + i < 2 ? "#222" : 10 - n + i < 4 ? "#bbb" : "#111"} strokeWidth=".6" />)}
           {old.map((a, i) => <circle key={`o${i}`} cx={a.x * 100} cy={-a.y * 100} r="2.2" className="st-old" />)}
-          {oldOutline && <circle cx={oldOutline.cx * 100} cy={-oldOutline.cy * 100} r={oldOutline.radius * 100} className="st-before" />}
+          {oldOutline && <Ring x={oldOutline.cx * 100} y={-oldOutline.cy * 100} r={oldOutline.radius * 100} className="st-before" />}
           {shown.map((a, i) => {
             const rv = reviewed.get(`${a.rsid}/${a.end}/${a.n}`);
             return (
@@ -72,9 +83,7 @@ function ShotMap({ st, prev, s, onPick, picked, compare }) {
           })}
           {outline && ["edge", "line"].map((k) => (
             <g key={k} className={`st-outline ${k}`} pointerEvents="none">
-              <circle cx={outline.cx * 100} cy={-outline.cy * 100} r={outline.radius * 100} />
-              <line x1={outline.cx * 100 - 6} x2={outline.cx * 100 + 6} y1={-outline.cy * 100} y2={-outline.cy * 100} />
-              <line x1={outline.cx * 100} x2={outline.cx * 100} y1={-outline.cy * 100 - 6} y2={-outline.cy * 100 + 6} />
+              <Ring x={outline.cx * 100} y={-outline.cy * 100} r={outline.radius * 100}><line x1="-6" x2="6" /><line y1="-6" y2="6" /></Ring>
             </g>
           ))}
         </svg>
@@ -166,7 +175,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
           </section>
 
           {p && p.lost > 0 && (
-            <section className="card">
+            <section className="card" key={`pts${period.from}${period.to}`}>
               <div className="card-title">{s.pointsTitle}</div>
               <p className="st-lead">{fill(s.pointsLead, { got: p.scored, max: p.max, lost: Math.round(p.lost) })}</p>
               <div className="st-stack" aria-hidden="true">
@@ -187,7 +196,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
           )}
 
           {says.length > 0 && (
-            <section className="card">
+            <section className="card" key={`find${period.from}${period.to}`}>
               <div className="card-title">{s.findTitle}</div>
               <ol className="st-find">{says.slice(0, 6).map((x, i) => <li key={i} className={x.kind}>{say(x)}</li>)}</ol>
             </section>
@@ -199,7 +208,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
                 <div className="card-title">{s.mapTitle}</div>
                 {prev?.count.plotted > 0 && <button className={`btn-ghost small ${compare ? "active" : ""}`} aria-pressed={compare} onClick={() => setCompare(!compare)}>{s.compare}</button>}
               </div>
-              <ShotMap st={st} prev={prev} s={{ ...s, faces: tr.range.faces }} onPick={setPicked} picked={picked} compare={compare} />
+              <ShotMap key={`map${period.from}${period.to}`} st={st} prev={prev} s={{ ...s, faces: tr.range.faces }} onPick={setPicked} picked={picked} compare={compare} />
               {compare && <p className="st-note">{s.compareNote}</p>}
             </section>
           )}
@@ -223,7 +232,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
           </section>
 
           {st.byThird.some((x) => x != null) && (
-            <section className="card">
+            <section className="card" key={`thr${period.from}${period.to}`}>
               <div className="card-title">{s.throughTitle}</div>
               <div className="st-bars">
                 {st.byThird.map((v, i) => <Bar key={i} label={s.thirds[i]} v={v} max={10} />)}
@@ -258,7 +267,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
           </section>
 
           {st.weeks.length > 1 && (
-            <section className="card">
+            <section className="card" key={`wk${period.from}${period.to}`}>
               <div className="card-title">{s.weeksTitle}</div>
               <ul className="st-weeks">
                 {(() => { const top = Math.max(1, ...st.weeks.map((w) => w.arrows)); return st.weeks.filter((w) => w.from <= isoDay(new Date())).map((w, i) => (

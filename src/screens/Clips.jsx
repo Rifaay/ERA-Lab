@@ -156,7 +156,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
                     <small>{when(x.recordedAt)} · {Math.round(x.durationS)} s · {mb(x.size)} MB{!x.savedOut && ` · ${c.onlyHere}`}</small>
                     {tagged ? <small className="clip-tags">{rv.verdict === "good" ? c.good : rv.faults.map((f) => tr.quick.faults[FAULTS.indexOf(f)] || f).join(", ") || c.fault}</small> : <small className="clip-tags none">{c.untagged}</small>}
                   </span>
-                  <Icon name={open === x.id ? "down" : "next"} size={18} />
+                  <Icon name="down" size={18} />
                 </button>
                 {open === x.id && (
                   <div className="clip-body">

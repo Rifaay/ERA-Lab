@@ -1,0 +1,67 @@
+/* ERA Lab motion. One rule decides everything here: motion only where it tells the coach something.
+   Arriving on a screen, a panel opening, a result landing, the archer's group changing between periods.
+   Anything done dozens of times a session stays instant: plotting arrows, the score pad, ends, session filters.
+   Only transform, opacity and filter move (and an SVG ring's size and place). prefers-reduced-motion turns it all off. */
+:root {
+  --ease-out: cubic-bezier(.16, 1, .3, 1);   /* arriving: quick start, soft landing */
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1); /* changing in place */
+  --t-xs: 120ms;  /* presses, colour */
+  --t-s: 180ms;   /* screens, small panels */
+  --t-m: 240ms;   /* overlays, toasts */
+  --t-l: 420ms;   /* data landing: bars, the group ring */
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(8px); filter: blur(3px); } }
+@keyframes rise-small { from { opacity: 0; transform: translateY(4px); } }
+@keyframes drop { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes grow-x { from { transform: scaleX(0); } }
+
+/* Screens: a short rise when a stage or step opens. Each Range step is its own screen. */
+.screen { animation: rise-small var(--t-s) var(--ease-out) both; }
+
+/* Things that open on request */
+.picker { animation: drop var(--t-m) var(--ease-out) both; }
+.recorder { animation: fade var(--t-s) var(--ease-out) both; }
+.quick, .clip-suggest, .rg-pending, .clips-risk { animation: rise var(--t-m) var(--ease-out) both; }
+.clip-body > * { animation: rise-small var(--t-s) var(--ease-out) both; }
+.clip-body > :nth-child(2) { animation-delay: 30ms; }
+.clip-body > :nth-child(3) { animation-delay: 60ms; }
+.toast, .rg-toast { animation: rise var(--t-m) var(--ease-out) both; }
+
+/* A clip row's chevron turns instead of being swapped */
+.clip-row .icon-down { transition: transform var(--t-s) var(--ease-out); }
+.clip-row[aria-expanded="false"] .icon-down { transform: rotate(-90deg); }
+[dir="rtl"] .clip-row[aria-expanded="false"] .icon-down { transform: rotate(90deg); }
+
+/* Presses: instant feedback under the finger */
+.btn-primary, .btn-ghost, .chip, .stage-btn, .subnav button, .st-kinds button, .clip-row, .cycle-row, .picker-row {
+  transition: background-color var(--t-xs) var(--ease-out), color var(--t-xs) var(--ease-out), border-color var(--t-xs) var(--ease-out), transform var(--t-xs) var(--ease-out);
+}
+.chip:active, .st-kinds button:active, .subnav button:active { transform: scale(.97); }
+.stage-btn .icon, .stage-btn.go .disc { transition: transform var(--t-xs) var(--ease-out); }
+.stage-btn:active .icon { transform: scale(.92); }
+
+/* Results landing: bars grow from their start edge (the right in Arabic) when a period opens */
+.st-stack i, .rd-stack i, .st-bar em, .st-weeks .d i, .rp-paper .rd-bar em {
+  transform-origin: left center;
+}
+[dir="rtl"] .st-stack i, [dir="rtl"] .rd-stack i, [dir="rtl"] .st-bar em, [dir="rtl"] .st-weeks .d i, [dir="rtl"] .rp-paper .rd-bar em { transform-origin: right center; }
+.st-stack i, .rp-paper .rd-stack i { animation: grow-x var(--t-l) var(--ease-out) both; }
+.st-bar em, .st-weeks .d i, .rp-paper .rd-bar em { animation: grow-x var(--t-l) var(--ease-out) 60ms both; }
+.st-find li, .rp-paper .rd-find li { animation: rise-small var(--t-s) var(--ease-out) both; }
+.st-find li:nth-child(2), .rp-paper .rd-find li:nth-child(2) { animation-delay: 40ms; }
+.st-find li:nth-child(3), .rp-paper .rd-find li:nth-child(3) { animation-delay: 80ms; }
+.st-find li:nth-child(n+4), .rp-paper .rd-find li:nth-child(n+4) { animation-delay: 120ms; }
+.rp-paper .rd { animation: fade var(--t-s) var(--ease-out) both; }
+
+/* The signature: the archer's group ring moves and resizes to the new period or session instead of jumping.
+   Place and size are set through style (Stats.jsx Ring), which browsers animate; SVG attributes would snap. */
+.st-move { transition: transform var(--t-l) var(--ease-in-out); }
+.st-r { transition: r var(--t-l) var(--ease-in-out); }
+
+/* Printing and reduced motion: everything in its final place, at once */
+@media print { *, *::before, *::after { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

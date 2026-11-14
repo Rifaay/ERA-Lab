@@ -17,8 +17,8 @@
 .rec-side { justify-self: center; width: 52px; height: 52px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #222; color: #fff; cursor: pointer; }
 .rec-side:disabled { opacity: .3; }
 .rec-btn { width: 76px; height: 76px; display: grid; place-items: center; border: 4px solid #fff; border-radius: 50%; background: none; cursor: pointer; }
-.rec-btn span { width: 58px; height: 58px; border-radius: 50%; background: var(--red); transition: all .18s var(--ease); }
-.rec-btn.on span { width: 28px; height: 28px; border-radius: 6px; }
+.rec-btn span { width: 58px; height: 58px; border-radius: 50%; background: var(--red); transition: transform var(--t-s) var(--ease-out), border-radius var(--t-s) var(--ease-out); }
+.rec-btn.on span { border-radius: 12px; transform: scale(.48); } /* the circle becomes a stop square */
 .rec-btn:disabled { opacity: .35; }
 .rec-hint { text-align: center; font-size: 13px; color: #bbb; padding: 0 16px 10px; background: #000; }
 

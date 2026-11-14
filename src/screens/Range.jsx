@@ -195,7 +195,7 @@ export default function Range({ tr, lang, selectedId }) {
   };
 
   if (live && live.athlete_id !== selectedId) return (
-    <div className="screen">
+    <div className="screen" key={step}>
       <div className="card">
         <p style={{ marginBottom: 10 }}>{fill(r.otherAthlete, { name: live.athlete })}</p>
         <button className="btn-primary" onClick={() => setSelectedId(live.athlete_id)}>{r.resume}</button>
@@ -203,7 +203,7 @@ export default function Range({ tr, lang, selectedId }) {
     </div>
   );
   if (!athlete) return (
-    <div className="screen"><div className="no-athlete"><div className="no-athlete-icon"><Icon name="target" size={56} /></div><div className="no-athlete-text">{r.noAthlete}</div></div></div>
+    <div className="screen" key={step}><div className="no-athlete"><div className="no-athlete-icon"><Icon name="target" size={56} /></div><div className="no-athlete-text">{r.noAthlete}</div></div></div>
   );
 
   const stepIndex = { setup: 0, range: 1, review: 2, done: 2 }[step];
@@ -217,7 +217,7 @@ export default function Range({ tr, lang, selectedId }) {
   );
 
   if (step === "setup") return (
-    <div className="screen">
+    <div className="screen" key={step}>
       {header}
       <div className="card">
         <div className="form">
@@ -279,7 +279,7 @@ export default function Range({ tr, lang, selectedId }) {
   );
 
   if (step === "done") return (
-    <div className="screen">
+    <div className="screen" key={step}>
       {header}
       <div className="card">
         <p className="success-msg">{r.saved}</p>
@@ -301,7 +301,7 @@ export default function Range({ tr, lang, selectedId }) {
   if (step === "review") {
     const sum = summary(live);
     return (
-      <div className="screen">
+      <div className="screen" key={step}>
         {header}
         <div className="card">
           <h3>{r.summary}</h3>
@@ -338,7 +338,7 @@ export default function Range({ tr, lang, selectedId }) {
   }
 
   return (
-    <div className="screen">
+    <div className="screen" key={step}>
       {header}
       <div className="rg-endbar">
         <button aria-label={r.prevEnd} disabled={view === 0} onClick={() => { setView(view - 1); setPick(null); }}><Icon name="prev" /></button>
