@@ -7,7 +7,9 @@ const DAY = 86400000;
 const pad = (n) => String(n).padStart(2, "0");
 export const isoDay = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parse = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
-const addDays = (iso, n) => { const d = parse(iso); d.setDate(d.getDate() + n); return isoDay(d); };
+const utc = (iso) => { const [y, m, d] = iso.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+export const daysBetween = (a, b) => Math.round((utc(b) - utc(a)) / DAY);
+export const addDays = (iso, n) => { const d = parse(iso); d.setDate(d.getDate() + n); return isoDay(d); };
 const mean = (xs) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
 const median = (xs) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const sd = (xs) => { const m = mean(xs); return xs.length > 1 ? Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / (xs.length - 1)) : null; };
@@ -30,6 +32,7 @@ export function periodOf(kind, anchor, { plans = [], first } = {}) {
   const d = parse(anchor);
   if (kind === "week") { const from = addDays(anchor, -((d.getDay() + 6) % 7)); return { kind, from, to: addDays(from, 6) }; }
   if (kind === "month") return { kind, from: isoDay(new Date(d.getFullYear(), d.getMonth(), 1)), to: isoDay(new Date(d.getFullYear(), d.getMonth() + 1, 0)) };
+  if (kind === "year") return { kind, from: `${d.getFullYear()}-01-01`, to: `${d.getFullYear()}-12-31` };
   if (kind === "all") return { kind, from: first || anchor, to: anchor };
   const year = d.getFullYear(), weeks = plans.find((p) => p.year === year)?.weeks || {}, w = planWeek(anchor), phase = weeks[w];
   if (!phase) return null;
@@ -40,8 +43,13 @@ export function periodOf(kind, anchor, { plans = [], first } = {}) {
 }
 
 // The period before (dir -1) or after (dir 1). A block steps to the nearest other block within a year.
+// A custom range (any two dates the coach picks) steps by its own length.
 export function shiftPeriod(p, dir, ctx) {
   if (p.kind === "all") return null;
+  if (p.kind === "custom") {
+    const days = daysBetween(p.from, p.to) + 1;
+    return dir < 0 ? { kind: "custom", from: addDays(p.from, -days), to: addDays(p.from, -1) } : { kind: "custom", from: addDays(p.to, 1), to: addDays(p.to, days) };
+  }
   if (p.kind !== "block") return periodOf(p.kind, dir < 0 ? addDays(p.from, -1) : addDays(p.to, 1), ctx);
   for (let day = dir < 0 ? addDays(p.from, -1) : addDays(p.to, 1), i = 0; i < 53; i++, day = addDays(day, 7 * dir)) {
     const q = periodOf("block", day, ctx);

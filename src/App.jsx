@@ -15,7 +15,7 @@ import GoalsTracker      from "./screens/GoalsTracker";
 import PeriodizationPlanner from "./screens/PeriodizationPlanner";
 import CoachDashboard    from "./screens/CoachDashboard";
 import Archer            from "./screens/Archer";
-import PdfReport         from "./screens/PdfReport";
+import Report            from "./screens/Report";
 import Stats             from "./screens/Stats";
 import Clips             from "./screens/Clips";
 import Settings          from "./screens/Settings";
@@ -150,7 +150,7 @@ export default function App() {
             {screen === "goals"     && <GoalsTracker      lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "planner"   && <PeriodizationPlanner lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "stats"     && <Stats key={selectedId} tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
-            {screen === "report"    &&<PdfReport         lang={lang} tr={tr} selectedId={selectedId} />}
+            {screen === "report"    && <Report key={selectedId} tr={tr} lang={lang} selectedId={selectedId} />}
             {screen === "settings"  && <Settings          lang={lang} tr={tr} onDataCleared={() => { setSelectedId(""); setAthletesTick((n) => n + 1); }} onGo={go} />}
             {screen === "legal"     && <Legal lang={lang} />}
             </Fragment>

@@ -3,6 +3,9 @@ import { getAthletes, getSessions, getReviews, getPlans } from "../storage";
 import { RING_FILL, rings } from "../range";
 import { periodOf, shiftPeriod, periodStats, findings, groupOf, isoDay } from "../stats";
 import Icon from "../icons";
+import ArcherSelect from "../ArcherSelect";
+import { useApp } from "../context";
+import { findingText } from "../findingText";
 import "./stats.css";
 
 // One archer's statistics for a week, a month, a training block from their plan, or everything.
@@ -88,6 +91,7 @@ function ShotMap({ st, prev, s, onPick, picked, compare }) {
 
 export default function Stats({ tr, lang, selectedId, onGo }) {
   const s = tr.stats;
+  const { setSelectedId } = useApp();
   const athlete = getAthletes().find((a) => a.id === selectedId);
   const sessions = useMemo(() => getSessions().filter((x) => x.athleteId === selectedId), [selectedId]);
   const reviews = useMemo(() => getReviews(), []);
@@ -107,7 +111,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
   const prevPeriod = period && shiftPeriod(period, -1, ctx);
   const prev = useMemo(() => prevPeriod && periodStats(prevPeriod, data), [prevPeriod?.from, prevPeriod?.to, selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!athlete) return <div className="screen"><div className="no-athlete"><div className="no-athlete-icon"><Icon name="chart" size={56} /></div><div className="no-athlete-text">{s.noAthlete}</div></div></div>;
+  if (!athlete) return <div className="screen"><h2>{tr.nav.stats}</h2><ArcherSelect tr={tr} athletes={getAthletes()} selectedId={selectedId} onPick={setSelectedId} prompt={s.pick} /></div>;
 
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const date = (iso, o) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(locale, o); };
@@ -127,22 +131,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
   const per72 = (v) => (st.count.scored ? (v / st.count.scored) * 72 : 0);
   const causes = p ? CAUSES.map((k) => ({ k, v: k === "faults" ? Object.values(p.faults).reduce((t, x) => t + x, 0) : p[k] })).filter((c) => c.v > 0.05) : [];
   const says = st ? findings(st, prev) : [];
-  const say = (x) => {
-    const L = s.find;
-    if (x.kind === "leak") return fill(L.leak, { cause: x.cause === "fault" ? fill(s.faultNamed, { name: x.name }) : s.causes[x.cause].toLowerCase(), n: f1(x.perArrow * 72) });
-    if (x.kind === "aim") return fill(L.aim, { d: x.distance, x: `${Math.abs(x.x).toFixed(1)} cm ${x.x > 0 ? s.right : s.left}`, y: `${Math.abs(x.y).toFixed(1)} cm ${x.y > 0 ? s.high : s.low}` });
-    if (x.kind === "shape") return fill(x.wide ? L.wide : L.tall, { d: x.distance });
-    if (x.kind === "fatigue") return fill(L.fatigue, { a: f2(x.early), b: f2(x.late) });
-    if (x.kind === "position") return fill(L.position, { n: x.n, a: f2(x.avg), b: f2(x.others) });
-    if (x.kind === "routine") return fill(L.routine, { a: f2(x.yes), b: f2(x.not) });
-    if (x.kind === "feel") return fill(x.matches ? L.feelGood : L.feelOff, { a: f2(x.good), b: f2(x.bad) });
-    if (x.kind === "readiness") return x.up ? L.readyUp : L.readyDown;
-    if (x.kind === "pb") return fill(L.pb, { d: x.distance, a: f2(x.avg) });
-    if (x.kind === "trend") return fill(x.to > x.from ? L.up : L.down, { a: f2(x.from), b: f2(x.to) });
-    if (x.kind === "volume") return fill(x.change > 0 ? L.more : L.fewer, { n: Math.round(Math.abs(x.change) * 100) });
-    if (x.kind === "busiest") return fill(L.busiest, { w: date(x.from, { day: "numeric", month: "short" }), n: x.arrows });
-    return "";
-  };
+  const say = (x) => findingText(x, s, (iso) => date(iso, { day: "numeric", month: "short" }));
   const glyphNow = main && st.arrows.length ? groupOf(st.arrows.filter((a) => `${a.distance}|${a.face}` === main.key)) : null;
   const glyphBefore = main && prev?.arrows.length ? groupOf(prev.arrows.filter((a) => `${a.distance}|${a.face}` === main.key)) : null;
 
