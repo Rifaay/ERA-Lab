@@ -24,11 +24,11 @@ import "./index.css";
 
 // The coaching cycle is the navigation: six stages, each holding the screens that belong to it.
 const STAGES = [
-  { key: "home",   icon: "archer",   screens: ["dashboard", "archer", "profile", "settings", "legal"] },
+  { key: "home",   icon: "home",   screens: ["dashboard", "archer", "profile", "settings", "legal"] },
   { key: "plan",   icon: "calendar", screens: ["planner", "goals", "exercises"] },
   { key: "range",  icon: "target",   screens: ["range"] },
   { key: "review", icon: "clip",     screens: ["clips", "review"] },
-  { key: "assess", icon: "shield",   screens: ["rubric", "session"] },
+  { key: "assess", icon: "assess",   screens: ["rubric", "session"] },
   { key: "report", icon: "chart",    screens: ["stats", "report"] },
 ];
 const stageOf = (screen) => STAGES.find((s) => s.screens.includes(screen));

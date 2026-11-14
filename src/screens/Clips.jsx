@@ -128,7 +128,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
       <h2>{c.title} — {athlete.name}</h2>
       <p className="muted">{c.lead}</p>
       <div className="clips-actions">
-        <button className="btn-ghost" disabled={busy} onClick={() => fileRef.current.click()}><Icon name="plus" size={18} />{busy ? c.importing : c.import}</button>
+        <button className="btn-ghost" disabled={busy} onClick={() => fileRef.current.click()}><Icon name="import" size={18} />{busy ? c.importing : c.import}</button>
         <input ref={fileRef} type="file" accept="video/*,.mp4,.mov,.m4v,.webm" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ""; if (f.length) importFiles(f); }} />
         <small>{c.importHint}</small>
       </div>
