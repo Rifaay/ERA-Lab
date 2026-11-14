@@ -13,7 +13,7 @@ export const legal = {
       ]},
       { h: "What is kept", p: [
         "Archer profiles (name, birth date, gender, discipline, stage, coach notes), training sessions with arrow scores and positions, assessments, plans, goals, check-ins and short video review records (clip name, verdict, faults, hold time).",
-        "Video files are never uploaded by ERA Lab. They stay in the coach's own folders.",
+        "Video files are never uploaded by ERA Lab. Clips filmed in ERA Lab are kept whole in the browser's storage on the coach's device until the coach saves or shares them; other footage stays in the coach's own folders. Deleting an archer deletes their clips on that device.",
       ]},
       { h: "Where it is kept", p: [
         "On the coach's device, in the browser's own storage. Nothing leaves the device unless the coach downloads a backup file or turns on the cloud copy.",
@@ -55,7 +55,7 @@ export const legal = {
       ]},
       { h: "ما الذي يُحفظ", p: [
         "ملفات الرماة (الاسم، تاريخ الميلاد، الجنس، التخصص، المرحلة، ملاحظات المدرب)، وجلسات التدريب بنتائج الأسهم ومواضعها، والتقييمات والخطط والأهداف والمتابعات، وسجلات مختصرة لمراجعة الفيديو (اسم المقطع، الحكم، الأخطاء، زمن الثبات).",
-        "لا يرفع ERA Lab ملفات الفيديو أبداً؛ تبقى في مجلدات المدرب.",
+        "لا يرفع ERA Lab ملفات الفيديو أبداً. المقاطع المصوّرة في ERA Lab تُحفظ كاملة في تخزين المتصفح على جهاز المدرب حتى يحفظها أو يشاركها؛ وباقي اللقطات تبقى في مجلدات المدرب. حذف الرامي يحذف مقاطعه من ذلك الجهاز.",
       ]},
       { h: "أين تُحفظ", p: [
         "على جهاز المدرب، في مساحة التخزين الخاصة بالمتصفح. لا يخرج شيء من الجهاز إلا إذا نزّل المدرب نسخة احتياطية أو فعّل النسخة السحابية.",
