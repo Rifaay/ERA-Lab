@@ -3,6 +3,10 @@ import { getAthletes, getReviews, saveReview, deleteReview, getSessions, getRang
 import { FAULTS, quickReview, suggestShot, arrowChoices } from "../clips";
 import { listClips, getClip, putClip, deleteClip, updateClip, hasClipStore } from "../clipStore";
 import ArcherSelect from "../ArcherSelect";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
+import Scorecard from "./Scorecard";
+import { scorecardFile, saveHtmlFile } from "../scorecardFile";
 import { useApp } from "../context";
 import QuickTag from "../QuickTag";
 import Icon from "../icons";
@@ -14,6 +18,24 @@ const durationOf = (file) => new Promise((resolve) => {
   const done = (d) => { URL.revokeObjectURL(url); resolve(Number.isFinite(d) ? d : 0); };
   v.preload = "metadata"; v.onloadedmetadata = () => done(v.duration); v.onerror = () => done(0);
   setTimeout(() => done(v.duration), 4000);
+  v.src = url;
+});
+
+// One still from a clip, as a small JPEG for the archer's result file. A phone clip of one shot is mostly set-up and
+// draw, so the frame comes from 60% of the way in; null when the clip cannot be read.
+// shortcut: a fixed point in the clip; use the release time once the computer's phase labels travel with the record.
+const stillOf = (blob) => new Promise((resolve) => {
+  const v = document.createElement("video"), url = URL.createObjectURL(blob);
+  const done = (img) => { URL.revokeObjectURL(url); resolve(img); };
+  v.muted = true; v.preload = "auto"; v.playsInline = true;
+  v.onloadedmetadata = () => { v.currentTime = Number.isFinite(v.duration) ? v.duration * 0.6 : 0; };
+  v.onseeked = () => {
+    const w = 640, h = Math.round((v.videoHeight / v.videoWidth) * w) || 360, cv = document.createElement("canvas");
+    cv.width = w; cv.height = h; cv.getContext("2d").drawImage(v, 0, 0, w, h);
+    done(cv.toDataURL("image/jpeg", 0.72));
+  };
+  v.onerror = () => done(null);
+  setTimeout(() => done(null), 8000);
   v.src = url;
 });
 
@@ -55,6 +77,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0); // review records live in storage; this re-reads them after a change
   const fileRef = useRef(null);
+  const [resultSid, setResultSid] = useState("");
 
   const load = () => listClips().then((all) => setClips(all.sort((a, b) => b.recordedAt - a.recordedAt))).catch(() => setClips([]));
   useEffect(() => {
@@ -98,6 +121,29 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
     if (!rv) return;
     saveReview({ ...rv, shot: shot && { session_id: shot.session_id, end: shot.end, arrow: shot.arrow, score: shot.score }, savedAt: new Date().toISOString() });
     setTick((n) => n + 1);
+  };
+
+  // The archer's result file for one session: the scorecard plus each tagged clip as a still with the coach's verdict,
+  // faults and note. The video itself never goes in.
+  const tagged = Object.values(reviews).filter((r) => r.athleteId === selectedId && r.shot && (r.verdict || r.faults?.length || r.notes));
+  const resultSessions = sessions.filter((x) => x.athleteId === selectedId && x.range && tagged.some((r) => r.shot.session_id === x.range.session_id))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const makeResult = async () => {
+    const se = resultSessions.find((x) => x.id === (resultSid || resultSessions[0]?.id));
+    if (!se) return;
+    setBusy(true);
+    const rvs = tagged.filter((r) => r.shot.session_id === se.range.session_id).sort((a, b) => a.shot.end - b.shot.end || a.shot.arrow - b.shot.arrow);
+    const items = [];
+    for (const rv of rvs) {
+      const clip = (clips || []).find((x) => x.id === rv.id) || (await getClip(rv.id).catch(() => null));
+      items.push({ review: rv, still: clip ? await stillOf(clip.blob) : null });
+    }
+    const host = document.createElement("div"), root = createRoot(host);
+    flushSync(() => root.render(<Scorecard s={se.range} tr={tr} lang={lang} clips={items} />));
+    const html = host.innerHTML;
+    root.unmount();
+    setBusy(false);
+    await saveHtmlFile(`Results ${se.range.session_id}.html`, scorecardFile(html, { lang, title: `${tr.range.sc.resultTitle} ${se.range.session_id}` }));
   };
 
   // Clips from another camera or the gallery. The file's time (the camera's clock) suggests the arrow; the coach confirms.
@@ -190,6 +236,19 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
             );
           })}
         </ul>
+      )}
+
+      {resultSessions.length > 0 && (
+        <section className="card clips-result">
+          <h3>{c.resultTitle}</h3>
+          <p className="muted">{c.resultHint}</p>
+          <label>{c.resultSession}
+            <select value={resultSid || resultSessions[0].id} onChange={(e) => setResultSid(e.target.value)}>
+              {resultSessions.map((x) => <option key={x.id} value={x.id}>{x.date} · {fill(c.resultClips, { n: tagged.filter((r) => r.shot.session_id === x.range.session_id).length })}</option>)}
+            </select>
+          </label>
+          <button className="btn-primary" disabled={busy} onClick={makeResult}><Icon name="download" size={18} />{busy ? c.resultMaking : c.resultMake}</button>
+        </section>
       )}
 
       {space?.quota > 0 && <p className="st-note">{fill(c.space, { used: mb(space.usage), free: mb(space.quota - space.usage) })}</p>}

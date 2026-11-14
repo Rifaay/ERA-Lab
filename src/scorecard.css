@@ -68,6 +68,17 @@ tr[role="button"]:focus-visible { outline: 2px solid var(--blue); outline-offset
 .sc-foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; font-size: 14px; }
 .sc-made { margin-top: 14px; font-size: 12px; color: #777; text-align: end; }
 
+/* The coach's video review, in the archer's result file: a still of each shot with the verdict, faults and note */
+.sc-clips { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.sc-clip { border: 2px solid #000; border-radius: 8px; overflow: hidden; break-inside: avoid; background: #fff; }
+.sc-clip img, .sc-nostill { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #111; }
+.sc-clip-body { padding: 10px 12px; display: grid; gap: 4px; font-size: 14px; }
+.sc-verdict { font: 700 13px var(--font-head); text-transform: uppercase; letter-spacing: .06em; }
+.sc-clip.good .sc-verdict { color: #006b3a; }
+.sc-clip.fault .sc-verdict { color: var(--red-text); }
+.sc-clip ul { padding-inline-start: 18px; }
+.sc-clip p { color: #333; font-style: italic; }
+
 @media (max-width: 720px) {
   body { padding: 0; background: #fff; }
   .sc-sheet { padding: 14px; border-radius: 0; box-shadow: none; }
@@ -100,5 +111,7 @@ tr[role="button"]:focus-visible { outline: 2px solid var(--blue); outline-offset
   .sc-dist, .sc-facts, .sc-ends { font-size: 9pt; }
   .sc-ends td { padding: 2.5px 3px; }
   .sc-foot { grid-template-columns: repeat(3, 1fr); font-size: 8.5pt; }
+  .sc-clips { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .sc-clip-body { padding: 6px 8px; font-size: 8.5pt; }
   .picking .sc-hit, .picking .sc-ends tbody tr td { opacity: 1 !important; }
 }

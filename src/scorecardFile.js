@@ -45,3 +45,14 @@ ${sheetHtml}
 <script>${script}</script>
 </body>
 </html>`;
+
+// Hands a finished web file to the device: the share sheet where there is one (WhatsApp, Drive), else a download.
+export async function saveHtmlFile(name, html) {
+  const file = new File([html], name, { type: "text/html" });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === "AbortError") return; }
+  }
+  const url = URL.createObjectURL(file), a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

@@ -1,4 +1,5 @@
 import { RING_FILL, rings, scorecard, scoreValue } from "../range";
+import { FAULTS } from "../clips";
 
 // The scorecard of a finished range session. The app renders it hidden and saves its markup as a standalone web
 // file (scorecardFile.js adds the styles and the tap behaviour), so it fits any screen and prints to one A4 page.
@@ -28,7 +29,8 @@ function Face({ s, sum }) {
   );
 }
 
-export default function Scorecard({ s, tr, lang }) {
+// clips (optional): the coach's tagged clips of this session, each {review, still}: the archer's result file shows them.
+export default function Scorecard({ s, tr, lang, clips = [] }) {
   const r = tr.range, sc = r.sc, c = scorecard(s), per = s.context.arrows_per_end;
   const date = new Date(s.start_ms).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
   const most = Math.max(1, ...c.dist.map(([, n]) => n));
@@ -46,7 +48,7 @@ export default function Scorecard({ s, tr, lang }) {
   return (
     <div className="sc-sheet" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang} data-labels={JSON.stringify(labels)}>
       <header className="sc-head">
-        <div><div className="sc-brand">ERA LAB</div><div className="sc-kind">{sc.title}</div></div>
+        <div><div className="sc-brand">ERA LAB</div><div className="sc-kind">{clips.length ? sc.resultTitle : sc.title}</div></div>
         <div className="sc-who"><b>{s.athlete}</b><span>{date} · {tr.session.types[["Technical", "Physical", "Mental", "Competition", "Mixed"].indexOf(s.type)] ?? s.type}</span></div>
       </header>
 
@@ -111,6 +113,25 @@ export default function Scorecard({ s, tr, lang }) {
           </table>
         </div>
       </section>
+
+      {clips.length > 0 && (
+        <section>
+          <h4>{sc.reviewTitle}</h4>
+          <div className="sc-clips">
+            {clips.map(({ review: rv, still }) => (
+              <article key={rv.id} className={`sc-clip ${rv.verdict || ""}`}>
+                {still ? <img src={still} alt={rv.shot ? `${r.end} ${rv.shot.end}, ${sc.arrow} ${rv.shot.arrow}` : ""} /> : <div className="sc-nostill" />}
+                <div className="sc-clip-body">
+                  <b>{rv.shot ? `${r.end} ${rv.shot.end} · ${sc.arrow} ${rv.shot.arrow} · ${rv.shot.score ?? ""}` : sc.noArrow}</b>
+                  <span className="sc-verdict">{rv.verdict === "good" ? tr.quick.good : rv.verdict === "fault" ? tr.quick.fault : ""}</span>
+                  {rv.faults?.length > 0 && <ul>{rv.faults.map((f) => <li key={f}>{tr.quick.faults[FAULTS.indexOf(f)] || f}</li>)}</ul>}
+                  {rv.notes && <p>{rv.notes}</p>}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <footer className="sc-foot">
         <div><h4>{sc.conditions}</h4><p>{conditions.join(" · ")}</p></div>
