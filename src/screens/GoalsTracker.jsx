@@ -1,17 +1,29 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Icon from "../icons";
+import ArcherSelect from "../ArcherSelect";
+import "./goals.css";
+import { useApp } from "../context";
+import { suggestGoals, measure } from "../goals";
+import { isoDay } from "../stats";
+import { FAULTS } from "../clips";
 import {
-  getAthletes, getGoals, saveGoal, deleteGoal,
+  getAthletes, getGoals, saveGoal, deleteGoal, getSessions, getReviews,
   getProgressLogs, saveProgressLog, deleteProgressLog,
   getCheckIns, saveCheckIn, deleteCheckIn,
   getGoalTemplates, saveGoalTemplate, deleteGoalTemplate,
   exportBackup, importBackup, uid,
 } from "../storage";
 
-const calcPct = (goal) => {
+const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+const DIGITS = { avg: 2, late: 2, offset: 1, group: 1, fliers: 1, misses: 1, routine: 0, fault: 0 };
+const fmt = (kind, v) => (v == null ? "—" : (+v).toFixed(DIGITS[kind] ?? 1));
+// What ERA Lab measures today for a goal it suggested (none for goals made by hand).
+const measured = (goal) => (goal.metric ? measure(goal.metric, { sessions: getSessions(), reviews: getReviews(), athleteId: goal.athleteId }, isoDay(new Date())) : null);
+
+const calcPct = (goal, auto) => {
   const logs = getProgressLogs().filter((l) => l.goalId === goal.id);
-  if (!logs.length || goal.baseline == null || goal.target == null) return null;
-  const latest = logs[logs.length - 1].value;
+  const latest = logs.length ? logs[logs.length - 1].value : auto;
+  if (latest == null || goal.baseline == null || goal.baseline === "" || goal.target == null || goal.target === "") return null;
   const range = goal.target - goal.baseline;
   if (range === 0) return 100;
   return Math.min(100, Math.max(0, Math.round(((latest - goal.baseline) / range) * 100)));
@@ -106,8 +118,9 @@ function ProgressPanel({ goal, tr, onUpdate }) {
     onUpdate && onUpdate();
   };
 
-  const pct = calcPct({ ...goal, id: goal.id });
-  const latest = logs.length ? logs[logs.length - 1].value : null;
+  const auto = useMemo(() => measured(goal), [goal]);
+  const pct = calcPct(goal, auto);
+  const latest = logs.length ? logs[logs.length - 1].value : auto != null ? fmt(goal.metric.kind, auto) : null;
   const dl = daysLeft(goal.dueDate);
 
   return (
@@ -118,6 +131,7 @@ function ProgressPanel({ goal, tr, onUpdate }) {
           <span className="badge blue">{g.current}: {latest ?? "—"}</span>
           <span className="badge lime">{g.targetLabel}: {goal.target}</span>
         </>}
+        {goal.metric && !logs.length && <span className="badge gray">{g.sug.auto}</span>}
         {goal.dueDate && (
           <span className={`badge ${dl != null && dl < 0 ? "red" : "gray"}`}>
             {dl != null && dl < 0 ? g.overdue : `${dl} ${g.daysLeft}`}
@@ -249,6 +263,7 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
   const [templates, setTemplates] = useState(() => getGoalTemplates());
   const [editing, setEditing] = useState(null);
   const [restoreMsg, setRestoreMsg] = useState("");
+  const { setSelectedId } = useApp();
 
   const refresh = () => {
     setGoals(getGoals().filter((x) => x.athleteId === selectedId));
@@ -275,12 +290,7 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
   };
 
   if (!athlete) return (
-    <div className="screen">
-      <div className="no-athlete">
-        <div className="no-athlete-icon"><Icon name="target" size={56} /></div>
-        <div className="no-athlete-text">{g.noAthlete}</div>
-      </div>
-    </div>
+    <div className="screen"><h2>{g.title}</h2><ArcherSelect tr={tr} athletes={athletes} selectedId={selectedId} onPick={setSelectedId} prompt={g.sug.pick} /></div>
   );
 
   return (
@@ -297,6 +307,8 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
       </div>
       {restoreMsg && <p className="success-msg">{restoreMsg}</p>}
 
+      {!editing && <GoalSuggestions athlete={athlete} goals={goals} tr={tr} lang={lang} onUse={setEditing} />}
+
       {goals.length === 0 && !editing && <p className="muted">{g.noGoals}</p>}
 
       {goals.map((goal) =>
@@ -308,7 +320,7 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
       )}
 
       {editing && !editing.id && (
-        <GoalForm athleteId={selectedId} existing={null} templates={templates} tr={tr} onSaved={() => { refresh(); setEditing(null); }} onCancel={() => setEditing(null)} />
+        <GoalForm athleteId={selectedId} existing={editing.name ? editing : null} templates={templates} tr={tr} onSaved={() => { refresh(); setEditing(null); }} onCancel={() => setEditing(null)} />
       )}
 
       {!editing && (
@@ -317,5 +329,64 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
         </button>
       )}
     </div>
+  );
+}
+
+// "Suggested by ERA Lab": SMART goals worked out from this archer's own sessions and clips (goals.js). The coach picks
+// one, edits it in the usual form and saves; nothing is added without them. Writing a goal by hand works as before.
+function GoalSuggestions({ athlete, goals, tr, lang, onUse }) {
+  const g = tr.goals, S = g.sug;
+  const today = isoDay(new Date());
+  const [hidden, setHidden] = useState([]);
+  const { suggestions, p } = useMemo(() => suggestGoals({ sessions: getSessions(), reviews: getReviews(), athleteId: athlete.id }, getGoals(), today),
+    [athlete.id, goals, today]); // eslint-disable-line react-hooks/exhaustive-deps
+  const idOf = (x) => x.kind + (x.fault || "");
+  const shown = suggestions.filter((x) => !hidden.includes(idOf(x)));
+  const locale = lang === "ar" ? "ar-EG" : "en-GB";
+  const date = (iso) => new Date(`${iso}T12:00`).toLocaleDateString(locale, { day: "numeric", month: "short" });
+
+  const words = (x) => {
+    const v = {
+      d: x.distance, target: fmt(x.kind, x.target), base: fmt(x.kind, x.baseline), fault: tr.quick.faults[FAULTS.indexOf(x.fault)] || x.fault,
+      chance: x.chance != null ? Math.round(x.chance * 100) : "", n: x.sessions ?? "",
+      trend: x.trend != null ? `${x.trend >= 0 ? "+" : "−"}${Math.abs(x.trend).toFixed(2)}` : "",
+      points: x.why ? x.why.points.toFixed(1) : "", days: Math.round((new Date(`${x.due}T12:00`) - new Date(`${today}T12:00`)) / 86400000),
+    };
+    const name = fill(S.name[x.kind], v);
+    return {
+      v, name, specific: `${name}. ${fill(S.measure[x.kind], v)}`, metricLabel: S.unit[x.kind],
+      achievable: x.kind === "avg" ? fill(x.coldStart ? S.cold : S.forecast, v) : fill(S.step, v),
+      relevant: x.why ? fill(S.why, { ...v, cause: tr.stats.causes[x.why.cause === "fault" ? "faults" : x.why.cause].toLowerCase() }) : S.main,
+    };
+  };
+
+  if (!suggestions.length) return <section className="card goal-sug"><h3>{S.title}</h3><p className="muted">{S.none}</p></section>;
+  return (
+    <section className="card goal-sug">
+      <h3>{S.title}</h3>
+      <p className="muted">{fill(S.lead, { p: Math.round(p * 100) })}</p>
+      <ul>
+        {shown.map((x) => {
+          const w = words(x);
+          return (
+            <li key={idOf(x)}>
+              <span className={`badge ${x.type === "process" ? "blue" : "lime"}`}>{g.types[x.type]}</span>
+              <b>{w.name}</b>
+              <p className="goal-sug-line">{fill(S.fromTo, { base: w.v.base, target: w.v.target, unit: w.metricLabel, due: date(x.due) })}{x.chance != null && ` · ${fill(S.chance, w.v)}`}</p>
+              <p className="muted">{w.relevant}</p>
+              <div className="btn-row">
+                <button className="btn-primary small" onClick={() => onUse({
+                  athleteId: athlete.id, name: w.name, type: x.type, specific: w.specific, metricLabel: w.metricLabel,
+                  baseline: fmt(x.kind, x.baseline), target: fmt(x.kind, x.target), achievable: w.achievable, relevant: w.relevant, dueDate: x.due,
+                  metric: x.metric, suggested: { at: today, p, chance: x.chance },
+                })}>{S.use}</button>
+                <button className="btn-ghost small" onClick={() => setHidden([...hidden, idOf(x)])}>{S.notNow}</button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="st-note">{S.how}</p>
+    </section>
   );
 }

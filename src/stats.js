@@ -109,7 +109,7 @@ export function groupOf(arrows) {
 // shortcut: an estimate from the recorded arrows, not a measurement of cause; it reads well from about 30 plotted arrows.
 export function pointsLost(arrows, reviews = []) {
   const byShot = new Map(reviews.filter((r) => r.shot && r.faults?.length).map((r) => [`${r.shot.session_id}/${r.shot.end}/${r.shot.arrow}`, r]));
-  const out = { max: arrows.length * 10, scored: 0, lost: 0, misses: 0, fliers: 0, faults: {}, aim: 0, fatigue: 0, routine: 0, spread: 0 };
+  const out = { max: arrows.length * 10, scored: 0, lost: 0, misses: 0, fliers: 0, flierCount: 0, faults: {}, aim: 0, fatigue: 0, routine: 0, spread: 0 };
   const rest = new Set();
   const sessions = new Map();
   for (const a of arrows) { if (!sessions.has(a.sid)) sessions.set(a.sid, []); sessions.get(a.sid).push(a); }
@@ -121,7 +121,7 @@ export function pointsLost(arrows, reviews = []) {
       out.scored += a.value; out.lost += loss;
       const review = byShot.get(`${a.rsid}/${a.end}/${a.n}`);
       if (a.score === "M") out.misses += loss;
-      else if (g?.fliers.has(a)) out.fliers += loss;
+      else if (g?.fliers.has(a)) { out.fliers += loss; out.flierCount++; }
       else if (review) { const share = loss / review.faults.length; for (const f of review.faults) out.faults[f] = (out.faults[f] || 0) + share; }
       else {
         rest.add(a);
