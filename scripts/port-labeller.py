@@ -41,12 +41,51 @@ js = once(js, "'▶ Play'", "'Play'", "play label")
 js = js.replace("⚠ The saved labels file", "The saved labels file")
 assert "localStorage" not in js and "location." not in js
 
+# ERA Lab: every message goes through env.t (Arabic), fault chips through env.fault, phases show the coach's language.
+js = once(js, "function toast(t){const el=$('toast');el.textContent=t;", "function toast(t){const el=$('toast');el.textContent=env.t(t);", "toast text")
+js = once(js, "function status(t){$('status').textContent=t||''}", "function status(t){$('status').textContent=env.t(t||'')}", "status text")
+js = once(js, "c.className='chip'+(L.faults.includes(t)?' on':'');c.textContent=t;", "c.className='chip'+(L.faults.includes(t)?' on':'');c.textContent=env.fault(t);", "fault chips")
+js = once(js, "$('playBtn').textContent='Pause'", "$('playBtn').textContent=env.t('Pause')", "pause text")
+js = once(js, "$('playBtn').textContent='Play'", "$('playBtn').textContent=env.t('Play')", "play text")
+js = once(js, "$('ptMode').textContent='Place points: '+(ptMode?'on':'off');", "$('ptMode').textContent=env.t('Place points: '+(ptMode?'on':'off'));", "points mode text")
+js = once(js, "$('trackBtn').textContent='Stop tracking'", "$('trackBtn').textContent=env.t('Stop tracking')", "stop tracking text")
+js = once(js, "$('trackBtn').textContent='Track forward'", "$('trackBtn').textContent=env.t('Track forward')", "track text")
+js = once(js, "$('athleteLbl').textContent = (rootName?rootName+' · ':'')+clips.length+' clips'+(canWrite?'':' · read-only (labels download)');",
+          "$('athleteLbl').textContent = env.t((rootName?rootName+' · ':'')+clips.length+' clips'+(canWrite?'':' · read-only (labels download)'));", "clip count text")
+js = once(js, "'No session sheet covers this clip':exact.length?'— not linked —':`— pick the arrow (end ${esc(c[0].e.end)}) —`",
+          "env.t('No session sheet covers this clip'):exact.length?env.t('— not linked —'):esc(env.t(`— pick the arrow (end ${c[0].e.end}) —`))", "arrow list heading")
+js = once(js, ">End ${esc(x.e.end)} · arrow ${esc(x.ar.arrow)} · ${esc(x.ar.score??'?')}${x.exact?' · '+new Date(x.ar.shot_ms).toLocaleTimeString():''}</option>",
+          ">${esc(env.t(`End ${x.e.end} · arrow ${x.ar.arrow} · ${x.ar.score??'?'}${x.exact?' · '+new Date(x.ar.shot_ms).toLocaleTimeString():''}`))}</option>", "arrow options")
+js = once(js, "<div>End ${esc(s.end)} · arrow ${esc(s.arrow)} · <b", "<div>${esc(env.t(`End ${s.end} · arrow ${s.arrow}`))} · <b", "arrow info")
+js = once(js, "<div>feel ${esc(s.feel??'–')}/5 · routine ${esc(s.routine??'–')} · end focus ${esc(s.end_focus??'–')}/5</div>",
+          "<div>${env.t('feel')} ${esc(s.feel??'–')}/5 · ${env.t('routine')} ${esc(s.routine??'–')} · ${env.t('end focus')} ${esc(s.end_focus??'–')}/5</div>", "arrow details")
+js = once(js, " m · wind ${", " m · ${env.t('wind')} ${", "wind label")
+js = once(js, "${s.linked_by==='auto'?'auto-linked by time — check it':'linked by coach'}",
+          "${env.t(s.linked_by==='auto'?'auto-linked by time — check it':s.linked_by==='phone'?'linked on the phone':'linked by coach')}", "link source")
+js = once(js, "${p.en}</span>`).join('')", "${env.lang==='ar'?p.ar:p.en}</span>`).join('')", "phase legend")
+js = once(js, "></i>motion</span>'", "></i>'+env.t('motion')+'</span>'", "motion legend")
+js = once(js, "<span>${p.en}</span><span class=\"c\">", "<span>${env.t(p.en)}</span><span class=\"c\">", "body point names")
+js = once(js, "·  frame ${frameOf(t)}", "·  ${env.t('frame')} ${frameOf(t)}", "frame word")
+# ERA Lab: a clip filmed on the phone and copied here opens with the phone's quick tags and arrow, until labels are saved.
+js = once(js, "  if(seq!==loadSeq) return;\n  L.playback_fps=fps;",
+          "  const phone=!c.labelsEntry && env.review(c.name);\n"
+          "  if(phone){ if(phone.verdict) L.verdict=phone.verdict; L.faults=[...(phone.faults||[])]; if(phone.notes) L.notes=phone.notes;\n"
+          "    const se=phone.shot&&sessions.find(x=>x.session_id===phone.shot.session_id), e=se?.ends?.find(x=>x.end===phone.shot.end), ar=e?.arrows?.find(x=>x.arrow===phone.shot.arrow);\n"
+          "    if(ar) linkArrow({se,e,ar},'phone'); dirty=false }\n"
+          "  if(seq!==loadSeq) return;\n  L.playback_fps=fps;", "phone tags")
+js = once(js, "or tap along with M.'));\n}", "or tap along with M.'));\n  if(phone) status('Quick tags from the phone are filled in. Check them, then save.');\n}", "phone tags message")
+# The linked arrow stays in the list even when the clip's time does not point to it (a phone link, or another camera's clock).
+js = once(js, "  sel.value=cur_; showArrow();\n}",
+          "  if(cur_&&!c.some(x=>key(x)===cur_)) sel.insertAdjacentHTML('beforeend',`<option value=\"${esc(cur_)}\">${esc(env.t(`End ${L.shot.end} · arrow ${L.shot.arrow} · ${L.shot.score??'?'}`))}</option>`);\n"
+          "  sel.value=cur_; showArrow();\n}", "keep linked arrow")
+
 engine = f"""/* eslint-disable */
 // Generated by scripts/port-labeller.py from the stand-alone RACM Labeller. Do not edit by hand: change the
 // Labeller or the port script and run it again. The code is the Labeller's own, wrapped so it can live in one screen.
 //
 // host: the element holding the Review markup. env.sessions(): range sessions recorded in the app.
-// env.onSaved(labels): called after labels are saved. Returns {{ isDirty, destroy }}.
+// env.onSaved(labels): called after labels are saved. env.review(clipName): the app's record of that clip (phone tags).
+// env.t(text), env.fault(tag), env.lang: the coach's language. Returns {{ isDirty, destroy }}.
 export function mountLabeller(host, env) {{
   const ac = new AbortController();
   // Page-level listeners end with this screen.
@@ -162,6 +201,8 @@ tail = """
 .lab .lab-toast { bottom: calc(var(--nav-h) + 18px); z-index: 50; }
 @media (max-width:759px),(max-height:520px) { .lab .lab-toast { bottom: calc(var(--nav-h) + 76px); } }
 @media (min-width: 900px) { .lab .lab-toast { bottom: 84px; } } /* above the Save button */
+/* In Arabic the panels read right to left; the video, its controls and the timeline keep time running left to right. */
+.lab .viewer, .lab .transport, .lab .timeline, .lab .legend, .lab #miniT { direction: ltr; }
 """
 open(os.path.join(out, "review.css"), "w", encoding="utf-8", newline="").write(head + scoped + tail)
 print("ported:", len(engine.splitlines()), "lines of script,", len(body.splitlines()), "of markup,", len(scoped.splitlines()), "of styles")

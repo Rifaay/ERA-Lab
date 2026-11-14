@@ -3,7 +3,8 @@
 // Labeller or the port script and run it again. The code is the Labeller's own, wrapped so it can live in one screen.
 //
 // host: the element holding the Review markup. env.sessions(): range sessions recorded in the app.
-// env.onSaved(labels): called after labels are saved. Returns { isDirty, destroy }.
+// env.onSaved(labels): called after labels are saved. env.review(clipName): the app's record of that clip (phone tags).
+// env.t(text), env.fault(tag), env.lang: the coach's language. Returns { isDirty, destroy }.
 export function mountLabeller(host, env) {
   const ac = new AbortController();
   // Page-level listeners end with this screen.
@@ -47,8 +48,8 @@ function parseCSV(text){
 }
 const fmt = s => s==null||isNaN(s) ? '--' : s.toFixed(3)+'s';
 const frameOf = s => Math.round(s*fps);
-function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),1800)}
-function status(t){$('status').textContent=t||''}
+function toast(t){const el=$('toast');el.textContent=env.t(t);el.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),1800)}
+function status(t){$('status').textContent=env.t(t||'')}
 const touch = matchMedia('(pointer:coarse)').matches; // phones and tablets: no keyboard hints
 const esc = v => String(v??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';'); // anything from a file or filename, before innerHTML
 function blank(){return {schema:'racm.labels.v1',clip:cur?.name||'',athlete:'',date:'',camera_angle:'',capture_fps:null,playback_fps:fps,duration_s:vid.duration||null,
@@ -111,7 +112,7 @@ async function build(entries, rootName){
     const base=e.path.replace(/\.[^.]+$/,'');
     return {...e, base, labelsEntry:labelMap[base]||null, labelled:!!coachSaved[base], meta:index[e.name]||null};
   }).sort((a,b)=>a.path.localeCompare(b.path));
-  $('athleteLbl').textContent = (rootName?rootName+' · ':'')+clips.length+' clips'+(canWrite?'':' · read-only (labels download)');
+  $('athleteLbl').textContent = env.t((rootName?rootName+' · ':'')+clips.length+' clips'+(canWrite?'':' · read-only (labels download)'));
   renderList(); $('exportBtn').disabled=!clips.length;
   status(clips.length?'Pick a clip on the left.':'No video files in that folder.');
   if(clips.length) openClip(clips.find(c=>!c.labelled)||clips[0]);
@@ -197,6 +198,10 @@ async function loadClip(c,seq){
   c.labelsMtime=null;
   if(c.labelsEntry){ try{ const file=await c.labelsEntry.getFile(); c.labelsMtime=file.lastModified; const j=JSON.parse(await file.text()); if(seq!==loadSeq) return;
     if(!validLabels(j)) throw new Error('unexpected format'); Object.assign(labels,j); if(j.motion) {motion=j.motion; events=findEvents(motion)} }catch(e){ c.labelsBad=true } }
+  const phone=!c.labelsEntry && env.review(c.name);
+  if(phone){ if(phone.verdict) L.verdict=phone.verdict; L.faults=[...(phone.faults||[])]; if(phone.notes) L.notes=phone.notes;
+    const se=phone.shot&&sessions.find(x=>x.session_id===phone.shot.session_id), e=se?.ends?.find(x=>x.end===phone.shot.end), ar=e?.arrows?.find(x=>x.arrow===phone.shot.arrow);
+    if(ar) linkArrow({se,e,ar},'phone'); dirty=false }
   if(seq!==loadSeq) return;
   L.playback_fps=fps; L.duration_s=+vid.duration.toFixed(3);
   for(const t of L.faults) faultSet.add(t);
@@ -204,6 +209,7 @@ async function loadClip(c,seq){
   ['playBtn','backBtn','fwdBtn','analyseBtn','suggestBtn','markBtn','saveBtn'].forEach(id=>$(id).disabled=false);
   ensurePts(); $('clockOff').value=L.clock_offset_s??0; renderArrowLink(); renderPhases(); renderVerdict(); renderFaults(); renderPoints(); $('notes').value=L.notes||''; renderMeta(); draw(); hud();
   status(c.labelsBad?'The saved labels file for this clip could not be read. Starting blank; the file is untouched unless you save.':motion?'Motion data loaded from saved labels.':(touch?'Tip: tap Analyse motion first, then Suggest phases, or tap Mark next phase along the clip.':'Tip: press A to analyse motion first, then S for suggested phases, or tap along with M.'));
+  if(phone) status('Quick tags from the phone are filled in. Check them, then save.');
 }
 const validLabels = j => !!j && Array.isArray(j.phases) && j.phases.length>=PHASES.length && (j.faults===undefined||Array.isArray(j.faults));
 function measureFps(seq){
@@ -229,14 +235,14 @@ function step(n){vid.pause();vid.currentTime=Math.min(vid.duration,Math.max(0,(f
 $('playBtn').onclick=()=>vid.paused?vid.play():vid.pause();
 $('backBtn').onclick=()=>step(-1); $('fwdBtn').onclick=()=>step(1);
 $('rate').onchange=e=>vid.playbackRate=+e.target.value;
-vid.addEventListener('play',()=>{$('playBtn').textContent='Pause';loop()});
-vid.addEventListener('pause',()=>{$('playBtn').textContent='Play';draw();hud()});
+vid.addEventListener('play',()=>{$('playBtn').textContent=env.t('Pause');loop()});
+vid.addEventListener('pause',()=>{$('playBtn').textContent=env.t('Play');draw();hud()});
 vid.addEventListener('seeked',()=>{draw();hud()});
 function loop(){ draw(); hud(); if(!vid.paused) requestAnimationFrame(loop) }
 function phaseAt(t){let k=-1;for(let i=0;i<L.phases.length;i++){const s=L.phases[i].start_s; if(s!=null&&s<=t+1e-6&&(k<0||s>=L.phases[k].start_s))k=i}return k}
 function hud(){
   if(!L) return; const t=vid.currentTime, k=phaseAt(t);
-  $('time').textContent=`${fmt(t)}  ·  frame ${frameOf(t)} / ${frameOf(vid.duration)}`;
+  $('time').textContent=`${fmt(t)}  ·  ${env.t('frame')} ${frameOf(t)} / ${frameOf(vid.duration)}`;
   $('hud').innerHTML=`<div class="ph">${k>=0?PHASES[k].en:'—'}</div><div class="ar">${k>=0?PHASES[k].ar:''}</div><div>${fmt(t)} · fr ${frameOf(t)}</div>`;
 }
 
@@ -375,7 +381,7 @@ function renderPhases(){
     d.onclick=()=>{selPhase=i; if(p.start_s!=null){vid.pause();vid.currentTime=p.start_s} renderPhases()};
     box.appendChild(d);
   });
-  $('legend').innerHTML=PHASES.map(p=>`<span><i style="background:var(${p.c})"></i>${p.en}</span>`).join('')+'<span><i style="background:var(--bone);height:2px;vertical-align:3px"></i>motion</span>';
+  $('legend').innerHTML=PHASES.map(p=>`<span><i style="background:var(${p.c})"></i>${env.lang==='ar'?p.ar:p.en}</span>`).join('')+'<span><i style="background:var(--bone);height:2px;vertical-align:3px"></i>'+env.t('motion')+'</span>';
 }
 
 /* ---------- verdict / faults / notes ---------- */
@@ -384,7 +390,7 @@ $('vGood').onclick=()=>{L.verdict=L.verdict==='good'?null:'good';dirty=true;rend
 $('vFault').onclick=()=>{L.verdict=L.verdict==='fault'?null:'fault';dirty=true;renderVerdict()};
 function renderFaults(){
   const box=$('faults'); box.innerHTML='';
-  for(const t of faultSet){const c=document.createElement('button');c.className='chip'+(L.faults.includes(t)?' on':'');c.textContent=t;
+  for(const t of faultSet){const c=document.createElement('button');c.className='chip'+(L.faults.includes(t)?' on':'');c.textContent=env.fault(t);
     c.onclick=()=>{L.faults=L.faults.includes(t)?L.faults.filter(x=>x!==t):[...L.faults,t]; if(L.faults.length) L.verdict='fault'; dirty=true; renderFaults(); renderVerdict()};
     box.appendChild(c)}
 }
@@ -491,10 +497,11 @@ function renderArrowLink(){
   const sel=$('arrowSel'), info=$('arrowInfo'); if(!L) return;
   const c=candidateArrows(); const key=x=>x.se.session_id+'|'+x.e.end+'|'+x.ar.arrow;
   const exact=c.filter(x=>x.exact);
-  sel.innerHTML='<option value="">'+(!c.length?'No session sheet covers this clip':exact.length?'— not linked —':`— pick the arrow (end ${esc(c[0].e.end)}) —`)+'</option>'+c.map(x=>`<option value="${esc(key(x))}">End ${esc(x.e.end)} · arrow ${esc(x.ar.arrow)} · ${esc(x.ar.score??'?')}${x.exact?' · '+new Date(x.ar.shot_ms).toLocaleTimeString():''}</option>`).join('');
+  sel.innerHTML='<option value="">'+(!c.length?env.t('No session sheet covers this clip'):exact.length?env.t('— not linked —'):esc(env.t(`— pick the arrow (end ${c[0].e.end}) —`)))+'</option>'+c.map(x=>`<option value="${esc(key(x))}">${esc(env.t(`End ${x.e.end} · arrow ${x.ar.arrow} · ${x.ar.score??'?'}${x.exact?' · '+new Date(x.ar.shot_ms).toLocaleTimeString():''}`))}</option>`).join('');
   let cur_=L.shot? L.shot.session_id+'|'+L.shot.end+'|'+L.shot.arrow : '';
   const best=exact.length?exact.reduce((p,q)=>q.d<p.d?q:p):c.length===1?c[0]:null; // an end with several arrows is the coach's pick, never a guess
   if(!cur_ && best){ cur_=key(best); linkArrow(best,'auto') }
+  if(cur_&&!c.some(x=>key(x)===cur_)) sel.insertAdjacentHTML('beforeend',`<option value="${esc(cur_)}">${esc(env.t(`End ${L.shot.end} · arrow ${L.shot.arrow} · ${L.shot.score??'?'}`))}</option>`);
   sel.value=cur_; showArrow();
 }
 function linkArrow(x,how){ if(!x){ delete L.shot; return }
@@ -504,7 +511,7 @@ function linkArrow(x,how){ if(!x){ delete L.shot; return }
 function showArrow(){ const s=L.shot, info=$('arrowInfo');
   if(!s){ info.textContent=''; miniTarget('122',null); return }
   miniTarget(s.face,s);
-  info.innerHTML=`<div>End ${esc(s.end)} · arrow ${esc(s.arrow)} · <b style="color:var(--gold);font-size:15px">${esc(s.score??'?')}</b></div><div>feel ${esc(s.feel??'–')}/5 · routine ${esc(s.routine??'–')} · end focus ${esc(s.end_focus??'–')}/5</div><div>${esc(s.distance_m)} m · wind ${esc(s.wind??'–')}${s.wind_from?' ('+esc(s.wind_from)+')':''}</div>${s.arrow_note?'<div>“'+esc(s.arrow_note)+'”</div>':''}<div style="opacity:.7">${s.linked_by==='auto'?'auto-linked by time — check it':'linked by coach'}</div>`;
+  info.innerHTML=`<div>${esc(env.t(`End ${s.end} · arrow ${s.arrow}`))} · <b style="color:var(--gold);font-size:15px">${esc(s.score??'?')}</b></div><div>${env.t('feel')} ${esc(s.feel??'–')}/5 · ${env.t('routine')} ${esc(s.routine??'–')} · ${env.t('end focus')} ${esc(s.end_focus??'–')}/5</div><div>${esc(s.distance_m)} m · ${env.t('wind')} ${esc(s.wind??'–')}${s.wind_from?' ('+esc(s.wind_from)+')':''}</div>${s.arrow_note?'<div>“'+esc(s.arrow_note)+'”</div>':''}<div style="opacity:.7">${env.t(s.linked_by==='auto'?'auto-linked by time — check it':s.linked_by==='phone'?'linked on the phone':'linked by coach')}</div>`;
 }
 $('arrowSel').onchange=e=>{ const v=e.target.value; if(!v){ delete L.shot; dirty=true; showArrow(); return }
   const x=candidateArrows().find(x=>x.se.session_id+'|'+x.e.end+'|'+x.ar.arrow===v); linkArrow(x,'coach'); showArrow() };
@@ -557,9 +564,9 @@ let _lastPF=-1; function renderPointsLite(){ const f=frameOf(vid.currentTime); i
 function renderPoints(){
   const box=$('ptList'); box.innerHTML=''; const f=L?frameOf(vid.currentTime):0;
   POINTS.forEach((p,i)=>{ const m=(L&&L.points&&L.points[p.k])||{}; const n=Object.keys(m).length;
-    const d=document.createElement('div'); d.className='pt'+(i===selPt?' on':''); d.innerHTML=`<span class="d" style="background:${p.c}"></span><span>${p.en}</span><span class="c">${n?n+' fr':''}${m[f]?' ●':''}</span>`;
+    const d=document.createElement('div'); d.className='pt'+(i===selPt?' on':''); d.innerHTML=`<span class="d" style="background:${p.c}"></span><span>${env.t(p.en)}</span><span class="c">${n?n+' fr':''}${m[f]?' ●':''}</span>`;
     d.onclick=()=>{selPt=i;renderPoints()}; box.appendChild(d) });
-  $('ptMode').textContent='Place points: '+(ptMode?'on':'off'); $('ptMode').classList.toggle('on',ptMode);
+  $('ptMode').textContent=env.t('Place points: '+(ptMode?'on':'off')); $('ptMode').classList.toggle('on',ptMode);
 }
 $('ptMode').onclick=()=>{ptMode=!ptMode; if(ptMode) vid.pause(); renderPoints(); drawOverlay()};
 ov.addEventListener('click',e=>{
@@ -579,7 +586,7 @@ async function trackForward(){
   tracking=true; vid.pause(); await seek((f0+.5)/fps); let g=gray();
   const st={}; for(const k of keys){const q=pts[k][f0]; const x=Math.round(q[0]*W),y=Math.round(q[1]*H); st[k]={x,y,t0:tpl(g,x,y),t:tpl(g,x,y)}}
   const last=Math.min(frameOf(vid.duration)-1,f0+Math.round(fps*8)); let done=0;
-  status(touch?'Tracking points… tap Stop tracking to stop.':'Tracking points… (Esc stops)'); $('trackBtn').textContent='Stop tracking';
+  status(touch?'Tracking points… tap Stop tracking to stop.':'Tracking points… (Esc stops)'); $('trackBtn').textContent=env.t('Stop tracking');
   for(let f=f0+1; f<=last && tracking; f++){
     await seek((f+.5)/fps); g=gray();
     for(const k of keys){ const s=st[k]; if(!s) continue;
@@ -595,7 +602,7 @@ async function trackForward(){
     done=f-f0; if(done%10===0){drawOverlay();status(`Tracking… ${done} frames`)}
     if(!Object.keys(st).length) break;
   }
-  tracking=false; $('trackBtn').textContent='Track forward'; dirty=true; renderPoints(); drawOverlay();
+  tracking=false; $('trackBtn').textContent=env.t('Track forward'); dirty=true; renderPoints(); drawOverlay();
   status(`Tracked ${keys.length} point(s) over ${done} frames. Check them by stepping frames; fix any drift with a new click (it becomes a new anchor).`);
 }
 let tracking=false;

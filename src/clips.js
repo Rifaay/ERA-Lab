@@ -10,10 +10,10 @@ export const pickMime = (supported) => ["video/mp4;codecs=avc1", "video/mp4", "v
 export const extOf = (mime) => (mime.startsWith("video/mp4") ? "mp4" : "webm");
 
 const pad = (n) => String(n).padStart(2, "0");
-// e.g. 2026-11-14_093015_TestArcher.mp4: sorts by time, and the Labeller on the computer finds the archer and the time in it.
+// e.g. 2026-11-14_093015_TestArcher_phone.mp4: sorts by time; the Labeller on the computer reads the archer from the third part.
 export const clipName = (archerName, at, mime) => {
   const d = new Date(at);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}_${archerName.replace(/[^\p{L}\p{N}]+/gu, "")}.${extOf(mime)}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}_${archerName.replace(/[^\p{L}\p{N}]+/gu, "")}_phone.${extOf(mime)}`;
 };
 
 // The review record a phone clip starts with. It is the same record the Labeller writes, so Statistics, the archer

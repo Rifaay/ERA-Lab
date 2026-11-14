@@ -15,8 +15,8 @@ test("the phone's fault tags are the Labeller's, and both languages name every o
 
 test("clip names sort by time and carry the archer; MP4 is preferred", () => {
   const at = new Date(2026, 10, 14, 9, 5, 7).getTime();
-  assert.equal(clipName("Test Archer", at, "video/mp4"), "2026-11-14_090507_TestArcher.mp4");
-  assert.equal(clipName("رامي تجربة", at, "video/webm;codecs=vp9"), "2026-11-14_090507_راميتجربة.webm");
+  assert.equal(clipName("Test Archer", at, "video/mp4"), "2026-11-14_090507_TestArcher_phone.mp4");
+  assert.equal(clipName("رامي تجربة", at, "video/webm;codecs=vp9"), "2026-11-14_090507_راميتجربة_phone.webm");
   assert.equal(pickMime((m) => m.startsWith("video/webm")), "video/webm;codecs=vp9");
   assert.equal(pickMime(() => false), "");
 });
@@ -56,4 +56,16 @@ test("a clip from another camera finds its arrow by time, shot by shot or end by
   assert.equal(suggestShot([range], T + 900 * s, T + 910 * s), null, "after the session: no guess");
   const sessions = [{ athleteId: "a1", date: "2027-01-15", range }, { athleteId: "a2", date: "2027-01-15", range }];
   assert.equal(arrowChoices(sessions, "a1", new Date("2027-01-15T10:00").getTime()).length, 4);
+});
+
+test("the Labeller's Arabic: every translated layout piece still exists, and its messages translate", async () => {
+  const { MARKUP } = await import("./review/markup.js");
+  const { MARKUP_AR, translateMarkup, reviewText } = await import("./review/i18n.js");
+  for (const [en] of MARKUP_AR) assert.ok(MARKUP.includes(en), `layout text changed: ${en.slice(0, 60)}`);
+  assert.ok(!/>Open athlete folder</.test(translateMarkup(MARKUP, "ar")));
+  const t = reviewText("ar");
+  assert.equal(t("Loading clip.mp4…"), "جارٍ تحميل clip.mp4…");
+  assert.equal(t("End 2 · arrow 3 · 9"), "الجولة 2 · السهم 3 · 9");
+  assert.equal(t("12 clips · read-only (labels download)"), "12 مقاطع · للقراءة فقط (تُنزَّل العلامات)");
+  assert.equal(reviewText("en")("Loading clip.mp4…"), "Loading clip.mp4…");
 });

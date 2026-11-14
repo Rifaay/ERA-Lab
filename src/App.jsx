@@ -144,7 +144,7 @@ export default function App() {
             {screen === "profile"   && <AthleteProfile    lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
             {screen === "range"     && <Range key={selectedId} tr={tr} lang={lang} selectedId={selectedId} />}
             {screen === "clips"     && <Clips key={selectedId} tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
-            {screen === "review"    &&<Review selectedId={selectedId} guardRef={reviewDirty} />}
+            {screen === "review"    && <Review selectedId={selectedId} guardRef={reviewDirty} lang={lang} tr={tr} />}
             {screen === "session"   && <SessionLogger     lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "rubric"    && <RubricAssessment key={selectedId} lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "exercises" && <Exercises         lang={lang} tr={tr} selectedId={selectedId} />}

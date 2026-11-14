@@ -173,3 +173,5 @@
 .lab .lab-toast { bottom: calc(var(--nav-h) + 18px); z-index: 50; }
 @media (max-width:759px),(max-height:520px) { .lab .lab-toast { bottom: calc(var(--nav-h) + 76px); } }
 @media (min-width: 900px) { .lab .lab-toast { bottom: 84px; } } /* above the Save button */
+/* In Arabic the panels read right to left; the video, its controls and the timeline keep time running left to right. */
+.lab .viewer, .lab .transport, .lab .timeline, .lab .legend, .lab #miniT { direction: ltr; }
