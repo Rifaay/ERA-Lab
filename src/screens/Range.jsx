@@ -5,6 +5,7 @@ import { ringOf } from "../insights";
 import Icon from "../icons";
 import { FACES, RING_FILL, rings, scoreOf, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
 import Scorecard from "./Scorecard";
+import { scorecardFile } from "../scorecardFile";
 
 // Stored values stay in English whatever the screen language; labels come from the translations by position.
 const WINDS = ["Calm", "Light", "Moderate", "Strong", "Gusty"];
@@ -16,14 +17,13 @@ const KEPT = ["distance", "face", "perEnd", "type", "place", "light", "bow", "dr
 const BLANK = { distance: "70", face: "122", perEnd: "6", type: "Technical", place: "", wind: "Calm", windFrom: "", temp: "", light: "Sunny",
   bow: "", drawWeight: "", arrows: "", drawLength: "", eqNotes: "", readiness: null, confidence: null, focus: null, energy: null, sleep: "", goal: "" };
 
-// Prints only the hidden scorecard sheet; the page title becomes the PDF's suggested file name.
-const printScorecard = (s) => {
-  const title = document.title;
-  document.title = `Scorecard ${s.session_id}`;
-  document.documentElement.classList.add("sc-printing");
-  const done = () => { document.documentElement.classList.remove("sc-printing"); document.title = title; window.removeEventListener("afterprint", done); };
-  window.addEventListener("afterprint", done);
-  window.print();
+// Saves the scorecard rendered (hidden) on the done screen as one standalone, interactive web file.
+const downloadScorecard = (host, s, lang) => {
+  const title = `Scorecard ${s.session_id}`;
+  const url = URL.createObjectURL(new Blob([scorecardFile(host.innerHTML, { lang, title })], { type: "text/html" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = `${title}.html`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
@@ -118,6 +118,7 @@ export default function Range({ tr, lang, selectedId }) {
   const [note, setNote] = useState("");
   const [savedEntry, setSavedEntry] = useState(null);
   const noteTimer = useRef(0);
+  const cardRef = useRef(null);
 
   const say = (text) => { setNote(text); clearTimeout(noteTimer.current); noteTimer.current = setTimeout(() => setNote(""), 1800); };
   const set = (k, v) => setSetup((f) => ({ ...f, [k]: v }));
@@ -247,11 +248,11 @@ export default function Range({ tr, lang, selectedId }) {
         <p className="success-msg">{r.saved}</p>
         <p style={{ margin: "10px 0" }}>{r.fileNote}</p>
         <div className="btn-row">
-          <button className="btn-ghost" onClick={() => printScorecard(savedEntry.range)}>{r.file}</button>
+          <button className="btn-ghost" onClick={() => downloadScorecard(cardRef.current, savedEntry.range, lang)}>{r.file}</button>
           <button className="btn-primary" onClick={() => setStep("setup")}>{r.newSession}</button>
         </div>
       </div>
-      <Scorecard s={savedEntry.range} tr={tr} lang={lang} />
+      <div hidden ref={cardRef}><Scorecard s={savedEntry.range} tr={tr} lang={lang} /></div>
     </div>
   );
 

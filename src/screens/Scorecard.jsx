@@ -1,25 +1,29 @@
-import { createPortal } from "react-dom";
 import { RING_FILL, rings, scorecard, scoreValue } from "../range";
 
-// One A4 page for a finished range session. It sits hidden at the end of <body> and is the only thing printed,
-// so the browser's print window (Save as PDF) gives a clean scorecard; same approach as the Report stage.
+// The scorecard of a finished range session. The app renders it hidden and saves its markup as a standalone web
+// file (scorecardFile.js adds the styles and the tap behaviour), so it fits any screen and prints to one A4 page.
+// data-end / data-score / data-n mark what a tap can pick; they carry no more than the page already shows.
 
 const f1 = (v) => (v == null ? "–" : v.toFixed(1));
 const f2 = (v) => (v == null ? "–" : v.toFixed(2));
 
 function Face({ s, sum }) {
-  const n = rings(s.context.face), arrows = s.ends.flatMap((e) => e.arrows).filter((a) => a.x != null);
+  const n = rings(s.context.face);
+  const arrows = s.ends.flatMap((e) => e.arrows.map((a) => ({ ...a, end: e.end }))).filter((a) => a.x != null);
   return (
     <svg viewBox="-110 -110 220 220" className="sc-face" dir="ltr">
       {Array.from({ length: n }, (_, i) => <circle key={i} r={(100 * (n - i)) / n} fill={RING_FILL[10 - n + i]} stroke={10 - n + i < 2 ? "#222" : 10 - n + i < 4 ? "#bbb" : "#111"} strokeWidth=".6" />)}
       <circle r={50 / n} fill="none" stroke="#111" strokeWidth=".4" />
-      {arrows.map((a, i) => <circle key={i} cx={a.x * 100} cy={-a.y * 100} r="3" fill="#00e0c6" stroke="#000" strokeWidth=".9" />)}
       {sum.cx != null && (
         <g stroke="#000" strokeWidth="1.6">
           <line x1={sum.cx * 100 - 7} x2={sum.cx * 100 + 7} y1={-sum.cy * 100} y2={-sum.cy * 100} />
           <line x1={sum.cx * 100} x2={sum.cx * 100} y1={-sum.cy * 100 - 7} y2={-sum.cy * 100 + 7} />
         </g>
       )}
+      {arrows.map((a) => (
+        <circle key={`${a.end}-${a.arrow}`} className="sc-hit" cx={a.x * 100} cy={-a.y * 100} r="3.4" tabIndex={0} role="button"
+          data-end={a.end} data-n={a.arrow} data-score={a.score} data-note={a.notes || undefined} data-feel={a.feel || undefined} />
+      ))}
     </svg>
   );
 }
@@ -37,9 +41,10 @@ export default function Scorecard({ s, tr, lang }) {
   ].filter(Boolean);
   const checkIn = [["readiness", mp.readiness], ["confidence", mp.confidence], ["focus", mp.focus], ["energy", mp.energy]].filter(([, v]) => v != null);
   const maxEnd = per * 10;
+  const labels = { end: r.end, arrow: sc.arrow, feel: sc.feel, running: sc.running, times: sc.times, hint: sc.hint };
 
-  return createPortal(
-    <div className="sc-sheet" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+  return (
+    <div className="sc-sheet" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang} data-labels={JSON.stringify(labels)}>
       <header className="sc-head">
         <div><div className="sc-brand">ERA LAB</div><div className="sc-kind">{sc.title}</div></div>
         <div className="sc-who"><b>{s.athlete}</b><span>{date} · {tr.session.types[["Technical", "Physical", "Mental", "Competition", "Mixed"].indexOf(s.type)] ?? s.type}</span></div>
@@ -54,6 +59,11 @@ export default function Scorecard({ s, tr, lang }) {
         <div className="sc-tile"><b>{c.arrows}</b><small>{r.arrowsWord}</small></div>
       </div>
 
+      <div className="sc-bar-top">
+        <p className="sc-info" aria-live="polite">{sc.hint}</p>
+        <button type="button" className="sc-pdf">{sc.savePdf}</button>
+      </div>
+
       <div className="sc-two">
         <section>
           <h4>{sc.plot}</h4>
@@ -64,7 +74,9 @@ export default function Scorecard({ s, tr, lang }) {
           <h4>{sc.dist}</h4>
           <table className="sc-dist"><tbody>
             {c.dist.map(([k, n]) => (
-              <tr key={k}><th>{k}</th><td><i style={{ width: `${(n / most) * 100}%` }} /></td><td>{n}</td><td className="sc-pct">{c.arrows ? Math.round((n / c.arrows) * 100) : 0}%</td></tr>
+              <tr key={k} data-score={k} data-count={n} tabIndex={n ? 0 : undefined} role={n ? "button" : undefined}>
+                <th>{k}</th><td><i style={{ width: `${(n / most) * 100}%` }} /></td><td>{n}</td><td className="sc-pct">{c.arrows ? Math.round((n / c.arrows) * 100) : 0}%</td>
+              </tr>
             ))}
           </tbody></table>
           <h4>{sc.trend}</h4>
@@ -80,19 +92,24 @@ export default function Scorecard({ s, tr, lang }) {
 
       <section>
         <h4>{r.ends}</h4>
-        <table className="sc-ends">
-          <thead><tr><th>{r.end}</th>{Array.from({ length: per }, (_, i) => <th key={i}>{i + 1}</th>)}<th>{r.sum}</th><th>{sc.running}</th><th className="sc-bar-h" /></tr></thead>
-          <tbody>
-            {c.ends.map((e) => (
-              <tr key={e.end}>
-                <td>{e.end}</td>
-                {Array.from({ length: per }, (_, i) => { const a = e.arrows[i]; return <td key={i} className={a ? `sc-s${a.score === "X" ? 10 : scoreValue(a.score)}` : ""}>{a?.score ?? ""}</td>; })}
-                <td><b>{e.sum}</b></td><td>{e.run}</td>
-                <td className="sc-bar"><i style={{ width: `${(e.sum / maxEnd) * 100}%` }} className={e.sum === c.best ? "top" : ""} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="sc-scroll">
+          <table className="sc-ends">
+            <thead><tr><th>{r.end}</th>{Array.from({ length: per }, (_, i) => <th key={i}>{i + 1}</th>)}<th>{r.sum}</th><th>{sc.running}</th><th className="sc-bar-h" /></tr></thead>
+            <tbody>
+              {c.ends.map((e) => (
+                <tr key={e.end} data-end={e.end} data-sum={e.sum} data-run={e.run} tabIndex={0} role="button">
+                  <td>{e.end}</td>
+                  {Array.from({ length: per }, (_, i) => {
+                    const a = e.arrows[i];
+                    return <td key={i} className={a ? `sc-s${a.score === "X" ? 10 : scoreValue(a.score)}` : ""} data-score={a?.score}>{a?.score ?? ""}</td>;
+                  })}
+                  <td><b>{e.sum}</b></td><td>{e.run}</td>
+                  <td className="sc-bar"><i style={{ width: `${(e.sum / maxEnd) * 100}%` }} className={e.sum === c.best ? "top" : ""} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <footer className="sc-foot">
@@ -101,7 +118,6 @@ export default function Scorecard({ s, tr, lang }) {
         {s.coach_notes && <div><h4>{r.coachNotes}</h4><p>{s.coach_notes}</p></div>}
       </footer>
       <div className="sc-made">{sc.made}</div>
-    </div>,
-    document.body,
+    </div>
   );
 }
