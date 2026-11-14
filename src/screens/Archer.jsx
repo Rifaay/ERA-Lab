@@ -85,6 +85,7 @@ export default function Archer({ tr, lang, selectedId, onGo }) {
           sub={!goal ? null : f.overdue.length ? fill(a.overdue, { name: shortDate(goal.dueDate) }) : dueIn != null ? fill(a.due, { when: shortDate(goal.dueDate) }) : f.openGoals.length === 1 ? a.goalOne : fill(a.goalsOpen, { n: f.openGoals.length })}
           warn={f.overdue.length > 0}
           fig={f.openGoals.length || ""} />
+        <Row onGo={onGo} to="stats" label={a.stats} fact={a.statsFact} sub={a.statsHint} />
         <Row onGo={onGo} to="report" label={a.report} fact={a.reportFact} sub={a.reportHint} />
       </div>
 

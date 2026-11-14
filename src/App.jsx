@@ -16,6 +16,7 @@ import PeriodizationPlanner from "./screens/PeriodizationPlanner";
 import CoachDashboard    from "./screens/CoachDashboard";
 import Archer            from "./screens/Archer";
 import PdfReport         from "./screens/PdfReport";
+import Stats             from "./screens/Stats";
 import Settings          from "./screens/Settings";
 import Legal             from "./screens/Legal";
 import "./index.css";
@@ -27,7 +28,7 @@ const STAGES = [
   { key: "range",  icon: "target",   screens: ["range"] },
   { key: "review", icon: "clip",     screens: ["review"] },
   { key: "assess", icon: "shield",   screens: ["rubric", "session"] },
-  { key: "report", icon: "file",     screens: ["report"] },
+  { key: "report", icon: "chart",    screens: ["stats", "report"] },
 ];
 const stageOf = (screen) => STAGES.find((s) => s.screens.includes(screen));
 
@@ -146,7 +147,8 @@ export default function App() {
             {screen === "exercises" && <Exercises         lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "goals"     && <GoalsTracker      lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "planner"   && <PeriodizationPlanner lang={lang} tr={tr} selectedId={selectedId} />}
-            {screen === "report"    && <PdfReport         lang={lang} tr={tr} selectedId={selectedId} />}
+            {screen === "stats"     && <Stats key={selectedId} tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
+            {screen === "report"    &&<PdfReport         lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "settings"  && <Settings          lang={lang} tr={tr} onDataCleared={() => { setSelectedId(""); setAthletesTick((n) => n + 1); }} onGo={go} />}
             {screen === "legal"     && <Legal lang={lang} />}
             </Fragment>
