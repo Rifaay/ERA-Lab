@@ -1,0 +1,51 @@
+/* Filming on the range, quick tags, and the phone's clip library. */
+.rg-film { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.rg-rec { width: 100%; }
+.rg-rec .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); }
+.rg-pending { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 12px; background: var(--red-tint); border-radius: var(--r-md); font-size: 14px; color: var(--black); }
+.link-btn { background: none; border: 0; padding: 4px 0; color: var(--blue); font: 600 14px var(--font-body); text-decoration: underline; cursor: pointer; }
+
+.recorder { position: fixed; inset: 0; z-index: 60; background: #000; color: #fff; display: flex; flex-direction: column; }
+.recorder video { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; }
+.rec-time { position: absolute; top: max(16px, env(safe-area-inset-top)); inset-inline-start: 50%; translate: -50% 0; display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; background: rgba(0, 0, 0, .6); font: 700 18px var(--font-head); font-variant-numeric: tabular-nums; }
+[dir="rtl"] .rec-time { translate: 50% 0; }
+.rec-time i { width: 10px; height: 10px; border-radius: 50%; background: var(--red); animation: rec-blink 1s steps(2) infinite; }
+@keyframes rec-blink { 50% { opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .rec-time i { animation: none; } }
+.rec-error { position: absolute; inset: 30% 16px auto; padding: 16px; border-radius: var(--r-md); background: #1a1a1a; text-align: center; line-height: 1.5; }
+.rec-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 16px 24px max(16px, env(safe-area-inset-bottom)); background: #000; }
+.rec-side { justify-self: center; width: 52px; height: 52px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #222; color: #fff; cursor: pointer; }
+.rec-side:disabled { opacity: .3; }
+.rec-btn { width: 76px; height: 76px; display: grid; place-items: center; border: 4px solid #fff; border-radius: 50%; background: none; cursor: pointer; }
+.rec-btn span { width: 58px; height: 58px; border-radius: 50%; background: var(--red); transition: all .18s var(--ease); }
+.rec-btn.on span { width: 28px; height: 28px; border-radius: 6px; }
+.rec-btn:disabled { opacity: .35; }
+.rec-hint { text-align: center; font-size: 13px; color: #bbb; padding: 0 16px 10px; background: #000; }
+
+.quick { border: 2px solid var(--black); border-radius: var(--r-lg); padding: 12px; margin: 12px 0; background: var(--white); }
+.quick-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.quick-head .icon-btn { width: 36px; height: 36px; }
+.quick-verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.quick-verdict .chip { justify-content: center; min-height: var(--tap); font-weight: 600; }
+.quick .chip.good.active { background: var(--green-text); border-color: var(--green-text); }
+.quick .chip.fault.active { background: var(--red-text); border-color: var(--red-text); }
+.quick .chip.ghost { border-style: dashed; color: var(--blue); }
+.quick-faults { margin-bottom: 8px; }
+
+.clips-risk { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center; padding: 12px; margin-block: 12px 16px; border-radius: var(--r-md); background: var(--black); color: var(--white); }
+.clips-risk b { display: block; color: var(--yellow); }
+.clips-risk span { font-size: 13.5px; color: var(--g200); }
+.clips-risk .btn-primary { grid-column: 1 / -1; }
+.clip-list { list-style: none; }
+.clip-list li { border-top: 1px solid var(--g200); }
+.clip-list li:last-child { border-bottom: 1px solid var(--g200); }
+.clip-row { width: 100%; display: grid; grid-template-columns: 44px 1fr 20px; gap: 12px; align-items: center; padding: 12px 0; background: none; border: 0; text-align: start; color: var(--black); font: inherit; cursor: pointer; }
+.clip-badge { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--g300); font: 800 18px var(--font-head); }
+.clip-badge.good { border-color: var(--green-text); color: var(--green-text); }
+.clip-badge.fault { border-color: var(--red-text); color: var(--red-text); }
+.clip-what b { display: block; font-weight: 600; }
+.clip-what small { display: block; font-size: 13px; color: var(--g500); }
+.clip-tags { color: var(--black) !important; }
+.clip-tags.none { color: var(--blue) !important; }
+.clip-body { padding: 0 0 16px; }
+.clip-video { display: block; width: 100%; max-height: 60vh; aspect-ratio: 16 / 9; background: #000; border-radius: var(--r-md); }

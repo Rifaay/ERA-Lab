@@ -262,7 +262,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
           </section>
 
           <section className="card">
-            <div className="card-header"><div className="card-title">{s.faultsTitle}</div><button className="btn-ghost small" onClick={() => onGo("review")}>{s.openReview}</button></div>
+            <div className="card-header"><div className="card-title">{s.faultsTitle}</div><button className="btn-ghost small" onClick={() => onGo("clips")}>{s.openReview}</button></div>
             {st.faults.length ? (
               <ul className="st-faults">{st.faults.map((x) => <li key={x.name}><b>{x.name}</b><span>{fill(s.faultCount, { n: x.count })}</span><span>{x.cost != null ? fill(x.cost >= 0 ? s.faultCost : s.faultGain, { n: f2(Math.abs(x.cost)) }) : ""}</span></li>)}</ul>
             ) : <p className="muted">{s.noFaults}</p>}

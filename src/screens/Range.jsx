@@ -1,5 +1,9 @@
 import { useState, useRef } from "react";
-import { getAthletes, getRange, saveRange, saveSession, uid } from "../storage";
+import { getAthletes, getRange, saveRange, saveSession, getReviews, saveReview, uid } from "../storage";
+import { putClip } from "../clipStore";
+import { clipName, quickReview, shotOf, refreshShots } from "../clips";
+import Recorder from "../Recorder";
+import QuickTag from "../QuickTag";
 import { useApp } from "../context";
 import { ringOf } from "../insights";
 import Icon from "../icons";
@@ -119,11 +123,35 @@ export default function Range({ tr, lang, selectedId }) {
   const [savedEntry, setSavedEntry] = useState(null);
   const noteTimer = useRef(0);
   const cardRef = useRef(null);
+  const [filming, setFilming] = useState(false);
+  const [tagId, setTagId] = useState(null); // the clip just linked, offered for a quick tag
 
   const say = (text) => { setNote(text); clearTimeout(noteTimer.current); noteTimer.current = setTimeout(() => setNote(""), 1800); };
   const set = (k, v) => setSetup((f) => ({ ...f, [k]: v }));
   // Every change goes to storage at once: a refresh or a phone call must not cost the session.
-  const change = (fn) => { const s = structuredClone(live); const out = fn(s); setLive(s); saveRange({ ...getRange(), live: s }); return out; };
+  // Reads the stored session, not this render's copy: a clip can finish saving after newer arrows were plotted.
+  const change = (fn) => { const s = structuredClone(getRange().live); const out = fn(s); setLive(s); saveRange({ ...getRange(), live: s }); return out; };
+
+  // A finished clip is stored on the phone at once, then waits for the next arrow plotted (or re-scored).
+  const clipDone = async ({ blob, mime, recordedAt, durationS }) => {
+    setFilming(false);
+    const id = clipName(athlete.name, recordedAt, mime);
+    try {
+      await putClip({ id, athleteId: athlete.id, blob, mime, size: blob.size, durationS, recordedAt, savedOut: false });
+    } catch (e) { window.alert(`${r.clipFailed}\n${e.message}`); return; }
+    navigator.storage?.persist?.(); // ask the browser not to clear ERA Lab's storage when the phone runs low
+    saveReview(quickReview({ id, athlete, at: recordedAt }));
+    change((s) => { s.pendingClip = id; });
+    say(r.clipWaiting);
+  };
+  const linkClip = (s, endIndex, arrowIndex) => {
+    if (!s.pendingClip) return null;
+    const id = s.pendingClip, shot = shotOf(s, endIndex, arrowIndex);
+    delete s.pendingClip;
+    const rv = getReviews().find((x) => x.id === id);
+    if (rv && shot) saveReview({ ...rv, shot });
+    return id;
+  };
 
   const start = () => {
     const s = newSession({ athlete, setup });
@@ -132,9 +160,14 @@ export default function Range({ tr, lang, selectedId }) {
     setLive(s); setView(0); setPick(null); setSavedEntry(null); setStep("range");
   };
   const hit = (h) => {
-    const out = change((s) => record(s, view, pick, h));
+    const out = change((s) => {
+      const o = record(s, view, pick, h);
+      if (!o.refused) o.linked = linkClip(s, o.view, pick != null ? pick : s.ends[o.view].arrows.length - 1);
+      return o;
+    });
     if (out.refused) { say(out.refused === "double" ? r.refusedDouble : r.refusedFull); return; }
     setView(out.view); setPick(null); navigator.vibrate?.(30);
+    if (out.linked) { setTagId(out.linked); say(r.clipLinked); }
   };
   const undo = () => {
     const v = change((s) => undoLast(s));
@@ -148,7 +181,11 @@ export default function Range({ tr, lang, selectedId }) {
   };
   const save = () => {
     const entry = finish(structuredClone(live), uid());
+    delete entry.range.pendingClip; // a clip still waiting stays in the library without an arrow
     saveSession(entry);
+    const reviews = getReviews(), fresh = refreshShots(reviews, entry.range); // clips take their arrows' final scores
+    fresh.forEach((x, i) => { if (x !== reviews[i]) saveReview(x); });
+    setTagId(null);
     saveRange({ ...getRange(), live: null });
     setLive(null); setSavedEntry(entry); setStep("done");
   };
@@ -319,7 +356,16 @@ export default function Range({ tr, lang, selectedId }) {
           : e.arrows.length >= per ? fill(r.hintFull, { n: e.end, m: e.end + 1 })
           : fill(r.hintPlot, { n: e.arrows.length + 1, per })}
       </p>
+      <div className="rg-film">
+        <button className="btn-ghost rg-rec" onClick={() => setFilming(true)}><span className="dot" />{live.pendingClip ? r.recordAgain : r.record}</button>
+        {live.pendingClip && (
+          <p className="rg-pending" role="status">{r.clipWaitingLong}
+            <button className="link-btn" onClick={() => change((s) => { delete s.pendingClip; })}>{r.dontLink}</button></p>
+        )}
+      </div>
       <Target face={face} arrows={e.arrows} pick={pick} onHit={hit} />
+      {tagId && <QuickTag key={tagId} id={tagId} tr={tr} onClose={() => setTagId(null)} />}
+      {filming && <Recorder tr={tr} onDone={clipDone} onClose={() => setFilming(false)} />}
       <div className="rg-row3">
         <button className="btn-ghost" onClick={() => hit({ score: "M" })}>{r.miss}</button>
         <button className="btn-ghost" onClick={undo}>{r.undo}</button>

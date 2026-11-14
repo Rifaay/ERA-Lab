@@ -16,6 +16,7 @@ const PATHS = {
   search: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>,
   plus: <><path d="M12 5v14" /><path d="M5 12h14" /></>,
   x: <><path d="M6 6l12 12" /><path d="M18 6 6 18" /></>,
+  flip: <><path d="M4 12a8 8 0 0 1 14-5.3L20 9" /><path d="M20 4v5h-5" /><path d="M20 12a8 8 0 0 1-14 5.3L4 15" /><path d="M4 20v-5h5" /></>,
   check: <path d="M5 12l5 5 9-10" />,
   down: <path d="M6 9l6 6 6-6" />,
   next: <path d="M9 6l6 6-6 6" />, // mirrored in right-to-left layouts by CSS

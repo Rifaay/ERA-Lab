@@ -24,15 +24,26 @@ export function reviewFromLabels(labels, ctx) {
   };
 }
 
-// What the archer screen says about an archer's reviewed clips.
+// Saving labels for a clip that already has a record (a phone clip, quick-tagged at the range) keeps what the labels
+// leave out: the phone's verdict, faults and note when the computer added none, its arrow link, its archer.
+export const mergeReview = (prev, next) => !prev ? next : {
+  ...prev, ...next,
+  athleteId: prev.athleteId || next.athleteId, shot: next.shot || prev.shot,
+  verdict: next.verdict ?? prev.verdict, faults: next.faults?.length ? next.faults : prev.faults, notes: next.notes || prev.notes,
+};
+
+const tagged = (r) => !!(r.verdict || r.faults?.length || r.phasesMarked);
+
+// What the archer screen says about an archer's reviewed clips (clips filmed but not tagged yet count as waiting).
 export function reviewFacts(reviews, athleteId) {
-  const mine = reviews.filter((r) => r.athleteId === athleteId).sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
+  const all = reviews.filter((r) => r.athleteId === athleteId);
+  const mine = all.filter(tagged).sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
   const counts = {};
   for (const r of mine) for (const f of r.faults) counts[f] = (counts[f] || 0) + 1;
   const top = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
   const holds = mine.map((r) => r.holdS).filter((h) => h != null);
   return {
-    count: mine.length, faulty: mine.filter((r) => r.verdict === "fault").length,
+    count: mine.length, waiting: all.length - mine.length, faulty: mine.filter((r) => r.verdict === "fault").length,
     topFault: top ? { name: top[0], count: top[1] } : null,
     avgHold: holds.length ? holds.reduce((s, h) => s + h, 0) / holds.length : null,
     last: mine[0] || null,

@@ -1,3 +1,5 @@
+import { deleteClipsOf, clearClips } from "./clipStore.js";
+
 const KEY = {
   athletes:      "racm_athletes",
   sessions:      "racm_sessions",
@@ -71,6 +73,7 @@ export const deleteAthlete = (id) => {
   delete range.setups?.[id];
   saveRange(range);
   store(KEY.athletes, getAthletes().filter((a) => a.id !== id)); // last: if a step fails, the athlete is still there to retry
+  deleteClipsOf(id).catch((e) => console.error("Could not delete the archer's clips", e)); // their video on this device too
 };
 
 // ── Range (live session and each athlete's last setup) ─────────────────────
@@ -80,6 +83,7 @@ export const saveRange = (r) => store(KEY.range, r);
 // ── Video reviews ─────────────────────────────────────────────────────────
 export const getReviews = () => load(KEY.reviews, "[]");
 export const saveReview = (r) => upsert(KEY.reviews, r); // saving a clip again replaces its record
+export const deleteReview = (id) => store(KEY.reviews, getReviews().filter((r) => r.id !== id));
 
 // ── Sessions ─────────────────────────────────────────────────────────────
 export const getSessions = () => load(KEY.sessions, "[]");
@@ -213,5 +217,7 @@ export const importBackup = (jsonString) => {
 };
 
 // Only RACM's keys: localStorage is shared with anything else on this origin.
-export const clearAllData = () =>
+export const clearAllData = () => {
   Object.keys(localStorage).filter((k) => k.startsWith("racm_")).forEach((k) => localStorage.removeItem(k));
+  clearClips().catch((e) => console.error("Could not clear the clips", e));
+};

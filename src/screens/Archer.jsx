@@ -70,9 +70,9 @@ export default function Archer({ tr, lang, selectedId, onGo }) {
           fig={f.avg != null ? f.avg.toFixed(2) : ""}>
           {f.lastEnd && <span style={{ display: "block", margin: "6px 0" }}><EndStrip scores={f.lastEnd} /></span>}
         </Row>
-        <Row onGo={onGo} to="review" label={a.review}
+        <Row onGo={onGo} to="clips" label={a.review}
           fact={!rv.count ? a.noReview : rv.count === 1 ? a.reviewOne : fill(a.reviewMany, { n: rv.count })}
-          sub={!rv.count ? a.noReviewHint : rv.topFault ? fill(a.topFault, { name: rv.topFault.name, n: rv.topFault.count }) : a.noFaults}
+          sub={rv.waiting ? fill(a.clipsWaiting, { n: rv.waiting }) : !rv.count ? a.noReviewHint : rv.topFault ? fill(a.topFault, { name: rv.topFault.name, n: rv.topFault.count }) : a.noFaults}
           warn={rv.faulty > 0 && rv.faulty === rv.count}
           fig={rv.count || ""} />
         <Row onGo={onGo} to="rubric" label={a.assess}

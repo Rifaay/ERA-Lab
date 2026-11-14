@@ -17,6 +17,7 @@ import CoachDashboard    from "./screens/CoachDashboard";
 import Archer            from "./screens/Archer";
 import PdfReport         from "./screens/PdfReport";
 import Stats             from "./screens/Stats";
+import Clips             from "./screens/Clips";
 import Settings          from "./screens/Settings";
 import Legal             from "./screens/Legal";
 import "./index.css";
@@ -26,7 +27,7 @@ const STAGES = [
   { key: "home",   icon: "archer",   screens: ["dashboard", "archer", "profile", "settings", "legal"] },
   { key: "plan",   icon: "calendar", screens: ["planner", "goals", "exercises"] },
   { key: "range",  icon: "target",   screens: ["range"] },
-  { key: "review", icon: "clip",     screens: ["review"] },
+  { key: "review", icon: "clip",     screens: ["clips", "review"] },
   { key: "assess", icon: "shield",   screens: ["rubric", "session"] },
   { key: "report", icon: "chart",    screens: ["stats", "report"] },
 ];
@@ -141,7 +142,8 @@ export default function App() {
             {screen === "archer"    && <Archer            tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
             {screen === "profile"   && <AthleteProfile    lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
             {screen === "range"     && <Range key={selectedId} tr={tr} lang={lang} selectedId={selectedId} />}
-            {screen === "review"    && <Review selectedId={selectedId} guardRef={reviewDirty} />}
+            {screen === "clips"     && <Clips key={selectedId} tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
+            {screen === "review"    &&<Review selectedId={selectedId} guardRef={reviewDirty} />}
             {screen === "session"   && <SessionLogger     lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "rubric"    && <RubricAssessment key={selectedId} lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "exercises" && <Exercises         lang={lang} tr={tr} selectedId={selectedId} />}
