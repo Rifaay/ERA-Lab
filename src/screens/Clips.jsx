@@ -1,12 +1,22 @@
-import { useEffect, useState } from "react";
-import { getAthletes, getReviews, deleteReview } from "../storage";
-import { FAULTS } from "../clips";
-import { listClips, getClip, deleteClip, updateClip, hasClipStore } from "../clipStore";
+import { useEffect, useRef, useState } from "react";
+import { getAthletes, getReviews, saveReview, deleteReview, getSessions, getRange } from "../storage";
+import { FAULTS, quickReview, suggestShot, arrowChoices } from "../clips";
+import { listClips, getClip, putClip, deleteClip, updateClip, hasClipStore } from "../clipStore";
+import ArcherSelect from "../ArcherSelect";
 import { useApp } from "../context";
 import QuickTag from "../QuickTag";
 import Icon from "../icons";
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+// How long a video file runs, read from the file itself; 0 when the browser cannot tell.
+const durationOf = (file) => new Promise((resolve) => {
+  const v = document.createElement("video"), url = URL.createObjectURL(file);
+  const done = (d) => { URL.revokeObjectURL(url); resolve(Number.isFinite(d) ? d : 0); };
+  v.preload = "metadata"; v.onloadedmetadata = () => done(v.duration); v.onerror = () => done(0);
+  setTimeout(() => done(v.duration), 4000);
+  v.src = url;
+});
+
 const mb = (bytes) => Math.max(0.1, bytes / 1048576).toFixed(bytes < 10485760 ? 1 : 0);
 
 // Saves one clip off the phone: the share sheet where there is one (Save Video, Drive, Nearby Share, AirDrop),
@@ -43,6 +53,8 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
   const [open, setOpen] = useState(null);
   const [space, setSpace] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [, setTick] = useState(0); // review records live in storage; this re-reads them after a change
+  const fileRef = useRef(null);
 
   const load = () => listClips().then((all) => setClips(all.sort((a, b) => b.recordedAt - a.recordedAt))).catch(() => setClips([]));
   useEffect(() => {
@@ -54,10 +66,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
   if (!athlete) return (
     <div className="screen">
       <h2>{c.title}</h2>
-      <div className="card"><h3>{c.pick}</h3>
-        {athletes.map((a) => <button key={a.id} className="picker-row" onClick={() => setSelectedId(a.id)}><b>{a.name}</b></button>)}
-        {!athletes.length && <p>{tr.shell.noArchers}</p>}
-      </div>
+      <ArcherSelect tr={tr} athletes={athletes} selectedId={selectedId} onPick={setSelectedId} prompt={c.pick} />
     </div>
   );
 
@@ -77,10 +86,52 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
     setOpen(null); load();
   };
 
+  // This archer's range sessions, the one being shot now included, and the arrows that already have a clip.
+  const sessions = getSessions(), live = getRange().live;
+  const liveHere = live?.athlete_id === selectedId ? [{ athleteId: selectedId, date: new Date().toISOString().slice(0, 10), range: live }] : [];
+  const ranges = [...sessions.filter((x) => x.athleteId === selectedId && x.range).map((x) => x.range), ...liveHere.map((x) => x.range)];
+  const taken = new Set(Object.values(reviews).filter((r) => r.shot).map((r) => `${r.shot.session_id}/${r.shot.end}/${r.shot.arrow}`));
+  const keyOf = (a) => `${a.session_id}/${a.end}/${a.arrow}`;
+  const choicesFor = (x) => [...arrowChoices(sessions, selectedId, x.recordedAt), ...arrowChoices(liveHere, selectedId, x.recordedAt)];
+  const link = (id, shot) => {
+    const rv = reviews[id];
+    if (!rv) return;
+    saveReview({ ...rv, shot: shot && { session_id: shot.session_id, end: shot.end, arrow: shot.arrow, score: shot.score }, savedAt: new Date().toISOString() });
+    setTick((n) => n + 1);
+  };
+
+  // Clips from another camera or the gallery. The file's time (the camera's clock) suggests the arrow; the coach confirms.
+  const importFiles = async (files) => {
+    setBusy(true);
+    const have = new Set((clips || []).map((x) => x.id));
+    let first = null;
+    for (const file of files) {
+      if (!file.type.startsWith("video/") && !/\.(mp4|mov|m4v|webm)$/i.test(file.name)) continue;
+      const durationS = await durationOf(file);
+      const end = file.lastModified, start = end - durationS * 1000; // a camera stamps the file when it stops recording
+      const id = have.has(file.name) ? `${start}_${file.name}` : file.name; // keep the camera's name, so the computer's copy matches
+      have.add(id);
+      try {
+        // savedOut: the original is still on the camera or in the gallery, so this copy is not the only one
+        await putClip({ id, athleteId: athlete.id, blob: file, mime: file.type || "video/mp4", size: file.size, durationS, recordedAt: start, savedOut: true, source: "import",
+          suggest: suggestShot(ranges, start, end, taken) });
+      } catch (e) { window.alert(`${tr.range.clipFailed}\n${e.message}`); break; }
+      if (!reviews[id]) saveReview(quickReview({ id, athlete, at: start }));
+      first ||= id;
+    }
+    setBusy(false); await load();
+    if (first) setOpen(first);
+  };
+
   return (
     <div className="screen clips">
       <h2>{c.title} — {athlete.name}</h2>
       <p className="muted">{c.lead}</p>
+      <div className="clips-actions">
+        <button className="btn-ghost" disabled={busy} onClick={() => fileRef.current.click()}><Icon name="plus" size={18} />{busy ? c.importing : c.import}</button>
+        <input ref={fileRef} type="file" accept="video/*,.mp4,.mov,.m4v,.webm" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ""; if (f.length) importFiles(f); }} />
+        <small>{c.importHint}</small>
+      </div>
 
       {atRisk.length > 0 && (
         <div className="clips-risk" role="status">
@@ -110,7 +161,25 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
                 {open === x.id && (
                   <div className="clip-body">
                     <Player id={x.id} />
-                    {rv && <QuickTag id={x.id} tr={tr} />}
+                    {rv && !rv.shot && x.suggest && (
+                      <div className="clip-suggest" role="status">
+                        <span><b>{fill(c.suggested, { end: x.suggest.end, n: x.suggest.arrow, score: x.suggest.score })}</b>{x.suggest.how === "end" ? c.suggestEnd : c.suggestArrow}</span>
+                        <button className="btn-primary small" onClick={() => link(x.id, x.suggest)}><Icon name="check" size={16} />{c.confirm}</button>
+                      </div>
+                    )}
+                    {rv && (() => {
+                      const choices = choicesFor(x);
+                      return (
+                        <label className="clip-link">{c.linkTo}
+                          <select value={rv.shot ? keyOf(rv.shot) : ""} onChange={(e) => link(x.id, choices.find((a) => keyOf(a) === e.target.value) || null)}>
+                            <option value="">{c.noArrow}</option>
+                            {rv.shot && !choices.some((a) => keyOf(a) === keyOf(rv.shot)) && <option value={keyOf(rv.shot)}>{fill(c.endArrow, { end: rv.shot.end, n: rv.shot.arrow })}</option>}
+                            {choices.map((a) => <option key={keyOf(a)} value={keyOf(a)}>{a.date} · {fill(c.endArrow, { end: a.end, n: a.arrow })} ({a.score})</option>)}
+                          </select>
+                        </label>
+                      );
+                    })()}
+                    {rv && <QuickTag key={`${x.id}-${rv.shot ? keyOf(rv.shot) : ""}`} id={x.id} tr={tr} />}
                     <div className="btn-row">
                       <button className="btn-ghost" onClick={() => save(x)}><Icon name="download" size={18} />{x.savedOut ? c.saveAgain : c.saveOut}</button>
                       <button className="btn-ghost danger" onClick={() => remove(x)}>{c.delete}</button>

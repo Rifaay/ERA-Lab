@@ -32,6 +32,42 @@ export const shotOf = (live, endIndex, arrowIndex) => {
   return a ? { session_id: live.session_id, end: e.end, arrow: a.arrow, score: a.score } : null;
 };
 
+// ── Clips from another camera ────────────────────────────────────────────────────────────
+// Which arrow a clip filmed from `start` to `end` (ms, the camera's clock) most likely shows, among an archer's range
+// sessions. Plotted arrow by arrow: the arrow plotted within two minutes after the clip ended, when the arrow before it
+// was plotted before the clip began. Plotted end by end (the usual way): the first end whose plotting finished after the
+// clip began (the rule the Labeller uses), and in it the first arrow that has no clip yet.
+// taken: Set of "session/end/arrow" already linked to a clip.
+export function suggestShot(ranges, start, end, taken = new Set()) {
+  for (const s of [...ranges].sort((a, b) => a.start_ms - b.start_ms)) {
+    let prev = (s.start_ms ?? -Infinity) - 120000;
+    for (const e of s.ends || []) {
+      const arr = e.arrows.filter((a) => a.plot_ms);
+      if (!arr.length) continue;
+      const shot = (a, how) => ({ session_id: s.session_id, end: e.end, arrow: a.arrow, score: a.score, how });
+      for (let i = 0; i < arr.length; i++) {
+        const before = i ? arr[i - 1].plot_ms : prev;
+        if (arr[i].plot_ms >= end && arr[i].plot_ms - end <= 120000 && before <= start) return shot(arr[i], "arrow");
+      }
+      const done = Math.max(...arr.map((a) => a.plot_ms));
+      if (start >= prev && start <= done) {
+        const free = arr.find((a) => !taken.has(`${s.session_id}/${e.end}/${a.arrow}`)) || arr[0];
+        return shot(free, "end");
+      }
+      prev = done;
+    }
+  }
+  return null;
+}
+
+// The arrows a clip could be linked to by hand: sessions within a day of the clip, else the archer's latest five.
+export function arrowChoices(sessions, athleteId, at) {
+  const mine = sessions.filter((s) => s.athleteId === athleteId && s.range?.ends).sort((a, b) => b.date.localeCompare(a.date));
+  const day = 86400000, near = mine.filter((s) => Math.abs(new Date(`${s.date}T12:00`) - at) <= 1.5 * day);
+  return (near.length ? near : mine.slice(0, 5)).flatMap((s) => s.range.ends.flatMap((e) => e.arrows.filter((a) => a.score != null)
+    .map((a) => ({ session_id: s.range.session_id, date: s.date, end: e.end, arrow: a.arrow, score: a.score }))));
+}
+
 // Tapping a fault marks the shot as a fault; clearing the last fault leaves the verdict as it was.
 export const toggleFault = (r, fault) => {
   const faults = r.faults.includes(fault) ? r.faults.filter((f) => f !== fault) : [...r.faults, fault];
