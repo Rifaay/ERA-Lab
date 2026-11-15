@@ -476,7 +476,7 @@ function clipStartMs(){
 
 /* ---------- arrow link (session sheet) ---------- */
 const RC=['#f7f3ea','#f7f3ea','#1b1b1b','#1b1b1b','#2e7fd8','#2e7fd8','#e2483d','#e2483d','#f2c40c','#f2c40c'];
-function miniTarget(face,a){ const n=face==='40s'?5:10; let h=''; for(let i=0;i<n;i++){const k=10-n+i; h+=`<circle r="${100*(n-i)/n}" fill="${RC[k]}" stroke="#555" stroke-width=".8"/>`}
+function miniTarget(face,a){ const n=face==='40s'?5:face==='80r'?6:10; let h=''; for(let i=0;i<n;i++){const k=10-n+i; h+=`<circle r="${100*(n-i)/n}" fill="${RC[k]}" stroke="#555" stroke-width=".8"/>`}
   if(a&&a.x!=null) h+=`<circle cx="${a.x*100}" cy="${-a.y*100}" r="7" fill="#00e0c6" stroke="#000" stroke-width="2"/>`; $('miniT').innerHTML=h }
 // Which arrows could a clip filmed from t0 to t1 show?
 // Older sessions hold a release time per arrow (shot_ms): an exact match. Field now records only when each arrow was

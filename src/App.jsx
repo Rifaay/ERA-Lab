@@ -1,6 +1,9 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
-import { configured, signedIn, syncNow, finishLinkSignIn } from "./sync";
-import { t } from "./i18n";
+import { configured, signedIn, syncNow } from "./sync";
+import { pullArchers, isLinked } from "./archer";
+import { getUi, setUi } from "./ui";
+import ArcherSelect from "./ArcherSelect";
+import LiveBoard from "./screens/Live";
 import { getAthletes } from "./storage";
 import { AppContext } from "./context";
 import Icon from "./icons";
@@ -27,12 +30,17 @@ import "./motion.css";
 const STAGES = [
   { key: "home",   icon: "home",   screens: ["dashboard", "archer", "profile", "settings", "legal"] },
   { key: "plan",   icon: "calendar", screens: ["planner", "goals", "exercises"] },
-  { key: "range",  icon: "target",   screens: ["range"] },
+  { key: "range",  icon: "target",   screens: ["range", "live"] },
   { key: "review", icon: "clip",     screens: ["clips", "review"] },
   { key: "assess", icon: "assess",   screens: ["rubric", "session"] },
   { key: "report", icon: "chart",    screens: ["stats", "report"] },
 ];
 const stageOf = (screen) => STAGES.find((s) => s.screens.includes(screen));
+const SCREENS = STAGES.flatMap((s) => s.screens);
+// Screens about one archer. With none chosen they show the list of archers instead of a dead end.
+const NEEDS_ARCHER = ["archer", "range", "session", "exercises", "planner"];
+// Home has no tabs, so its inner screens get a way back: screen → where "back" goes.
+const UP = { archer: "dashboard", profile: "archer", settings: "dashboard", legal: "settings" };
 
 function ArcherPicker({ athletes, selectedId, tr, onPick, onNew, onClose }) {
   const [q, setQ] = useState("");
@@ -60,25 +68,45 @@ function ArcherPicker({ athletes, selectedId, tr, onPick, onNew, onClose }) {
   );
 }
 
-export default function App() {
-  const [lang, setLang] = useState("en");
-  const [screen, setScreen] = useState("dashboard");
-  const [selectedId, setSelectedId] = useState("");
+export default function App({ tr, lang, setLang, open }) {
+  // The coach comes back to where they were: same screen, same archer.
+  const [screen, setScreen] = useState(() => open || (SCREENS.includes(getUi().screen) ? getUi().screen : "dashboard"));
+  const [selectedId, setSelectedId] = useState(() => getUi().selectedId || "");
+  const lastIn = useRef({}); // the screen last open in each stage: tapping a stage returns there
   const [picking, setPicking] = useState(false);
   const [athletesTick, setAthletesTick] = useState(0); // bump to re-read after a save
 
-  const tr = t[lang];
   const athletes = useMemo(() => getAthletes(), [athletesTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = athletes.find((a) => a.id === selectedId) || null;
   const stage = stageOf(screen);
   const reviewDirty = useRef(null); // set by the Review screen while it is open
+  const leaving = (next) => screen === "review" && next !== "review" && reviewDirty.current?.() && !window.confirm(tr.review.leave);
   const go = (next) => {
-    if (screen === "review" && next !== "review" && reviewDirty.current?.() && !window.confirm(tr.review.leave)) return;
+    if (next === screen) { setPicking(false); return; }
+    if (leaving(next)) return;
+    history.pushState({ screen: next }, ""); // the phone's Back button steps through screens instead of closing the app
     setPicking(false); setScreen(next);
   };
+  const goStage = (s) => go(stage.key === s.key ? s.screens[0] : lastIn.current[s.key] || s.screens[0]);
+  useEffect(() => {
+    lastIn.current[stageOf(screen).key] = screen;
+    setUi({ screen, selectedId });
+  }, [screen, selectedId]);
+  const screenRef = useRef(screen);
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+  useEffect(() => {
+    history.replaceState({ screen: screenRef.current }, "");
+    const back = (e) => {
+      const to = SCREENS.includes(e.state?.screen) ? e.state.screen : "dashboard";
+      if (screenRef.current === "review" && to !== "review" && reviewDirty.current?.() && !window.confirm(tr.review.leave)) { history.pushState({ screen: "review" }, ""); return; }
+      setPicking(false); setScreen(to);
+    };
+    window.addEventListener("popstate", back);
+    return () => window.removeEventListener("popstate", back);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openArcher = (id) => { setSelectedId(id); go("archer"); };
-  const pickArcher = (id) => { setSelectedId(id); setPicking(false); if (screen === "dashboard" || screen === "settings") setScreen("archer"); };
+  const pickArcher = (id) => { setSelectedId(id); setPicking(false); if (screen === "dashboard" || screen === "settings") go("archer"); };
   const newArcher = () => { setSelectedId(""); go("profile"); };
   const handleAthleteSaved = () => {
     setAthletesTick((n) => n + 1);
@@ -89,19 +117,21 @@ export default function App() {
   // Cloud copy: sync when the app opens or comes back into view, when the connection returns, and 5 s after a change.
   // Data received from another device re-opens the current screen, except Range and Review, which hold work in progress.
   const [dataTick, setDataTick] = useState(0);
-  const screenRef = useRef(screen);
-  useEffect(() => { screenRef.current = screen; }, [screen]);
+  const [, setLinkTick] = useState(0); // an archer joined or left: draw again, the Range screen may change
   useEffect(() => {
     if (!configured) return;
     let timer;
-    const sync = () => { clearTimeout(timer); if (signedIn() && navigator.onLine) syncNow().catch((e) => console.warn("Sync failed", e)); };
+    // Sessions that linked archers finished on their own phones are copied in first, then everything syncs.
+    const sync = () => {
+      clearTimeout(timer);
+      if (!signedIn() || !navigator.onLine) return;
+      pullArchers().then((r) => { setLinkTick((n) => n + 1); if (r.copied) setAthletesTick((n) => n + 1); }).catch((e) => console.warn("Archer check failed", e))
+        .finally(() => syncNow().catch((e) => console.warn("Sync failed", e)));
+    };
     const later = () => { clearTimeout(timer); timer = setTimeout(sync, 5000); };
     const seen = () => document.visibilityState === "visible" && sync();
     const received = () => { setAthletesTick((n) => n + 1); if (!["range", "review"].includes(screenRef.current)) setDataTick((n) => n + 1); };
-    finishLinkSignIn() // arriving from the emailed sign-in link
-      .then((r) => { if (r === true) setScreen("settings"); else if (r) window.alert(r); })
-      .catch((e) => console.warn("Sign-in link failed", e))
-      .finally(sync);
+    sync();
     window.addEventListener("racm-change", later);
     window.addEventListener("online", sync);
     window.addEventListener("racm-synced", received);
@@ -117,6 +147,9 @@ export default function App() {
 
   const ctx = { selectedId, setSelectedId, lang, setLang };
   const subs = stage.key === "home" ? [] : stage.screens;
+  const linked = isLinked(selectedId); // read each time: an archer may have joined since the last screen
+  const pickFirst = NEEDS_ARCHER.includes(screen) && !selected;
+  const up = UP[screen] && (screen !== "profile" || selected ? UP[screen] : "dashboard");
 
   return (
     <AppContext.Provider value={ctx}>
@@ -138,18 +171,36 @@ export default function App() {
                 {subs.map((s) => <button key={s} className={screen === s ? "active" : ""} aria-current={screen === s ? "page" : undefined} onClick={() => go(s)}>{tr.nav[s]}</button>)}
               </nav>
             )}
+            {up && screen !== "archer" && (
+              <div className="backbar"><button className="btn-ghost small" onClick={() => go(up)}><Icon name="prev" size={16} />{tr.shell.backTo[up]}</button></div>
+            )}
             <Fragment key={dataTick}>
+            {pickFirst && (
+              <div className="screen">
+                <h2>{tr.nav[screen] || tr.stages[stage.key]}</h2>
+                <ArcherSelect tr={tr} athletes={athletes} selectedId="" onPick={setSelectedId} prompt={tr.shell.pickFirst} />
+                <button className="btn-ghost" onClick={newArcher}><Icon name="plus" size={18} />{tr.shell.newArcher}</button>
+              </div>
+            )}
+            {screen === "live"      && <LiveBoard tr={tr} onCopied={() => setAthletesTick((n) => n + 1)} />}
+            {screen === "range" && selected && linked && (
+              <div className="screen">
+                <h2>{selected.name}</h2>
+                <div className="card"><p>{tr.live.ownPhone.replace("{name}", selected.name)}</p>
+                  <button className="btn-primary" style={{ marginTop: 12 }} onClick={() => go("live")}>{tr.live.watch}</button></div>
+              </div>
+            )}
             {screen === "dashboard" && <CoachDashboard   tr={tr} lang={lang} tick={athletesTick} onOpen={openArcher} onGo={(id, to) => { setSelectedId(id); go(to); }} onNew={newArcher} />}
-            {screen === "archer"    && <Archer            tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
+            {screen === "archer"    && selected && <Archer tr={tr} lang={lang} selectedId={selectedId} onGo={go} onLink={() => setLinkTick((n) => n + 1)} />}
             {screen === "profile"   && <AthleteProfile    lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
-            {screen === "range"     && <Range key={selectedId} tr={tr} lang={lang} selectedId={selectedId} />}
+            {screen === "range"     && selected && !linked && <Range key={selectedId} tr={tr} lang={lang} selectedId={selectedId} />}
             {screen === "clips"     && <Clips key={selectedId} tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
             {screen === "review"    && <Review selectedId={selectedId} guardRef={reviewDirty} lang={lang} tr={tr} />}
-            {screen === "session"   && <SessionLogger     lang={lang} tr={tr} selectedId={selectedId} />}
+            {screen === "session"   && selected && <SessionLogger key={selectedId} lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "rubric"    && <RubricAssessment key={selectedId} lang={lang} tr={tr} selectedId={selectedId} />}
-            {screen === "exercises" && <Exercises         lang={lang} tr={tr} selectedId={selectedId} />}
+            {screen === "exercises" && selected && <Exercises lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "goals"     && <GoalsTracker      lang={lang} tr={tr} selectedId={selectedId} />}
-            {screen === "planner"   && <PeriodizationPlanner lang={lang} tr={tr} selectedId={selectedId} />}
+            {screen === "planner"   && selected && <PeriodizationPlanner lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "stats"     && <Stats key={selectedId} tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
             {screen === "report"    && <Report key={selectedId} tr={tr} lang={lang} selectedId={selectedId} />}
             {screen === "settings"  && <Settings          lang={lang} tr={tr} onDataCleared={() => { setSelectedId(""); setAthletesTick((n) => n + 1); }} onGo={go} />}
@@ -161,7 +212,7 @@ export default function App() {
           <nav className="stage-nav" aria-label="ERA Lab">
             {STAGES.map((s) => (
               <button key={s.key} className={`stage-btn ${s.key === "range" ? "go" : ""} ${stage.key === s.key ? "active" : ""}`}
-                aria-current={stage.key === s.key ? "page" : undefined} onClick={() => go(s.screens[0])}>
+                aria-current={stage.key === s.key ? "page" : undefined} onClick={() => goStage(s)}>
                 {s.key === "range" ? <span className="disc"><Icon name={s.icon} size={26} /></span> : <Icon name={s.icon} size={24} />}
                 {tr.stages[s.key]}
               </button>

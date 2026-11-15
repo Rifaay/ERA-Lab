@@ -21,7 +21,8 @@ review of theirs. The live range session and video files stay on the device too.
 
 1. **Supabase:** create a project at supabase.com in an EU region. Turn off *Automatically expose new tables*.
    SQL Editor → run `migrations/0001_records.sql`, then `0002_reviews_and_ping.sql`, then `0003_require_second_step.sql`
-   (the data answers only sign-ins that passed both steps).
+   (the data answers only sign-ins that passed both steps), then `0004_archers.sql` (archer accounts, invite codes
+   and live scores).
 2. **Sign-in email:** Authentication → URL Configuration → Site URL: the app's address. Supabase's own sender emails a
    **link**; opening it on the same device signs in. Its template can only be edited once Resend (step 3) is the
    sender: then add `<p>Or type this code: <b>{{ .Token }}</b></p>` to *Magic link or OTP*, so the offline file and
@@ -37,8 +38,11 @@ review of theirs. The live range session and video files stay on the device too.
 5. **Sign-in rules:** Authentication → Sign In / Providers → Email: keep *Confirm email* on and set the minimum
    password length to 12. Authentication → Multi-Factor: *TOTP (App Authenticator)* enabled.
 6. Open the app → Coach profile → Security → Cloud copy → **Create account**, confirm the email, sign in and scan
-   the QR code with an authenticator app. Then turn off **Allow new users to sign up**, so nobody else can create
-   accounts. Sign in the same way on the second device (same password, same authenticator).
+   the QR code with an authenticator app. Sign in the same way on the second device (same password, same
+   authenticator). Add a **backup authenticator** from the same screen, so a lost phone doesn't lock you out.
+7. **Archers:** leave **Allow new users to sign up** ON, or archers can't create accounts (turn it off only if no
+   archer will ever have their own app). Archers confirm their email like coaches do, and Supabase's own sender only
+   emails the project's team: set up Resend (step 3) before inviting archers, or their confirmation emails never arrive.
 
 An account made before passwords existed (2026-11-14, email-code sign-in) has no password: use **Forgot password?**
 on the sign-in form, open the emailed link on the same device, set up the authenticator, then choose a password.
@@ -46,6 +50,17 @@ on the sign-in form, open the emailed link on the same device, set up the authen
 The publishable key (`sb_publishable_...`) is meant to be public; the permission rules protect the data.
 The **secret** key (`sb_secret_...`) skips every rule: never put it in the app, a `VITE_` variable, a GitHub variable or git.
 If it leaks, rotate it in Project Settings → API Keys.
+
+## Archers with their own app
+
+- The coach opens an archer's page → **Create invite code** (adults only: an archer under 18, or with no birth date,
+  can't be invited, and nothing of theirs is uploaded). The archer installs ERA Lab, chooses **I'm an archer**, signs
+  up with email + password (no authenticator) and types the code. A code works once and lasts 7 days.
+- The archer's phone uploads the session being shot about a second after each arrow, into `archer_sessions`. Offline,
+  it waits on the phone. Only the linked coach can read those rows, and only after both sign-in steps.
+- The coach's **Range → Live scores** asks for them every 5 seconds while open. A finished session is checked, rebuilt
+  to the known shape, bound to the coach's own archer profile and saved once into the coach's sessions; from there the
+  normal sync carries it. The coach can no longer plot for a linked archer; **Unlink** on the archer's page undoes it.
 
 ## How sync behaves
 

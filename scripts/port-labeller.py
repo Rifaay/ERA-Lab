@@ -24,6 +24,7 @@ def once(text, old, new, what):
 
 # ── script ──────────────────────────────────────────────────────────────────
 js = once(js, "'use strict';\n", "", "strict directive")
+js = once(js, "const n=face==='40s'?5:10;", "const n=face==='40s'?5:face==='80r'?6:10;", "80 cm reduced face in the mini target")
 js = once(js, "getComputedStyle(document.documentElement)", "getComputedStyle(host)", "colour lookup")
 # Session sheets recorded in the app join the ones found as files in the opened folder.
 js = once(js, "  sessions=[];\n", "  sessions=[];\n  const appSessions=env.sessions();\n", "session list")
@@ -203,6 +204,34 @@ tail = """
 @media (min-width: 900px) { .lab .lab-toast { bottom: 84px; } } /* above the Save button */
 /* In Arabic the panels read right to left; the video, its controls and the timeline keep time running left to right. */
 .lab .viewer, .lab .transport, .lab .timeline, .lab .legend, .lab #miniT { direction: ltr; }
+/* Phone, upright: the picture gets the room. One slim header (the folder picker needs a computer), the time shown once
+   (on the picture), controls in a tight grid, and the lists two to a row so phases fit on one screen. */
+@media (max-width:759px){
+  .lab header{padding:4px 8px;gap:6px;min-height:0}
+  .lab header .btn{min-height:36px;padding:4px 6px}
+  .lab #openBtn{display:none}
+  .lab main{gap:6px;padding:6px 8px}
+  .lab .viewer{flex:1 1 auto;min-height:170px}
+  .lab .transport{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .lab .transport .btn,.lab .transport .sel{min-height:40px;padding:4px 4px;font-size:13px}
+  .lab .transport .time,.lab .transport .tsp{display:none}
+  .lab #analyseBtn,.lab #suggestBtn{grid-column:span 2}
+  .lab #markBtn{grid-column:1/-1;order:0;padding-top:4px;padding-bottom:4px;min-height:44px}
+  .lab .timeline{height:68px;flex:none}
+  .lab main > .status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;font-size:12px}
+  .lab .lab-tabs button{padding:6px 4px;min-height:40px}
+  .lab aside.panel{padding:8px 10px}
+  .lab #phaseList,.lab #ptList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .lab .phase,.lab .pt{min-height:40px;padding:4px 8px;margin:0;gap:6px;font-size:12.5px}
+  .lab .phase .nm span{display:none} /* one language per row: the screen's */
+  [dir=rtl] .lab .phase .nm{font-size:0}
+  [dir=rtl] .lab .phase .nm span{display:inline;font-size:12.5px}
+  .lab .phase .src{display:none}
+  .lab aside.panel .keys{display:none} /* keyboard shortcuts: no keyboard here */
+  .lab #faults{gap:6px}
+  .lab #faults .chip{min-height:36px;padding:4px 10px;font-size:12.5px}
+  .lab aside.panel h3{margin-top:12px}
+}
 """
 open(os.path.join(out, "review.css"), "w", encoding="utf-8", newline="").write(head + scoped + tail)
 print("ported:", len(engine.splitlines()), "lines of script,", len(body.splitlines()), "of markup,", len(scoped.splitlines()), "of styles")

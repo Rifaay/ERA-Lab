@@ -17,7 +17,7 @@ export const legal = {
       ]},
       { h: "Where it is kept", p: [
         "On the coach's device, in the browser's own storage. Nothing leaves the device unless the coach downloads a backup file or turns on the cloud copy.",
-        "Cloud copy (optional): when a coach signs in, records are copied to that coach's private database on Supabase (servers in the European Union) so the coach's phone and computer stay in step. Only that coach can read them, after signing in with a password and a code from an authenticator app. Account emails (confirming the address, resetting the password) are sent through Resend.",
+        "Cloud copy (optional): when a coach signs in, records are copied to that coach's private database on Supabase (servers in the European Union) so the coach's phone and computer stay in step. Only that coach can read them, after signing in with a password and a code from an authenticator app. Account emails (confirming the address, resetting the password) are sent through Resend. Archer accounts (optional, aged 18 or over only): an archer who joins with their coach's invite code plots on their own phone, and the range sessions they plot are copied to Supabase, where only that archer and that coach can read them. Video clips never leave the phone.",
         "Archers under 18, or with no birth date entered, and everything recorded about them, are never copied to the cloud. They stay on the coach's device.",
       ]},
       { h: "Who else receives something", p: [
@@ -59,7 +59,7 @@ export const legal = {
       ]},
       { h: "أين تُحفظ", p: [
         "على جهاز المدرب، في مساحة التخزين الخاصة بالمتصفح. لا يخرج شيء من الجهاز إلا إذا نزّل المدرب نسخة احتياطية أو فعّل النسخة السحابية.",
-        "النسخة السحابية (اختيارية): عند تسجيل دخول المدرب تُنسخ السجلات إلى قاعدة بيانات خاصة به على Supabase (خوادم في الاتحاد الأوروبي) ليبقى هاتفه وحاسوبه متطابقين. لا يقرؤها غيره، بعد الدخول بكلمة مرور ورمز من تطبيق مصادقة. تُرسل رسائل الحساب (تأكيد البريد وإعادة تعيين كلمة المرور) عبر Resend.",
+        "النسخة السحابية (اختيارية): عند تسجيل دخول المدرب تُنسخ السجلات إلى قاعدة بيانات خاصة به على Supabase (خوادم في الاتحاد الأوروبي) ليبقى هاتفه وحاسوبه متطابقين. لا يقرؤها غيره، بعد الدخول بكلمة مرور ورمز من تطبيق مصادقة. تُرسل رسائل الحساب (تأكيد البريد وإعادة تعيين كلمة المرور) عبر Resend. حسابات الرماة (اختيارية، لمن بلغ ١٨ سنة فقط): الرامي الذي ينضم برمز دعوة مدربه يسجّل على هاتفه، وتُنسخ جلسات الميدان التي يسجّلها إلى Supabase حيث لا يقرؤها إلا هو ومدربه. مقاطع الفيديو لا تغادر الهاتف أبداً.",
         "الرماة تحت ١٨ سنة، أو من لم يُدخل تاريخ ميلادهم، وكل ما سُجّل عنهم، لا يُنسخون إلى السحابة أبداً ويبقون على جهاز المدرب.",
       ]},
       { h: "من يتلقى شيئاً آخر", p: [

@@ -366,3 +366,59 @@ button.row:hover .row-name { color: var(--blue); }
 .lock-card .link-btn { color: var(--yellow); justify-self: center; align-self: center; }
 .lock-card p { color: var(--white); }
 .lock-card .error-msg { color: var(--yellow); font-weight: 600; }
+
+/* Navigation: tabs within a stage fill the width and read as tabs; inner Home screens get a way back */
+.subnav { gap: 6px; background: var(--white); }
+.subnav button { flex: 1 0 auto; min-height: 40px; border: 1.5px solid var(--g200); }
+.subnav button.active { border-color: var(--black); }
+.backbar { flex: none; padding: 8px 16px 0; }
+
+/* Welcome: coach or archer, then that person's sign-in */
+.welcome { min-height: 100svh; display: flex; flex-direction: column; background: var(--white); }
+.welcome-top { display: flex; align-items: center; justify-content: space-between; height: var(--topbar-h); padding: 0 12px 0 16px; background: var(--black); color: var(--white); }
+.welcome-body { width: min(100%, 460px); margin: 0 auto; padding: 24px 16px 40px; display: grid; gap: 12px; align-content: start; }
+.welcome-body h1 { font: 800 30px var(--font-head); text-transform: uppercase; letter-spacing: .02em; line-height: 1.1; }
+.welcome-back { justify-self: start; }
+.role-card { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; text-align: start; padding: 18px 16px; background: var(--white); border: 2px solid var(--black); border-radius: var(--r-lg); cursor: pointer; font: inherit; color: inherit; }
+.role-card b { display: block; font: 800 22px var(--font-head); text-transform: uppercase; }
+.role-card small { color: var(--g600); font-size: 14px; }
+.role-card:hover:not(:disabled) { background: var(--g50); }
+.role-card:disabled { opacity: .55; cursor: not-allowed; }
+.code-input { text-align: center; font: 700 26px monospace; letter-spacing: .25em; text-transform: uppercase; }
+
+/* Sign-in form */
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--g100); border-radius: var(--r-md); }
+.seg button { min-height: 40px; border: 0; border-radius: var(--r-sm); background: none; font: 600 15px var(--font-body); color: var(--g600); cursor: pointer; }
+.seg button.active { background: var(--white); color: var(--black); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+.acct-steps { list-style: none; display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--g500); }
+.acct-steps li { display: flex; gap: 6px; align-items: center; }
+.acct-steps li + li::before { content: ""; width: 24px; height: 2px; background: var(--g300); }
+.acct-steps b { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--g200); color: var(--g600); font-size: 13px; }
+.acct-steps .now { color: var(--black); font-weight: 600; }
+.acct-steps .now b { background: var(--black); color: var(--yellow); }
+.acct-steps .done b { background: var(--green-tint); color: var(--green-text); }
+.acct .wide-btn { margin: 4px 0 0; }
+
+/* Archer's own app */
+.stage-nav.three { grid-template-columns: repeat(3, 1fr); }
+.send-state { font-size: 12px; font-weight: 600; color: var(--g300); white-space: nowrap; }
+.send-state.wait { color: var(--yellow); }
+
+/* Coach: invite code and live scores */
+.link-card { margin-top: 20px; display: grid; gap: 8px; justify-items: start; }
+.invite-code { font: 800 34px monospace; letter-spacing: .12em; padding: 8px 14px; background: var(--black); color: var(--yellow); border-radius: var(--r-md); user-select: all; }
+.live-card header { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--g600); margin-bottom: 10px; }
+.live-card header b { font: 800 22px var(--font-head); text-transform: uppercase; color: var(--black); margin-inline-end: auto; }
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); animation: live-pulse 1.6s ease-in-out infinite; }
+@keyframes live-pulse { 50% { opacity: .25; } }
+.live-body { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 14px; align-items: start; }
+.live-face { width: 100%; display: block; }
+.live-total { font: 800 44px var(--font-head); line-height: 1; }
+.live-total small { font-size: 20px; color: var(--g500); }
+.live-end { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; flex-wrap: wrap; }
+.live-end > span:first-child { min-width: 48px; color: var(--g600); }
+.live-end b { margin-inline-start: auto; font: 700 18px var(--font-head); }
+.live-end.past { opacity: .6; margin-top: 4px; }
+@media (min-width: 900px) {
+  .subnav button { flex: none; }
+}

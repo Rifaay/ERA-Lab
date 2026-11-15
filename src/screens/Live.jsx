@@ -1,0 +1,111 @@
+import { useEffect, useState } from "react";
+import { getAthletes } from "../storage";
+import { signedIn, configured } from "../sync";
+import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, pullArchers } from "../archer";
+import { RING_FILL, rings, summary, scoreValue } from "../range";
+import EndStrip from "../EndStrip";
+
+function Face({ s }) {
+  const n = rings(s.context.face), ends = s.ends, last = ends.length - 1;
+  return (
+    <svg className="live-face" viewBox="-104 -104 208 208" aria-hidden="true">
+      {Array.from({ length: n }, (_, i) => <circle key={i} r={(100 * (n - i)) / n} fill={RING_FILL[10 - n + i]} stroke={10 - n + i < 2 ? "#222" : 10 - n + i < 4 ? "#bbb" : "#111"} strokeWidth=".6" />)}
+      {ends.flatMap((e, k) => e.arrows.filter((a) => a.x != null).map((a) => (
+        <circle key={`${k}-${a.arrow}`} cx={a.x * 100} cy={-a.y * 100} r={k === last ? 5 : 3.2} fill={k === last ? "#00e0c6" : "#fff"} fillOpacity={k === last ? 1 : 0.55} stroke="#000" strokeWidth={k === last ? 1.4 : 0.7} />
+      )))}
+    </svg>
+  );
+}
+
+const ago = (ms, l) => { const sec = Math.max(0, Math.round((Date.now() - ms) / 1000)); return sec < 60 ? l.secAgo.replace("{n}", sec) : l.minAgo.replace("{n}", Math.round(sec / 60)); };
+
+// Coach → Range → Live: every linked archer who is shooting right now, refreshed every few seconds.
+export default function LiveBoard({ tr, onCopied }) {
+  const l = tr.live;
+  const [rows, setRows] = useState([]);
+  const [state, setState] = useState("loading"); // loading | ok | offline
+  const [, setNow] = useState(0);
+  const on = configured && signedIn();
+
+  useEffect(() => {
+    if (!on) return;
+    let live = true, busy = false;
+    const pull = async () => {
+      if (busy || document.visibilityState !== "visible") return;
+      busy = true;
+      try { const r = await pullArchers(); if (live) { setRows(r.rows); setState("ok"); if (r.copied) onCopied?.(r.copied); } }
+      catch { if (live) setState("offline"); }
+      busy = false;
+    };
+    pull();
+    const t = setInterval(pull, 5000), tick = setInterval(() => setNow((n) => n + 1), 1000);
+    document.addEventListener("visibilitychange", pull);
+    return () => { live = false; clearInterval(t); clearInterval(tick); document.removeEventListener("visibilitychange", pull); };
+  }, [on]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!on) return <div className="screen"><h2>{l.title}</h2><div className="card"><p>{configured ? l.signIn : l.noCloud}</p></div></div>;
+  const athletes = getAthletes(), linked = athletes.filter((a) => isLinked(a.id)), shooting = liveOf(rows, athletes);
+  return (
+    <div className="screen">
+      <h2>{l.title}</h2>
+      {state === "offline" && <p className="error-msg" role="status">{l.offline}</p>}
+      {!linked.length && <div className="card"><p>{l.none}</p><p className="muted">{l.how}</p></div>}
+      {linked.length > 0 && !shooting.length && state !== "loading" && <div className="card"><p>{l.quiet.replace("{n}", linked.length)}</p><p className="muted">{l.quietSub}</p></div>}
+      {shooting.map(({ athlete, session: s, updated }) => {
+        const sum = summary(s), cur = s.ends[s.ends.length - 1], before = s.ends.slice(-4, -1);
+        return (
+          <article key={athlete.id} className="card live-card">
+            <header><b>{athlete.name}</b><span className="live-dot" />{ago(updated, l)}</header>
+            <div className="live-body">
+              <Face s={s} />
+              <div>
+                <div className="live-total" dir="ltr">{sum.total}<small> / {sum.outOf}</small></div>
+                <div className="muted">{l.line.replace("{avg}", sum.avg == null ? "–" : sum.avg.toFixed(2)).replace("{arrows}", sum.arrows).replace("{dist}", s.context.distance_m)}</div>
+                <div className="live-end"><span>{l.end.replace("{n}", cur.end)}</span><EndStrip scores={cur.arrows.map((a) => a.score)} /><b dir="ltr">{cur.arrows.reduce((t, a) => t + scoreValue(a.score), 0)}</b></div>
+                {before.reverse().map((e) => (
+                  <div key={e.end} className="live-end past"><span>{l.end.replace("{n}", e.end)}</span><EndStrip scores={e.arrows.map((a) => a.score)} /><b dir="ltr">{e.arrows.reduce((t, a) => t + scoreValue(a.score), 0)}</b></div>
+                ))}
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+// Coach → an archer's page: give this archer their own app, or take it back.
+export function ArcherLink({ tr, athlete, onChange }) {
+  const l = tr.live;
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [, setTick] = useState(0);
+  const on = configured && signedIn();
+  useEffect(() => { if (on) refreshInvites().then(() => { setTick((n) => n + 1); onChange?.(); }).catch(() => {}); }, [on, athlete.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!configured) return null;
+
+  const link = linkOf(athlete.id), expired = isExpired(link);
+  const run = async (fn) => { setBusy(true); setErr(""); try { await fn(); } catch (e) { setErr(navigator.onLine === false || e instanceof TypeError ? tr.sync.offline : e.message); } setBusy(false); setTick((n) => n + 1); onChange?.(); };
+  return (
+    <div className="card link-card">
+      <div className="card-title">{l.linkTitle}</div>
+      {!on ? <p className="muted">{l.signIn}</p>
+        : !canInvite(athlete) ? <p className="muted">{l.minor}</p>
+        : link?.claimed_by ? <>
+            <p className="acct-ok">✓ {l.linked.replace("{name}", athlete.name)}</p>
+            <button className="btn-ghost small danger" disabled={busy} onClick={() => window.confirm(l.confirmUnlink.replace("{name}", athlete.name)) && run(() => unlink(athlete.id))}>{l.unlink}</button>
+          </>
+        : link && !expired ? <>
+            <p className="muted">{l.codeIntro.replace("{name}", athlete.name)}</p>
+            <p className="invite-code" dir="ltr">{link.code.slice(0, 4)} {link.code.slice(4)}</p>
+            <p className="muted">{l.expires.replace("{date}", new Date(link.expires_at).toLocaleDateString())}</p>
+            <button className="btn-ghost small" disabled={busy} onClick={() => run(() => createInvite(athlete))}>{l.newCode}</button>
+          </>
+        : <>
+            <p className="muted">{l.inviteIntro.replace("{name}", athlete.name)}</p>
+            <button className="btn-primary small" disabled={busy} onClick={() => run(() => createInvite(athlete))}>{l.invite}</button>
+          </>}
+      {err && <p className="error-msg" role="alert">{err}</p>}
+    </div>
+  );
+}

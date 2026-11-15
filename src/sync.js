@@ -87,16 +87,20 @@ const call = async (path, { method = "GET", body, token, prefer } = {}, f = fetc
   return text ? JSON.parse(text) : null;
 };
 
+export const api = (path, opt, f) => call(path, opt, f); // archer.js talks to the same project
+
 // Sign-in has two steps: email + password (aal1), then a code from an authenticator app (aal2). The database only
 // answers aal2 tokens (migrations/0003), so a stolen password alone reaches nothing.
 const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
 export const account = () => get(AUTH, null)?.email || "";
+export const userId = () => get(AUTH, null)?.uid || "";
+export const role = () => get(AUTH, null)?.role || ""; // "coach" | "archer", as chosen when the account was made
 export const signedIn = () => get(AUTH, null)?.aal === "aal2"; // both steps done: sync may run
 export const resetting = () => Boolean(get(AUTH, null)?.recovery);
 const here = () => location.href.split("#")[0];
 const keep = (s, extra = {}) => {
   if (get(STATE, {}).user !== s.user.id) { put(STATE, { user: s.user.id, base: {} }); } // another account: compare from scratch
-  put(AUTH, { email: s.user.email, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000, aal: claims(s.access_token).aal || "aal1", ...extra });
+  put(AUTH, { email: s.user.email, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000, aal: claims(s.access_token).aal || "aal1", uid: s.user.id, role: s.user.user_metadata?.role === "archer" ? "archer" : "coach", ...extra });
 };
 
 // Client-side rules are for the coach's benefit; set the same minimum in Supabase so the server enforces it too.
@@ -110,8 +114,8 @@ export const passwordProblem = (pw, email = "") => {
 };
 
 // Returns true when Supabase wants the email address confirmed first (a link is on its way).
-export const signUp = async (email, password) => {
-  const r = await call(`/auth/v1/signup?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, password } });
+export const signUp = async (email, password, as = "coach") => {
+  const r = await call(`/auth/v1/signup?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, password, data: { role: as } } });
   if (r?.access_token) { keep(r); return false; }
   return true;
 };
@@ -130,6 +134,13 @@ export const enrollApp = async () => {
   const r = await call("/auth/v1/factors", { method: "POST", token: t, body: { factor_type: "totp", friendly_name: `ERA Lab ${new Date().toISOString().slice(0, 16)}`, issuer: "ERA Lab" } });
   return { id: r.id, qr: r.totp.qr_code, secret: r.totp.secret };
 };
+// Signing in: the code may come from any of the coach's authenticators (the main one or a backup).
+export const verifyAny = async (code) => {
+  const list = (await factors()).filter((x) => x.status === "verified");
+  let last = new Error("No authenticator");
+  for (const x of list) { try { return await verifyApp(x.id, code); } catch (e) { last = e; if (e.status === 429) break; } }
+  throw last;
+};
 export const verifyApp = async (factorId, code) => {
   const t = await token();
   const ch = await call(`/auth/v1/factors/${factorId}/challenge`, { method: "POST", token: t, body: {} });
@@ -146,7 +157,7 @@ export const finishLinkSignIn = async () => {
   keep({ user, access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: Number(h.get("expires_in")) || 3600 }, { recovery: h.get("type") === "recovery" });
   return true;
 };
-const token = async (f) => {
+export const token = async (f) => {
   const a = get(AUTH, null);
   if (!a) throw new Error("Not signed in");
   if (Date.now() < a.expires - 60_000) return a.token;

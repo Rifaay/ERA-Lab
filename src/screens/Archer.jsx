@@ -3,6 +3,7 @@ import { athleteFacts, daysSince } from "../insights";
 import { reviewFacts } from "../review";
 import Icon from "../icons";
 import EndStrip from "../EndStrip";
+import { ArcherLink } from "./Live";
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 
@@ -22,7 +23,7 @@ function Row({ to, label, fact, sub, warn, fig, children, onGo }) {
 }
 
 // One archer's coaching cycle on one screen: plan, range, assessment, goals, report. Each row opens its stage.
-export default function Archer({ tr, lang, selectedId, onGo }) {
+export default function Archer({ tr, lang, selectedId, onGo, onLink }) {
   const a = tr.archer, h = tr.home;
   const athlete = getAthletes().find((x) => x.id === selectedId);
   if (!athlete) return (
@@ -91,6 +92,7 @@ export default function Archer({ tr, lang, selectedId, onGo }) {
 
       <button className="btn-primary wide-btn" onClick={() => onGo("range")}><Icon name="target" size={22} />{a.start}</button>
       <button className="btn-ghost" style={{ width: "100%" }} onClick={() => onGo("profile")}>{a.profile}</button>
+      <ArcherLink tr={tr} athlete={athlete} onChange={onLink} />
     </div>
   );
 }
