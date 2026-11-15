@@ -146,3 +146,15 @@ test("a session ended elsewhere signs this device out; being offline does not", 
   await assert.rejects(syncNow(async () => ({ ok: false, status: 400, text: async () => JSON.stringify({ error_code: "refresh_token_not_found", msg: "Invalid Refresh Token" }) })));
   assert.equal(account(), "");
 });
+
+test("the account's role comes from the server, not from the note the owner can edit", async () => {
+  const { loadRole, role } = await import("./sync.js");
+  const auth = () => mem.set("racm_auth", JSON.stringify({ email: "c@x", token: "t", refresh: "r", expires: Date.now() + 3.6e6, uid: "u1", role: "coach" }));
+  mem = new Map(); auth();
+  globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify([{ role: "archer" }]) });
+  assert.equal(await loadRole(), "archer");
+  auth();
+  globalThis.fetch = async () => ({ ok: false, status: 404, text: async () => "{}" });
+  assert.equal(await loadRole(), "coach", "project without the roles table: the note is the fallback");
+  assert.equal(role(), "coach");
+});

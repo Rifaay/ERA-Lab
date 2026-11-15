@@ -3,7 +3,7 @@ import App from './App.jsx'
 import Welcome from './Welcome.jsx'
 import ArcherApp from './ArcherApp.jsx'
 import { t } from './i18n'
-import { account, role, finishLinkSignIn } from './sync'
+import { account, loadRole, finishLinkSignIn } from './sync'
 import { myLink } from './archer'
 import { getUi, setUi, appRole } from './ui'
 import { watchDigits } from './digits'
@@ -19,7 +19,7 @@ export default function Root() {
   useEffect(() => watchDigits(lang), [lang, ready])
   useEffect(() => { // arriving from an emailed link (confirm address, reset password): the account says whose app this is
     finishLinkSignIn()
-      .then((r) => { if (r === true) { setUi({ role: role() }); if (role() === 'coach') setOpen('settings') } else if (r) window.alert(r) })
+      .then(async (r) => { if (r === true) { if ((await loadRole()) === 'coach') setOpen('settings') } else if (r) window.alert(r) })
       .catch((e) => console.warn('Sign-in link failed', e))
       .finally(() => setReady(true))
   }, [])

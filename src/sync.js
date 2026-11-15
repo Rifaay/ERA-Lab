@@ -94,7 +94,16 @@ export const api = (path, opt, f) => call(path, opt, f); // archer.js talks to t
 const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
 export const account = () => get(AUTH, null)?.email || "";
 export const userId = () => get(AUTH, null)?.uid || (get(AUTH, null) && get(STATE, {}).user) || ""; // sessions from before uid was kept
-export const role = () => get(AUTH, null)?.role || ""; // "coach" | "archer", as chosen when the account was made
+export const role = () => get(AUTH, null)?.role || ""; // "coach" | "archer"
+// The server's word on whose account this is (profiles, migrations/0005): fixed at sign-up, not editable by its owner.
+// The note on the account is only the fallback for a project where that migration hasn't been run.
+export const loadRole = async (f) => {
+  try {
+    const rows = await call(`/rest/v1/profiles?select=role&id=eq.${userId()}`, { token: await token(f) }, f);
+    if (rows?.[0]?.role) put(AUTH, { ...get(AUTH, {}), role: rows[0].role });
+  } catch (e) { if (e.status !== 404) throw e; }
+  return role();
+};
 export const signedIn = () => get(AUTH, null)?.aal === "aal2"; // both steps done: sync may run
 export const resetting = () => Boolean(get(AUTH, null)?.recovery);
 const here = () => location.href.split("#")[0];

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  account, signedIn, resetting, role, passwordProblem, signIn, signUp, sendReset, setPassword,
+  account, signedIn, resetting, loadRole, passwordProblem, signIn, signUp, sendReset, setPassword,
   factors, enrollApp, verifyApp, verifyAny, signOut, syncNow, deleteCloudCopy, lastSync, conflicts,
 } from "../sync";
 import { digits } from "../lock";
@@ -46,7 +46,7 @@ export default function Account({ tr, as = "coach", onChange }) {
   const weak = (p) => ({ short: s.short, email: s.emailInPw, common: s.common })[passwordProblem(p, email)] || "";
   const report = (r) => setMsg(s.done.replace("{sent}", r.sent).replace("{received}", r.received));
   // An archer's account can't be used as a coach's, or the other way round: the two apps keep different data.
-  const sameRole = async () => { if (role() !== as) { await signOut(); throw Object.assign(new Error("role"), { shown: coach ? s.isArcher : s.isCoach }); } };
+  const sameRole = async () => { if ((await loadRole()) !== as) { await signOut(); throw Object.assign(new Error("role"), { shown: coach ? s.isArcher : s.isCoach }); } };
 
   // Step 2: find the coach's authenticator, or start setting one up.
   useEffect(() => {

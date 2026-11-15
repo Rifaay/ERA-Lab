@@ -15,16 +15,16 @@ await db.exec(`
   create role anon nologin; create role authenticated nologin;
   grant usage on schema public to anon, authenticated;
   create schema auth; grant usage on schema auth to anon, authenticated;
-  create table auth.users (id uuid primary key);
+  create table auth.users (id uuid primary key, raw_user_meta_data jsonb);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claims', true)::jsonb ->> 'sub', '')::uuid $$;
   create function auth.jwt() returns jsonb language sql stable as
     $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql"]) await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8"));
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql"]) await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8"));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
-test.beforeEach(() => db.exec(`delete from archer_sessions; delete from invites; delete from records; insert into auth.users values ('${A}'), ('${B}'), ('${R}'), ('${R2}') on conflict do nothing`));
+test.beforeEach(() => db.exec(`delete from archer_sessions; delete from invites; delete from records; insert into auth.users values ('${A}', null), ('${B}', '{"role":"coach"}'), ('${R}', '{"role":"archer"}'), ('${R2}', '{"role":"archer"}') on conflict do nothing`));
 
 // Each call runs as the given visitor and is rolled back, so tests can't leak into each other.
 const as = async (who, sql, params, aal = "aal2") => {
@@ -123,7 +123,7 @@ test("an archer claims with the code (any letter case), once; strangers can't re
 
 test("an expired code, or a coach's own code, can't be claimed; a linked archer can't take a second coach", async () => {
   await invite();
-  assert.equal((await claim(A)).rows.length, 0, "own code");
+  await assert.rejects(claim(A), /archers only/, "a coach's account can't join");
   await db.exec(`update invites set expires_at = now() - interval '1 minute'`);
   assert.equal((await claim(R)).rows.length, 0, "expired");
   await db.exec(`update invites set expires_at = now() + interval '1 day'`);
@@ -151,4 +151,24 @@ test("when the coach removes the link, the archer can no longer upload", async (
   await invite(); await link();
   await db.exec("delete from invites");
   await assert.rejects(upload(R), /row-level security/);
+});
+
+// ── Roles ───────────────────────────────────────────────────────────────────────────────────────────────
+test("the role is set once at sign-up and its owner can't change it", async () => {
+  assert.deepEqual((await as(R, "select role from profiles", [], "aal1")).rows, [{ role: "archer" }], "sees only their own");
+  assert.equal((await as(A, "select public.my_role() as r")).rows[0].r, "coach", "no role chosen: coach");
+  await assert.rejects(as(R, `update profiles set role = 'coach'`, [], "aal1"), /permission denied/);
+  await assert.rejects(as(R, `insert into profiles values ('${R}', 'coach')`, [], "aal1"), /permission denied/);
+  await db.exec(`update auth.users set raw_user_meta_data = '{"role":"coach"}' where id = '${R}'`); // the owner edits the note on their account
+  assert.equal((await as(R, "select public.my_role() as r", [], "aal1")).rows[0].r, "archer", "nothing changes");
+});
+
+test("an archer's account can't act as a coach, even with both sign-in steps; a coach's can't upload as an archer", async () => {
+  await assert.rejects(as(R, insertAthlete), /row-level security/, "keep records");
+  await assert.rejects(as(R, `insert into invites (code, athlete_id, name) values ('ABCDEFGH', 'a1', 'Sam')`), /row-level security/, "make invites");
+  await invite(); await link();
+  await db.query(`insert into archer_sessions (archer_id, session_id, coach_id, athlete_id, data) values ($1, 's9', $2, 'a1', '{}')`, [R2, R]);
+  assert.equal((await as(R, "select * from archer_sessions where session_id = 's9'")).rows.length, 0, "read another archer's sessions as their coach");
+  await db.exec(`update invites set claimed_by = '${B}' where code = 'ABCDEFGH'`); // a coach account wrongly holding a link
+  await assert.rejects(upload(B), /row-level security/);
 });

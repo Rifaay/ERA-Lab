@@ -22,7 +22,8 @@ review of theirs. The live range session and video files stay on the device too.
 1. **Supabase:** create a project at supabase.com in an EU region. Turn off *Automatically expose new tables*.
    SQL Editor → run `migrations/0001_records.sql`, then `0002_reviews_and_ping.sql`, then `0003_require_second_step.sql`
    (the data answers only sign-ins that passed both steps), then `0004_archers.sql` (archer accounts, invite codes
-   and live scores).
+   and live scores), then `0005_roles.sql` (each account is a coach's or an archer's, fixed at sign-up and checked by
+   every rule).
 2. **Sign-in email:** Authentication → URL Configuration → Site URL: the app's address. Supabase's own sender emails a
    **link**; opening it on the same device signs in. Its template can only be edited once Resend (step 3) is the
    sender: then add `<p>Or type this code: <b>{{ .Token }}</b></p>` to *Magic link or OTP*, so the offline file and
@@ -30,7 +31,11 @@ review of theirs. The live range session and video files stay on the device too.
 3. **Resend:** create an account at resend.com, add and verify a domain you own (a few DNS records), create an API key.
    In Supabase → Authentication → Emails → SMTP Settings: host `smtp.resend.com`, port `465`, user `resend`,
    password = the Resend API key, sender e.g. `ERA Lab <login@your-domain>`.
-   Without a domain, skip this step: sign-in still works for the email that owns the Supabase project.
+   **No domain? Use Gmail instead (free, about 500 emails a day):** in the Google account turn on 2-Step Verification,
+   then create an *App password* (myaccount.google.com → Security → App passwords). In Supabase → Authentication →
+   Emails → SMTP Settings: host `smtp.gmail.com`, port `587`, user = the Gmail address, password = the 16-letter app
+   password, sender email = the same Gmail address, sender name `ERA Lab`.
+   With neither, account emails only reach the email that owns the Supabase project.
 4. **Keys into the app:** Supabase → Project Settings → API Keys. Copy the project URL and the **publishable** key.
    - Local build: copy `.env.example` to `.env.local` and fill both in.
    - GitHub: repository Settings → Secrets and variables → Actions → **Variables**: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
