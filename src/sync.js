@@ -93,7 +93,7 @@ export const api = (path, opt, f) => call(path, opt, f); // archer.js talks to t
 // answers aal2 tokens (migrations/0003), so a stolen password alone reaches nothing.
 const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
 export const account = () => get(AUTH, null)?.email || "";
-export const userId = () => get(AUTH, null)?.uid || "";
+export const userId = () => get(AUTH, null)?.uid || (get(AUTH, null) && get(STATE, {}).user) || ""; // sessions from before uid was kept
 export const role = () => get(AUTH, null)?.role || ""; // "coach" | "archer", as chosen when the account was made
 export const signedIn = () => get(AUTH, null)?.aal === "aal2"; // both steps done: sync may run
 export const resetting = () => Boolean(get(AUTH, null)?.recovery);
