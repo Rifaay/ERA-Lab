@@ -75,7 +75,7 @@ p { color: var(--g600); font-size: 14px; max-width: 70ch; }
 .screen.flush > * { max-width: none; }
 
 /* Stage navigation: the coaching cycle, always in the same place. */
-.stage-nav { flex: none; height: var(--nav-h); background: var(--black); display: grid; grid-template-columns: repeat(6, 1fr); padding-bottom: env(safe-area-inset-bottom); }
+.stage-nav { flex: none; position: relative; z-index: 5; /* above the page: the Range disc sticks up into it */ height: var(--nav-h); background: var(--black); display: grid; grid-template-columns: repeat(6, 1fr); padding-bottom: env(safe-area-inset-bottom); }
 .stage-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: 0; color: var(--g300); font: 600 12px var(--font-body); cursor: pointer; }
 .stage-btn:hover { color: var(--white); }
 .stage-btn.active { color: var(--white); }
