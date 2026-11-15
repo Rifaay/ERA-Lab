@@ -150,7 +150,12 @@ const token = async (f) => {
   const a = get(AUTH, null);
   if (!a) throw new Error("Not signed in");
   if (Date.now() < a.expires - 60_000) return a.token;
-  const s = await call("/auth/v1/token?grant_type=refresh_token", { method: "POST", body: { refresh_token: a.refresh } }, f);
+  let s;
+  try { s = await call("/auth/v1/token?grant_type=refresh_token", { method: "POST", body: { refresh_token: a.refresh } }, f); }
+  catch (e) {
+    if (e.status >= 400 && e.status < 500 && e.status !== 429) { localStorage.removeItem(AUTH); globalThis.dispatchEvent?.(new Event("racm-signed-out")); } // refused, not offline
+    throw e;
+  }
   put(AUTH, { ...a, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000, aal: claims(s.access_token).aal || a.aal });
   return s.access_token;
 };

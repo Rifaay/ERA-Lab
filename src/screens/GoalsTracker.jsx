@@ -10,7 +10,7 @@ import {
   getAthletes, getGoals, saveGoal, deleteGoal, getSessions, getReviews,
   getProgressLogs, saveProgressLog, deleteProgressLog,
   getCheckIns, saveCheckIn, deleteCheckIn,
-  getGoalTemplates, saveGoalTemplate, deleteGoalTemplate,
+  getGoalTemplates, saveGoalTemplate,
   exportBackup, importBackup, uid,
 } from "../storage";
 

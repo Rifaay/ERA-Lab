@@ -22,7 +22,7 @@ function getWeekMondayISO(year, week) {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }).replace(" ", "");
 }
 
-export default function PeriodizationPlanner({ lang, tr, selectedId }) {
+export default function PeriodizationPlanner({ tr, selectedId }) {
   const pl = tr.planner;
   const athletes = getAthletes();
   const athlete = athletes.find((a) => a.id === selectedId) || null;

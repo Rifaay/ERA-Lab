@@ -219,5 +219,5 @@ export const importBackup = (jsonString) => {
 // Only RACM's keys: localStorage is shared with anything else on this origin.
 export const clearAllData = () => {
   Object.keys(localStorage).filter((k) => k.startsWith("racm_")).forEach((k) => localStorage.removeItem(k));
-  clearClips().catch((e) => console.error("Could not clear the clips", e));
+  return clearClips().catch((e) => console.error("Could not clear the clips", e)); // callers that reload next must wait for this
 };

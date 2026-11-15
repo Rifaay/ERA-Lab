@@ -18,16 +18,7 @@ const DOMAIN_MAP = {
 };
 
 
-function ScoreBtn({ val, current, onClick }) {
-  return (
-    <button
-      className={`score-btn ${current === val ? "selected" : ""}`}
-      onClick={() => onClick(val)}
-    >{val}</button>
-  );
-}
-
-export default function RubricAssessment({ lang, tr, selectedId }) {
+export default function RubricAssessment({ tr, selectedId }) {
   const r = tr.rubric;
   const { setSelectedId } = useApp();
   const athletes = getAthletes();

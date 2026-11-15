@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { canLock, hasPin, pinOk, setPin, removePin, checkPin, lockAfter, setLockAfter, lockNow, LOCK_EVENT } from "./lock";
+import { digits, canLock, hasPin, pinOk, setPin, removePin, checkPin, lockAfter, setLockAfter, lockNow, LOCK_EVENT } from "./lock";
 import { clearAllData } from "./storage";
 import Logo from "./Logo";
 
@@ -46,8 +46,7 @@ function LockScreen({ onOpen }) {
   };
   const forgot = () => {
     if (!window.confirm("Forgot your PIN? The only way in is to erase ERA Lab's data on this device. Archers in your cloud copy or a backup file can be brought back after.\n\nنسيت الرمز؟ الطريقة الوحيدة هي مسح بيانات ERA Lab على هذا الجهاز. يمكن استعادة الرماة من النسخة السحابية أو ملف النسخة الاحتياطية بعد ذلك.")) return;
-    clearAllData();
-    location.reload();
+    Promise.resolve(clearAllData()).finally(() => location.reload()); // the clips are erased before the page goes
   };
   const secs = Math.ceil(wait / 1000);
   return (
@@ -57,7 +56,7 @@ function LockScreen({ onOpen }) {
         <h1>ERA Lab</h1>
         <p>Locked · مقفل</p>
         <input type="password" inputMode="numeric" autoComplete="off" autoFocus dir="ltr" aria-label="PIN · الرمز"
-          value={pin} onChange={(e) => setPinText(e.target.value.replace(/\D/g, "").slice(0, 12))} disabled={secs > 0} />
+          value={pin} onChange={(e) => setPinText(digits(e.target.value, 12))} disabled={secs > 0} />
         <button className="btn-primary" disabled={busy || secs > 0 || pin.length < 6}>Unlock · افتح</button>
         {secs > 0 ? <p className="error-msg" role="alert">Too many wrong PINs. Try again in {secs} s · محاولات خاطئة كثيرة. حاول بعد {secs} ث</p>
           : wrong && <p className="error-msg" role="alert">Wrong PIN · رمز خاطئ</p>}
@@ -81,15 +80,15 @@ export function LockSettings({ tr, onChange }) {
   if (!canLock()) return <p className="muted">{l.noCrypto}</p>;
 
   const close = (m = "") => { setMode(""); setCur(""); setA(""); setB(""); setErr(""); setMsg(m); onChange?.(); };
-  const digits = (set) => (e) => set(e.target.value.replace(/\D/g, "").slice(0, 12));
+  const typed = (set) => (e) => set(digits(e.target.value, 12));
   const field = (label, v, set, auto = "new-password") => (
-    <label>{label}<input type="password" inputMode="numeric" autoComplete={auto} dir="ltr" value={v} onChange={digits(set)} /></label>
+    <label>{label}<input type="password" inputMode="numeric" autoComplete={auto} dir="ltr" value={v} onChange={typed(set)} /></label>
   );
   const submit = async (e) => {
     e.preventDefault(); setErr("");
     setBusy(true);
     try {
-      if (mode !== "set" && !(await checkPin(cur)).ok) return setErr(l.wrong);
+      if (mode !== "set") { const r = await checkPin(cur); if (!r.ok) return setErr(r.wait ? tr.sync.tooMany : l.wrong); }
       if (mode === "remove") { removePin(); return close(l.removed); }
       if (!pinOk(a)) return setErr(l.bad);
       if (a !== b) return setErr(l.mismatch);

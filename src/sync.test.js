@@ -136,3 +136,13 @@ test("only a token that passed both sign-in steps counts as signed in", async ()
   await verifyApp("f1", "123456");
   assert.equal(signedIn(), true);
 });
+
+test("a session ended elsewhere signs this device out; being offline does not", async () => {
+  const { syncNow, account } = await import("./sync.js");
+  const old = () => mem.set("racm_auth", JSON.stringify({ email: "c@x", token: "t", refresh: "r", expires: 0, aal: "aal2" }));
+  mem = new Map(); old();
+  await assert.rejects(syncNow(async () => { throw new TypeError("offline"); }));
+  assert.equal(account(), "c@x");
+  await assert.rejects(syncNow(async () => ({ ok: false, status: 400, text: async () => JSON.stringify({ error_code: "refresh_token_not_found", msg: "Invalid Refresh Token" }) })));
+  assert.equal(account(), "");
+});

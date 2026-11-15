@@ -40,6 +40,8 @@
 .clip-body > :nth-child(3) { animation-delay: 60ms; }
 .toast, .rg-toast { animation: rise var(--t-m) var(--ease-out) both; }
 
+.recorder, .quick, .picker, .clip-suggest, .rg-pending, .toast, .rg-toast { animation-delay: 0ms !important; }
+
 /* A clip row's chevron turns instead of being swapped */
 .clip-row .icon-down { transition: transform var(--t-s) var(--ease-out); }
 .clip-row[aria-expanded="false"] .icon-down { transform: rotate(-90deg); }

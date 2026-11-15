@@ -3,7 +3,7 @@ import { getAthletes, saveAthlete, deleteAthlete, calcAgeBand, calcWACategory, u
 
 const BLANK = { id: "", name: "", dob: "", gender: "male", discipline: "recurve", stage: "0", startDate: "", focusArea: "technical", coachNotes: "", notes: "" };
 
-export default function AthleteProfile({ lang, tr, selectedId, onSelect, onSaved }) {
+export default function AthleteProfile({ tr, selectedId, onSelect, onSaved }) {
   const p = tr.profile;
   const [athletes, setAthletes] = useState(getAthletes);
   const [form, setForm] = useState(() => {
@@ -16,7 +16,6 @@ export default function AthleteProfile({ lang, tr, selectedId, onSelect, onSaved
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   // Sync form when selectedId changes (controlled from App)
-  const athlete = athletes.find((a) => a.id === selectedId);
   const currentFormId = form.id;
   if (selectedId !== currentFormId) {
     const found = athletes.find((a) => a.id === selectedId);

@@ -3,6 +3,7 @@ import {
   account, signedIn, resetting, passwordProblem, signIn, signUp, sendReset, setPassword,
   factors, enrollApp, verifyApp, signOut, syncNow, deleteCloudCopy, lastSync, conflicts,
 } from "../sync";
+import { digits } from "../lock";
 
 // Coach profile → Security → Cloud copy. Two-step sign-in: email + password, then a code from an authenticator app.
 // Until both steps are done the database answers nothing (migrations/0003), and the app doesn't try to sync.
@@ -19,6 +20,11 @@ export default function Account({ tr, onChange }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  useEffect(() => { // the session was ended from another device
+    const gone = () => { setApp(null); setTick((n) => n + 1); onChange?.(); };
+    window.addEventListener("racm-signed-out", gone);
+    return () => window.removeEventListener("racm-signed-out", gone);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stage = !account() ? "out" : !signedIn() ? "step2" : resetting() ? "newpw" : "in";
 
@@ -26,7 +32,7 @@ export default function Account({ tr, onChange }) {
     if (e.status === 429) return s.tooMany;
     if (navigator.onLine === false || e instanceof TypeError) return s.offline;
     return { invalid_credentials: s.badLogin, email_not_confirmed: s.notConfirmed, weak_password: s.weak, mfa_verification_failed: s.badCode }[e.code]
-      || (/totp|code/i.test(e.message) ? s.badCode : e.message);
+      || (stage === "step2" && /totp|code/i.test(e.message) ? s.badCode : e.message);
   };
   const run = async (fn) => {
     setBusy(true); setErr(""); setMsg("");
@@ -94,7 +100,7 @@ export default function Account({ tr, onChange }) {
       </div>}
       <form className="form" onSubmit={(e) => { e.preventDefault(); run(async () => { await verifyApp(app.id, code); setCode(""); refresh(); report(await syncNow()); }); }}>
         <label>{s.code}
-          <input inputMode="numeric" autoComplete="one-time-code" dir="ltr" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+          <input inputMode="numeric" autoComplete="one-time-code" dir="ltr" value={code} onChange={(e) => setCode(digits(e.target.value, 6))} />
         </label>
         <div className="btn-row">
           <button className="btn-primary small" disabled={busy || !app || code.length !== 6}>{s.verify}</button>

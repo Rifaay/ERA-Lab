@@ -36,10 +36,10 @@ if (import.meta.env.PROD && location.protocol.startsWith('http')) navigator.serv
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ErrorBoundary>
-      <LockGate>
+    <LockGate>
+      <ErrorBoundary>
         <App />
-      </LockGate>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </LockGate>
   </StrictMode>,
 )

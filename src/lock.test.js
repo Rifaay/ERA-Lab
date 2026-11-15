@@ -24,3 +24,10 @@ test("the right PIN opens; the PIN itself is never stored; wrong guesses lock ou
   removePin();
   assert.equal(hasPin(), false);
 });
+
+test("digits typed on an Arabic or Persian keyboard count", async () => {
+  const { digits } = await import("./lock.js");
+  assert.equal(digits("٤٨٣٩٢٠", 12), "483920");
+  assert.equal(digits("۴۸۳ 9a2", 12), "48392");
+  assert.equal(digits("1234567", 6), "123456");
+});

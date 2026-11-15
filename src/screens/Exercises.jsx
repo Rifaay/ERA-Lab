@@ -55,7 +55,7 @@ function ExForm({ athleteId, existing, tr, onSaved, onCancel }) {
   );
 }
 
-export default function Exercises({ lang, tr, selectedId }) {
+export default function Exercises({ tr, selectedId }) {
   const e = tr.exercises;
   const athletes = getAthletes();
   const athlete = athletes.find((a) => a.id === selectedId) || null;

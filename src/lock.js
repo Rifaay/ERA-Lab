@@ -14,6 +14,8 @@ const derive = async (pin, salt, iter) => {
   return b64(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations: iter }, k, 256));
 };
 
+// "٤٨٢" or "۴۸۲" → "482", everything else dropped: PINs and codes typed on an Arabic or Persian keyboard still work.
+export const digits = (v, max) => [...String(v)].map((c) => { const i = "٠١٢٣٤٥٦٧٨٩".indexOf(c), j = "۰۱۲۳۴۵۶۷۸۹".indexOf(c); return i >= 0 ? i : j >= 0 ? j : c; }).join("").replace(/\D/g, "").slice(0, max);
 export const LOCK_EVENT = "racm-lock";
 export const lockNow = () => window.dispatchEvent(new Event(LOCK_EVENT));
 export const canLock = () => Boolean(globalThis.crypto?.subtle);
