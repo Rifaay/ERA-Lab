@@ -7,6 +7,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import Scorecard from "./Scorecard";
 import { scorecardFile, saveHtmlFile } from "../scorecardFile";
+import { localize } from "../digits";
 import { useApp } from "../context";
 import QuickTag from "../QuickTag";
 import Icon from "../icons";
@@ -140,6 +141,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
     }
     const host = document.createElement("div"), root = createRoot(host);
     flushSync(() => root.render(<Scorecard s={se.range} tr={tr} lang={lang} clips={items} />));
+    localize(host, lang);
     const html = host.innerHTML;
     root.unmount();
     setBusy(false);

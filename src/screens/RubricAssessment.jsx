@@ -109,7 +109,7 @@ export default function RubricAssessment({ tr, selectedId }) {
             const cur = scores[key] || 0;
             return (
               <div key={el} className="rubric-item">
-                <span className="rubric-label">{el}</span>
+                <span className="rubric-label">{(tab === "technical" ? tr.rubric[discipline === "barebow" ? "bareboweElements" : "recurveElements"] : tr.rubric.elements[tab])?.[elements.indexOf(el)] ?? el}</span>
                 <div className="rubric-score">
                   {[1,2,3,4,5].map((n) => (
                     <button

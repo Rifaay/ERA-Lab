@@ -6,6 +6,7 @@ import { t } from './i18n'
 import { account, role, finishLinkSignIn } from './sync'
 import { myLink } from './archer'
 import { getUi, setUi, appRole } from './ui'
+import { watchDigits } from './digits'
 
 // Who is using this device decides which app opens: the coach's, the archer's, or the welcome screen that asks.
 export default function Root() {
@@ -15,6 +16,7 @@ export default function Root() {
   const again = () => setTick((n) => n + 1)
   const [open, setOpen] = useState('') // the coach arrives on their profile after an emailed link
   const [ready, setReady] = useState(false)
+  useEffect(() => watchDigits(lang), [lang, ready])
   useEffect(() => { // arriving from an emailed link (confirm address, reset password): the account says whose app this is
     finishLinkSignIn()
       .then((r) => { if (r === true) { setUi({ role: role() }); if (role() === 'coach') setOpen('settings') } else if (r) window.alert(r) })

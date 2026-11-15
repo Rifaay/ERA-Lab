@@ -127,8 +127,8 @@ export default function ReportDoc({ d, athlete, tr, lang, show, coach, waCategor
               <table className="rd-table">
                 <thead><tr><th>{s.distance}</th><th className="n">{s.arrows}</th><th className="n">{s.avg}</th><th className="n">{s.group}</th><th>{s.centre}</th></tr></thead>
                 <tbody>{st.groups.map((g) => (
-                  <tr key={g.key}><td>{g.distance} m <small>{tr.range.faces[g.face]}</small></td><td className="n">{g.arrows}</td><td className="n">{f2(g.avg)}{g.isPb && <em className="rd-pb">{s.pb}</em>}</td>
-                    <td className="n">{g.groupCm != null ? `${f1(g.groupCm)} cm` : "–"}</td>
+                  <tr key={g.key}><td>{g.distance} {tr.common.m} <small>{tr.range.faces[g.face]}</small></td><td className="n">{g.arrows}</td><td className="n">{f2(g.avg)}{g.isPb && <em className="rd-pb">{s.pb}</em>}</td>
+                    <td className="n">{g.groupCm != null ? `${f1(g.groupCm)} ${tr.common.cm}` : "–"}</td>
                     <td>{g.offsetXcm != null ? `${Math.abs(g.offsetXcm).toFixed(1)} ${g.offsetXcm > 0 ? s.rightShort : s.leftShort} · ${Math.abs(g.offsetYcm).toFixed(1)} ${g.offsetYcm > 0 ? s.highShort : s.lowShort}` : "–"}</td></tr>
                 ))}</tbody>
               </table>
@@ -204,7 +204,7 @@ export default function ReportDoc({ d, athlete, tr, lang, show, coach, waCategor
             <thead><tr><th>{tr.session.date}</th><th>{tr.session.type}</th><th className="n">{s.distance}</th><th className="n">{s.arrows}</th><th className="n">{tr.session.score}</th><th className="n">{s.avg}</th></tr></thead>
             <tbody>{[...st.sessions].reverse().map((x) => {
               const avg = +x.arrows > 0 && x.score !== "" && x.score != null ? +x.score / +x.arrows : null;
-              return <tr key={x.id}><td>{date(x.date)}</td><td>{tr.session.types[TYPES.indexOf(x.type)] ?? x.type}</td><td className="n">{x.distance ? `${x.distance} m` : "–"}</td><td className="n">{x.arrows || "–"}</td><td className="n">{x.score ? `${x.score}${x.outOf ? ` / ${x.outOf}` : ""}` : "–"}</td><td className="n">{f2(avg)}</td></tr>;
+              return <tr key={x.id}><td>{date(x.date)}</td><td>{tr.session.types[TYPES.indexOf(x.type)] ?? x.type}</td><td className="n">{x.distance ? `${x.distance} ${tr.common.m}` : "–"}</td><td className="n">{x.arrows || "–"}</td><td className="n">{x.score ? `${x.score}${x.outOf ? ` / ${x.outOf}` : ""}` : "–"}</td><td className="n">{f2(avg)}</td></tr>;
             })}</tbody>
           </table>
         </section>

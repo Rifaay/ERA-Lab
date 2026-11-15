@@ -220,8 +220,8 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
                 <thead><tr><th>{s.distance}</th><th>{s.arrows}</th><th>{s.avg}</th><th>{s.group}</th><th>{s.centre}</th><th>{s.best}</th></tr></thead>
                 <tbody>{st.groups.map((g) => (
                   <tr key={g.key}>
-                    <td><b>{g.distance} m</b><small>{tr.range.faces[g.face]}</small></td><td>{g.arrows}</td><td>{f2(g.avg)}</td>
-                    <td>{g.groupCm != null ? `${f1(g.groupCm)} cm` : "–"}</td>
+                    <td><b>{g.distance} {tr.common.m}</b><small>{tr.range.faces[g.face]}</small></td><td>{g.arrows}</td><td>{f2(g.avg)}</td>
+                    <td>{g.groupCm != null ? `${f1(g.groupCm)} ${tr.common.cm}` : "–"}</td>
                     <td>{g.offsetXcm != null ? `${Math.abs(g.offsetXcm).toFixed(1)} ${g.offsetXcm > 0 ? s.rightShort : s.leftShort} · ${Math.abs(g.offsetYcm).toFixed(1)} ${g.offsetYcm > 0 ? s.highShort : s.lowShort}` : "–"}</td>
                     <td>{g.best ? <>{f2(g.best.avg)}{g.isPb && <span className="st-pb">{s.pb}</span>}</> : "–"}</td>
                   </tr>

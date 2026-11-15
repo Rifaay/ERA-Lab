@@ -5,7 +5,10 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import Scorecard from "./Scorecard";
 import { scorecardFile, saveHtmlFile } from "../scorecardFile";
+import { localize } from "../digits";
 
+const TYPES = ["Technical", "Physical", "Mental", "Competition", "Mixed"];
+const DOMAINS = ["Technical", "Physical", "Mental", "Competition"];
 const BLANK = {
   date: new Date().toISOString().slice(0, 10),
   type: "Technical", duration: "", arrows: "", distance: "",
@@ -50,6 +53,7 @@ export default function SessionLogger({ lang, tr, selectedId }) {
   const downloadScorecard = (r) => {
     const host = document.createElement("div"), root = createRoot(host);
     flushSync(() => root.render(<Scorecard s={r} tr={tr} lang={lang} />));
+    localize(host, lang);
     const html = host.innerHTML;
     root.unmount();
     saveHtmlFile(`Scorecard ${r.session_id}.html`, scorecardFile(html, { lang, title: `Scorecard ${r.session_id}` }));
@@ -81,7 +85,7 @@ export default function SessionLogger({ lang, tr, selectedId }) {
             </label>
             <label>{s.type}
               <select value={form.type} onChange={(e) => set("type", e.target.value)}>
-                {s.types.map((t) => <option key={t}>{t}</option>)}
+                {TYPES.map((t, i) => <option key={t} value={t}>{s.types[i]}</option>)}
               </select>
             </label>
             <label>{s.duration}
@@ -123,8 +127,8 @@ export default function SessionLogger({ lang, tr, selectedId }) {
           <div>
             <label style={{ marginBottom: 6 }}>{s.domains}</label>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {s.domainList.map((d) => (
-                <button key={d} type="button" className={`chip ${form.domains.includes(d) ? "active" : ""}`} onClick={() => toggleDomain(d)}>{d}</button>
+              {DOMAINS.map((d, i) => (
+                <button key={d} type="button" className={`chip ${form.domains.includes(d) ? "active" : ""}`} aria-pressed={form.domains.includes(d)} onClick={() => toggleDomain(d)}>{s.domainList[i]}</button>
               ))}
             </div>
           </div>
@@ -157,11 +161,11 @@ export default function SessionLogger({ lang, tr, selectedId }) {
               <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "space-between", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
                   <span className="badge gray">{sess.date}</span>
-                  <span className="badge blue">{sess.type}</span>
-                  {sess.duration && <span className="badge gray">{sess.duration}m</span>}
+                  <span className="badge blue">{s.types[TYPES.indexOf(sess.type)] ?? sess.type}</span>
+                  {sess.duration && <span className="badge gray">{sess.duration} {tr.common.min}</span>}
                   {sess.arrows && <span className="badge gray">{sess.arrows} {tr.range.arrowsWord}</span>}
                   {sess.score && <span className="badge teal">{sess.score}{sess.outOf ? `/${sess.outOf}` : ""}</span>}
-                  {sess.quality && <span className="badge gray">Q{sess.quality}</span>}
+                  {sess.quality && <span className="badge gray">{tr.settings.qShort}{sess.quality}</span>}
                   {sess.ramadan && <span className="badge amber"><Icon name="moon" size={13} label={tr.session.ramadan} /></span>}
                 </div>
                 <span style={{ display: "flex", gap: 6, alignItems: "center" }}>

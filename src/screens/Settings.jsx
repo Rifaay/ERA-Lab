@@ -129,8 +129,8 @@ export default function Settings({ tr, onDataCleared, onGo }) {
         <div className="settings-label">{s.storage}</div>
         <div className="storage-bar-wrap">
           <div className="storage-info">
-            <span>{usageKB} KB {s.storageUsed}</span>
-            <span>{pct}% of ~5 MB</span>
+            <span>{usageKB} {s.kb} {s.storageUsed}</span>
+            <span>{s.storageOf.replace("{pct}", pct)}</span>
           </div>
           <div className="progress-track">
             <div className="progress-fill" style={{ width: `${pct}%`, background: pct > 80 ? "var(--r)" : "var(--p)" }} />

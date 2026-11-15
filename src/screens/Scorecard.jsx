@@ -34,12 +34,12 @@ export default function Scorecard({ s, tr, lang, clips = [] }) {
   const r = tr.range, sc = r.sc, c = scorecard(s), per = s.context.arrows_per_end;
   const date = new Date(s.start_ms).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
   const most = Math.max(1, ...c.dist.map(([, n]) => n));
-  const shift = c.cx == null ? null : `${c.cx > 0 ? r.right : r.left} ${Math.abs(c.cx * c.radiusCm).toFixed(1)} cm · ${c.cy > 0 ? r.high : r.low} ${Math.abs(c.cy * c.radiusCm).toFixed(1)} cm`;
+  const shift = c.cx == null ? null : `${c.cx > 0 ? r.right : r.left} ${Math.abs(c.cx * c.radiusCm).toFixed(1)} ${tr.common.cm} · ${c.cy > 0 ? r.high : r.low} ${Math.abs(c.cy * c.radiusCm).toFixed(1)} ${tr.common.cm}`;
   const ctx = s.context, mp = s.mental_pre || {};
   const conditions = [
-    `${ctx.distance_m} m`, r.faces[ctx.face], ctx.place,
+    `${ctx.distance_m} ${tr.common.m}`, r.faces[ctx.face], ctx.place,
     ctx.wind && `${r.wind}: ${r.winds[["Calm", "Light", "Moderate", "Strong", "Gusty"].indexOf(ctx.wind)] ?? ctx.wind}`,
-    ctx.temp_c != null && `${ctx.temp_c} °C`, s.equipment?.bow, s.equipment?.draw_weight_lb && `${s.equipment.draw_weight_lb} lb`,
+    ctx.temp_c != null && `${ctx.temp_c} ${tr.common.degC}`, s.equipment?.bow, s.equipment?.draw_weight_lb && `${s.equipment.draw_weight_lb} ${tr.common.lb}`,
   ].filter(Boolean);
   const checkIn = [["readiness", mp.readiness], ["confidence", mp.confidence], ["focus", mp.focus], ["energy", mp.energy]].filter(([, v]) => v != null);
   const maxEnd = per * 10;
@@ -70,7 +70,7 @@ export default function Scorecard({ s, tr, lang, clips = [] }) {
         <section>
           <h4>{sc.plot}</h4>
           <Face s={s} sum={c} />
-          <p className="sc-cap">{shift ? `${sc.centre}: ${shift}` : sc.noPlot}{c.spreadCm != null && <><br />{sc.spread}: {f1(c.spreadCm)} cm</>}</p>
+          <p className="sc-cap">{shift ? `${sc.centre}: ${shift}` : sc.noPlot}{c.spreadCm != null && <><br />{sc.spread}: {f1(c.spreadCm)} {tr.common.cm}</>}</p>
         </section>
         <section>
           <h4>{sc.dist}</h4>

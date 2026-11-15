@@ -10,6 +10,7 @@ import Icon from "../icons";
 import { FACES, RING_FILL, rings, spotsOf, scoreOf, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
 import Scorecard from "./Scorecard";
 import { scorecardFile } from "../scorecardFile";
+import { localize } from "../digits";
 
 // Stored values stay in English whatever the screen language; labels come from the translations by position.
 const WINDS = ["Calm", "Light", "Moderate", "Strong", "Gusty"];
@@ -24,6 +25,7 @@ const BLANK = { distance: "70", face: "122", perEnd: "6", type: "Technical", pla
 // Saves the scorecard rendered (hidden) on the done screen as one standalone, interactive web file.
 const downloadScorecard = (host, s, lang) => {
   const title = `Scorecard ${s.session_id}`;
+  host = host.cloneNode(true); localize(host, lang); // a copy: the hidden original stays as React drew it
   const url = URL.createObjectURL(new Blob([scorecardFile(host.innerHTML, { lang, title })], { type: "text/html" }));
   const a = document.createElement("a");
   a.href = url; a.download = `${title}.html`; a.click();
@@ -342,7 +344,7 @@ export default function Range({ tr, lang, selectedId }) {
         <div className="card rg-scroll">
           <h3>{r.ends}</h3>
           <table className="rg-table">
-            <thead><tr><th>{r.end}</th>{Array.from({ length: per }, (_, i) => <th key={i}>A{i + 1}</th>)}<th>{r.sum}</th><th>{r.focus}</th></tr></thead>
+            <thead><tr><th>{r.end}</th>{Array.from({ length: per }, (_, i) => <th key={i}>{i + 1}</th>)}<th>{r.sum}</th><th>{r.focus}</th></tr></thead>
             <tbody>
               {live.ends.filter((x) => x.arrows.length).map((x) => (
                 <tr key={x.end}><td>{x.end}</td>{Array.from({ length: per }, (_, i) => <td key={i}>{x.arrows[i]?.score ?? ""}</td>)}<td><b>{endSum(x)}</b></td><td>{x.focus ?? ""}</td></tr>

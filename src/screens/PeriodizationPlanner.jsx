@@ -14,15 +14,15 @@ const PHASES = [
   { key: "taper",      color: "#95a5a6" },
 ];
 
-function getWeekMondayISO(year, week) {
+function getWeekMondayISO(year, week, lang) {
   const d = new Date(year, 0, 1 + (week - 1) * 7);
   const day = d.getDay();
   const offset = day === 0 ? 1 : day === 1 ? 0 : 8 - day;
   d.setDate(d.getDate() + offset);
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }).replace(" ", "");
+  return d.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "short" });
 }
 
-export default function PeriodizationPlanner({ tr, selectedId }) {
+export default function PeriodizationPlanner({ lang, tr, selectedId }) {
   const pl = tr.planner;
   const athletes = getAthletes();
   const athlete = athletes.find((a) => a.id === selectedId) || null;
@@ -123,10 +123,10 @@ export default function PeriodizationPlanner({ tr, selectedId }) {
               style={ph ? { background: ph.color + "33", borderColor: ph.color } : {}}
               onClick={() => paintWeek(w)}
             >
-              <span className="wk-num" style={{ color: ph ? ph.color : "var(--txm)" }}>W{w}</span>
-              <span className="wk-date" style={{ color: "var(--txh)" }}>{getWeekMondayISO(year, w)}</span>
-              {isTour && <span className="wk-dot" title="Tournament">🏆</span>}
-              {isRam && !isTour && <span className="wk-dot" title="Ramadan"><Icon name="moon" size={10} /></span>}
+              <span className="wk-num" style={{ color: ph ? ph.color : "var(--txm)" }}>{pl.wk}{w}</span>
+              <span className="wk-date" style={{ color: "var(--txh)" }}>{getWeekMondayISO(year, w, lang)}</span>
+              {isTour && <span className="wk-dot" title={pl.tournament}>🏆</span>}
+              {isRam && !isTour && <span className="wk-dot" title={pl.ramadan}><Icon name="moon" size={10} /></span>}
             </div>
           );
         })}
@@ -149,12 +149,12 @@ export default function PeriodizationPlanner({ tr, selectedId }) {
           </div>
         </div>
         {(plan.tournaments || []).length === 0 ? (
-          <p className="muted">No tournaments added.</p>
+          <p className="muted">{pl.noTournaments}</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {(plan.tournaments || []).map((t) => (
               <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", background: "var(--bgp)", borderRadius: "var(--rad)" }}>
-                <span className="badge amber">W{t.week}</span>
+                <span className="badge amber">{pl.wk}{t.week}</span>
                 <span style={{ fontSize: 13, flex: 1 }}>{t.name}</span>
                 <button className="del-btn" onClick={() => removeTournament(t.id)}><Icon name="x" size={16} /></button>
               </div>

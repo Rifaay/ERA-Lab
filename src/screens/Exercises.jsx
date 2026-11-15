@@ -96,7 +96,7 @@ export default function Exercises({ tr, selectedId }) {
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
         {cats.map((c) => (
           <button key={c} className={`chip ${filterCat === c ? "active" : ""}`} onClick={() => setFilterCat(c)}>
-            {c === "all" ? "All" : e.categories[c]}
+            {c === "all" ? tr.common.all : e.categories[c]}
           </button>
         ))}
       </div>

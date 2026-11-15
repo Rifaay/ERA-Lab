@@ -6,12 +6,13 @@ import css from "./scorecard.css?raw";
 const script = `(() => {
   const S = document.querySelector(".sc-sheet"), info = S.querySelector(".sc-info"), L = JSON.parse(S.dataset.labels);
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const loc = (t) => (document.documentElement.lang === "ar" ? t.replace(/\\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]) : t);
   let picked = "";
   const pick = (key, match, text) => {
     picked = picked === key ? "" : key;
     S.classList.toggle("picking", !!picked);
     S.querySelectorAll(".sc-hit, .sc-ends tbody tr, .sc-ends td[data-score], .sc-dist tr").forEach((el) => el.classList.toggle("on", !!picked && match(el)));
-    info.innerHTML = picked ? text : esc(L.hint);
+    info.innerHTML = picked ? loc(text) : esc(L.hint);
   };
   const act = (el) => {
     if (el.matches(".sc-hit")) {
