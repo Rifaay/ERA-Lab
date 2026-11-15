@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { getAthletes, getRange, saveRange, saveSession, getReviews, saveReview, uid } from "../storage";
 import { putClip } from "../clipStore";
 import { clipName, quickReview, shotOf, refreshShots } from "../clips";
@@ -7,7 +7,7 @@ import QuickTag from "../QuickTag";
 import { useApp } from "../context";
 import { ringOf } from "../insights";
 import Icon from "../icons";
-import { FACES, RING_FILL, rings, scoreOf, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
+import { FACES, RING_FILL, rings, spotsOf, scoreOf, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
 import Scorecard from "./Scorecard";
 import { scorecardFile } from "../scorecardFile";
 
@@ -53,41 +53,70 @@ function Choice({ values, labels, value, onChange }) {
 }
 
 // Press, slide, lift. A fingertip covers about three rings on a phone, so the loupe shows the spot under the finger at 3x.
-function Target({ face, arrows, pick, onHit }) {
+// Only a touch that starts on the face plots: one that starts on the white around it scrolls the page as usual.
+const GAP = 220; // 3-spot: centre to centre, in the same units as a spot's radius (100)
+const ON_FACE = 1.04; // a little past the edge, for a finger on the outer line
+function Target({ face, label, arrows, pick, onHit }) {
   const ref = useRef(null);
   const [aim, setAim] = useState(null);
-  const n = rings(face), Z = 15, g = 1.4;
+  const n = rings(face), spots = spotsOf(face), Z = 15, g = 1.4;
+  const top = -(spots - 1) * GAP / 2; // centre of the first spot
+  const spotY = (k) => top + k * GAP;
 
-  const at = (ev) => {
+  // Screen point → the nearest spot and the position on it, in spot radii (y up).
+  const local = (clientX, clientY) => {
     const svg = ref.current, pt = svg.createSVGPoint();
-    pt.x = ev.clientX; pt.y = ev.clientY;
-    const p = pt.matrixTransform(svg.getScreenCTM().inverse()), box = svg.getBoundingClientRect();
-    const clamp = (v) => Math.max(-1.08, Math.min(1.08, v)); // a miss off the face stays visible on the edge
-    return { x: clamp(p.x / 100), y: clamp(-p.y / 100), side: ev.clientX > box.left + box.width / 2 ? "l" : "r", low: ev.clientY < box.top + box.height * 0.45 };
+    pt.x = clientX; pt.y = clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const k = Math.max(0, Math.min(spots - 1, Math.round((p.y - top) / GAP)));
+    return { k, x: p.x / 100, y: -(p.y - spotY(k)) / 100 };
   };
-  const down = (ev) => { ev.preventDefault(); ref.current.setPointerCapture(ev.pointerId); setAim(at(ev)); };
+  const onFace = (clientX, clientY) => { const q = local(clientX, clientY); return Math.hypot(q.x, q.y) <= ON_FACE; };
+  const at = (ev) => {
+    const q = local(ev.clientX, ev.clientY), box = ref.current.getBoundingClientRect();
+    const clamp = (v) => Math.max(-1.08, Math.min(1.08, v)); // a miss off the face stays visible on the edge
+    return { k: q.k, x: clamp(q.x), y: clamp(q.y), side: ev.clientX > box.left + box.width / 2 ? "l" : "r", low: ev.clientY < box.top + box.height * 0.45 };
+  };
+
+  // The page may scroll (touch-action: pan-y), so a touch that starts on the face cancels scrolling for that touch.
+  useEffect(() => {
+    const svg = ref.current;
+    const stop = (e) => { const t = e.touches[0]; if (t && onFace(t.clientX, t.clientY)) e.preventDefault(); };
+    svg.addEventListener("touchstart", stop, { passive: false });
+    return () => svg.removeEventListener("touchstart", stop);
+  });
+
+  const down = (ev) => {
+    if (!onFace(ev.clientX, ev.clientY)) return;
+    ev.preventDefault(); ref.current.setPointerCapture(ev.pointerId); setAim(at(ev));
+  };
   const move = (ev) => { if (aim) setAim(at(ev)); };
   const up = (ev) => {
     if (!aim) return;
     const p = at(ev), x = +p.x.toFixed(4), y = +p.y.toFixed(4);
-    setAim(null); onHit({ x, y, score: scoreOf(face, x, y) });
+    setAim(null); onHit({ x, y, score: scoreOf(face, x, y), ...(spots > 1 && { spot: p.k }) });
   };
 
+  const rest = (a) => spotY(spots > 1 ? (a.spot ?? 1) : 0); // older 3-spot arrows have no spot: the middle one
   const drawing = (
     <>
-      {Array.from({ length: n }, (_, i) => <circle key={i} r={(100 * (n - i)) / n} fill={RING_FILL[10 - n + i]} stroke={10 - n + i < 2 ? "#222" : 10 - n + i < 4 ? "#bbb" : "#111"} strokeWidth=".6" />)}
-      <circle r={50 / n} fill="none" stroke="#111" strokeWidth=".4" />
-      <line x1="-3" x2="3" stroke="#111" strokeWidth=".5" /><line y1="-3" y2="3" stroke="#111" strokeWidth=".5" />
+      {Array.from({ length: spots }, (_, k) => (
+        <g key={k} transform={`translate(0 ${spotY(k)})`}>
+          {Array.from({ length: n }, (_, i) => <circle key={i} r={(100 * (n - i)) / n} fill={RING_FILL[10 - n + i]} stroke={10 - n + i < 2 ? "#222" : 10 - n + i < 4 ? "#bbb" : "#111"} strokeWidth=".6" />)}
+          <circle r={50 / n} fill="none" stroke="#111" strokeWidth=".4" />
+          <line x1="-3" x2="3" stroke="#111" strokeWidth=".5" /><line y1="-3" y2="3" stroke="#111" strokeWidth=".5" />
+        </g>
+      ))}
       {arrows.map((a, i) => (a.x == null || (aim && i === pick) ? null : (
         <g key={i}>
-          <circle cx={a.x * 100} cy={-a.y * 100} r={i === pick ? 4.5 : 3.4} fill={i === pick ? "#00e0c6" : "#00b8a3"} stroke="#000" strokeWidth="1" />
-          <text x={a.x * 100 + 5} y={-a.y * 100 - 5} fontSize="8" fill="#000" fontFamily="monospace">{a.arrow}</text>
+          <circle cx={a.x * 100} cy={rest(a) - a.y * 100} r={i === pick ? 4.5 : 3.4} fill={i === pick ? "#00e0c6" : "#00b8a3"} stroke="#000" strokeWidth="1" />
+          <text x={a.x * 100 + 5} y={rest(a) - a.y * 100 - 5} fontSize="8" fill="#000" fontFamily="monospace">{a.arrow}</text>
         </g>
       )))}
-      {aim && <><circle cx={aim.x * 100} cy={-aim.y * 100} r="2.2" fill="none" stroke="#f2c40c" strokeWidth="1.1" /><circle cx={aim.x * 100} cy={-aim.y * 100} r="3.3" fill="none" stroke="#000" strokeWidth=".6" /></>}
+      {aim && <><circle cx={aim.x * 100} cy={spotY(aim.k) - aim.y * 100} r="2.2" fill="none" stroke="#f2c40c" strokeWidth="1.1" /><circle cx={aim.x * 100} cy={spotY(aim.k) - aim.y * 100} r="3.3" fill="none" stroke="#000" strokeWidth=".6" /></>}
     </>
   );
-  const cx = aim ? aim.x * 100 : 0, cy = aim ? -aim.y * 100 : 0;
+  const cx = aim ? aim.x * 100 : 0, cy = aim ? spotY(aim.k) - aim.y * 100 : 0;
   const cross = (w, c) => (
     <g stroke={c} strokeWidth={w}>
       <line x1={cx - Z} x2={cx - g} y1={cy} y2={cy} /><line x1={cx + g} x2={cx + Z} y1={cy} y2={cy} />
@@ -96,8 +125,9 @@ function Target({ face, arrows, pick, onHit }) {
   );
 
   return (
-    <div className="rg-target" dir="ltr">
-      <svg ref={ref} viewBox="-110 -110 220 220" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => setAim(null)}>{drawing}</svg>
+    <div className={`rg-target ${spots > 1 ? "spots" : ""}`} dir="ltr">
+      <p className="rg-face">{label}</p>
+      <svg ref={ref} viewBox={`-110 ${top - 110} 220 ${220 + (spots - 1) * GAP}`} role="img" aria-label={label} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => setAim(null)}>{drawing}</svg>
       {aim && (
         <svg className={`rg-loupe ${aim.side}${aim.low ? " b" : ""}`} viewBox={`${cx - Z} ${cy - Z} ${2 * Z} ${2 * Z}`} aria-hidden="true">
           {drawing}{cross(0.7, "#000")}{cross(0.3, "#fff")}
@@ -363,7 +393,7 @@ export default function Range({ tr, lang, selectedId }) {
             <button className="link-btn" onClick={() => change((s) => { delete s.pendingClip; })}>{r.dontLink}</button></p>
         )}
       </div>
-      <Target face={face} arrows={e.arrows} pick={pick} onHit={hit} />
+      <Target face={face} label={r.faces[face] || face} arrows={e.arrows} pick={pick} onHit={hit} />
       {tagId && <QuickTag key={tagId} id={tagId} tr={tr} onClose={() => setTagId(null)} />}
       {filming && <Recorder tr={tr} onDone={clipDone} onClose={() => setFilming(false)} />}
       <div className="rg-row3">

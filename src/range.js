@@ -2,8 +2,11 @@
 // Pure functions on a plain session object, so the screen stays thin and this file is testable.
 // The session uses the same shape as RACM Field's file (racm.session.v1), which the Labeller reads.
 
-export const FACES = ["122", "80", "40", "40s"]; // 40s: 40 cm 3-spot, rings 6 to 10
-export const rings = (face) => (face === "40s" ? 5 : 10);
+export const FACES = ["122", "80", "80r", "40", "40s"]; // 80r: 80 cm reduced, rings 5 to 10. 40s: 40 cm 3-spot, rings 6 to 10
+export const rings = (face) => ({ "40s": 5, "80r": 6 })[face] ?? 10;
+// A 3-spot has three faces stacked vertically. Arrows keep x, y on their own spot (0 top, 1 middle, 2 bottom), so
+// grouping and statistics overlay the three spots, as coaches read them.
+export const spotsOf = (face) => (face === "40s" ? 3 : 1);
 export const scoreValue = (s) => (s === "X" ? 10 : s === "M" || s == null ? 0 : +s);
 
 // x, y: hit position in target radii, centre 0,0, y up.
@@ -57,7 +60,7 @@ export const record = (s, view, pick, hit, now = Date.now()) => {
     a = { arrow: e.arrows.length + 1, plot_ms: now, score: null, x: null, y: null, feel: null, notes: "" };
     e.arrows.push(a);
   }
-  if (!("x" in hit)) { a.x = null; a.y = null; } // a typed score replaces an old plotted position
+  if (!("x" in hit)) { a.x = null; a.y = null; delete a.spot; } // a typed score replaces an old plotted position
   Object.assign(a, hit);
   return { view };
 };
@@ -83,7 +86,7 @@ export const summary = (s) => {
 };
 
 export const RING_FILL = ["#f7f3ea", "#f7f3ea", "#1b1b1b", "#1b1b1b", "#2e7fd8", "#2e7fd8", "#e2483d", "#e2483d", "#f2c40c", "#f2c40c"]; // ring 1 to 10
-export const faceRadiusCm = (face) => (face === "40s" ? 10 : +face / 2); // a 3-spot's single face is 20 cm across
+export const faceRadiusCm = (face) => (face === "40s" ? 10 : parseInt(face, 10) / 2); // a 3-spot's single face is 20 cm across
 
 // Everything the printed scorecard shows: per-end and running totals, how often each score came up,
 // first half against second half, and the group's centre and size in cm on the real face.

@@ -1,7 +1,7 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { scoreOf, scoreKeys, newSession, record, undoLast, summary, finish, scorecard } from "./range.js";
+import { scoreOf, scoreKeys, newSession, record, undoLast, summary, finish, scorecard, rings, spotsOf, faceRadiusCm } from "./range.js";
 
 const setup = { type: "Technical", distance: "70", face: "122", perEnd: "3", wind: "Calm", temp: "", sleep: "7.5", goal: "hold expansion" };
 const start = 1_800_000_000_000;
@@ -85,4 +85,19 @@ test("scorecard: end and running totals, score counts, halves and group size in 
   assert.deepEqual([c.firstHalf, c.secondHalf], [6, 10]); // 9, 9, M | X, 10
   assert.ok(Math.abs(c.spreadCm - 6.1) < 1e-9, "both plotted arrows sit 0.1 radius from their centre");
   assert.equal(c.feel, 3);
+});
+
+test("80 cm reduced face scores 5 to 10; a 3-spot has three spots; typing a score drops the plotted spot", () => {
+  assert.equal(rings("80r"), 6);
+  assert.equal(scoreOf("80r", 0.95, 0), "5");
+  assert.equal(scoreOf("80r", 1.01, 0), "M");
+  assert.deepEqual(scoreKeys("80r"), ["X", "10", "9", "8", "7", "6", "5", "M"]);
+  assert.equal(faceRadiusCm("80r"), 40);
+  assert.equal(spotsOf("40s"), 3);
+  assert.equal(spotsOf("122"), 1);
+  const s = newSession({ athlete: { id: "a", name: "A" }, setup: { distance: "18", face: "40s", perEnd: "3", type: "Technical" }, now: 0 });
+  record(s, 0, null, { x: 0, y: 0, score: "X", spot: 2 }, 1000);
+  assert.equal(s.ends[0].arrows[0].spot, 2);
+  record(s, 0, 0, { score: "9" }, 2000);
+  assert.equal("spot" in s.ends[0].arrows[0], false);
 });
