@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/single-file.mjs",
     "lint": "eslint .",
-    "test": "node --test src/storage.test.js src/range.test.js src/stats.test.js src/clips.test.js src/report.test.js src/goals.test.js src/insights.test.js src/review.test.js src/sync.test.js supabase/rls.test.js",
+    "test": "node --test src/storage.test.js src/lock.test.js src/range.test.js src/stats.test.js src/clips.test.js src/report.test.js src/goals.test.js src/insights.test.js src/review.test.js src/sync.test.js supabase/rls.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

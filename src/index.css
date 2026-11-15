@@ -334,3 +334,33 @@ button.row:hover .row-name { color: var(--blue); }
   .archer-btn { max-width: 27vw; padding: 0 8px; }
   .lang-toggle { padding: 0 6px; }
 }
+
+/* Coach profile */
+.coach-head { display: flex; gap: 14px; align-items: center; margin-bottom: 20px; }
+.coach-avatar { width: 56px; height: 56px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--black); color: var(--yellow); font: 800 22px var(--font-head); }
+.coach-name { font: 700 22px var(--font-head); line-height: 1.1; }
+.coach-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.settings-sub { font: 700 15px var(--font-head); margin: 4px 0 6px; }
+.settings-sub + * { margin-bottom: 4px; }
+.lock-settings, .acct { display: grid; gap: 10px; margin-bottom: 18px; }
+.settings-group { font: 800 20px var(--font-head); text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 10px; }
+.link-btn { background: none; border: 0; padding: 4px 0; color: var(--blue); font: inherit; text-decoration: underline; cursor: pointer; justify-self: start; align-self: flex-start; min-height: var(--tap); }
+.acct-step { font-weight: 700; }
+.acct-ok { color: var(--green-text); font-weight: 600; }
+.acct-qr { display: grid; gap: 6px; justify-items: start; }
+.acct-qr img { background: var(--white); padding: 8px; border: 1.5px solid var(--g200); border-radius: var(--r-md); }
+.acct-qr code { word-break: break-all; font-size: 13px; }
+.acct-danger { padding-top: 10px; border-top: 1px solid var(--g200); }
+.lock-after { display: flex; flex-direction: row; gap: 8px; align-items: center; justify-content: flex-start; justify-self: start; flex-wrap: wrap; text-align: start; }
+.lock-after select { width: auto; }
+
+/* Device lock */
+.lock-host { display: contents; }
+.lock-screen { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: var(--black); color: var(--white); }
+.lock-card { display: grid; gap: 12px; justify-items: center; width: min(100%, 320px); text-align: center; }
+.lock-card h1 { font: 800 32px var(--font-head); letter-spacing: .04em; text-transform: uppercase; }
+.lock-card input { width: 100%; text-align: center; font-size: 24px; letter-spacing: .3em; }
+.lock-card .btn-primary { width: 100%; }
+.lock-card .link-btn { color: var(--yellow); justify-self: center; align-self: center; }
+.lock-card p { color: var(--white); }
+.lock-card .error-msg { color: var(--yellow); font-weight: 600; }

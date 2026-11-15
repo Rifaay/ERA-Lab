@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
-import { configured, account, syncNow, finishLinkSignIn } from "./sync";
+import { configured, signedIn, syncNow, finishLinkSignIn } from "./sync";
 import { t } from "./i18n";
 import { getAthletes } from "./storage";
 import { AppContext } from "./context";
@@ -94,7 +94,7 @@ export default function App() {
   useEffect(() => {
     if (!configured) return;
     let timer;
-    const sync = () => { clearTimeout(timer); if (account() && navigator.onLine) syncNow().catch((e) => console.warn("Sync failed", e)); };
+    const sync = () => { clearTimeout(timer); if (signedIn() && navigator.onLine) syncNow().catch((e) => console.warn("Sync failed", e)); };
     const later = () => { clearTimeout(timer); timer = setTimeout(sync, 5000); };
     const seen = () => document.visibilityState === "visible" && sync();
     const received = () => { setAthletesTick((n) => n + 1); if (!["range", "review"].includes(screenRef.current)) setDataTick((n) => n + 1); };

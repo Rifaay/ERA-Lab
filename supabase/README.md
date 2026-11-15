@@ -1,7 +1,8 @@
 # ERA Lab cloud copy (free tier)
 
 The app works without any of this: with no Supabase settings it keeps everything on the device.
-With them, Settings shows **Cloud copy**: sign in by email, and the phone and the computer stay in step.
+With them, Coach profile → Security shows **Cloud copy**: sign in with email + password, then a 6-digit code from an
+authenticator app (two-step sign-in), and the phone and the computer stay in step.
 
 **Set up on 2026-11-14:** project `ERA Lab` (`snljkhitklnfezxbhirv`, West EU / Ireland, free plan), both migrations run,
 Site URL `https://rifaay.github.io/ERA-Lab/`, GitHub variables set. Resend is not set up yet.
@@ -19,7 +20,8 @@ review of theirs. The live range session and video files stay on the device too.
 ## Set it up once (about 20 minutes)
 
 1. **Supabase:** create a project at supabase.com in an EU region. Turn off *Automatically expose new tables*.
-   SQL Editor → run `migrations/0001_records.sql`, then `migrations/0002_reviews_and_ping.sql`.
+   SQL Editor → run `migrations/0001_records.sql`, then `0002_reviews_and_ping.sql`, then `0003_require_second_step.sql`
+   (the data answers only sign-ins that passed both steps).
 2. **Sign-in email:** Authentication → URL Configuration → Site URL: the app's address. Supabase's own sender emails a
    **link**; opening it on the same device signs in. Its template can only be edited once Resend (step 3) is the
    sender: then add `<p>Or type this code: <b>{{ .Token }}</b></p>` to *Magic link or OTP*, so the offline file and
@@ -32,7 +34,14 @@ review of theirs. The live range session and video files stay on the device too.
    - Local build: copy `.env.example` to `.env.local` and fill both in.
    - GitHub: repository Settings → Secrets and variables → Actions → **Variables**: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
      The next push builds the app with them and starts the keep-alive.
-5. Open the app → Settings → Cloud copy → sign in. Do the same on the second device.
+5. **Sign-in rules:** Authentication → Sign In / Providers → Email: keep *Confirm email* on and set the minimum
+   password length to 12. Authentication → Multi-Factor: *TOTP (App Authenticator)* enabled.
+6. Open the app → Coach profile → Security → Cloud copy → **Create account**, confirm the email, sign in and scan
+   the QR code with an authenticator app. Then turn off **Allow new users to sign up**, so nobody else can create
+   accounts. Sign in the same way on the second device (same password, same authenticator).
+
+An account made before passwords existed (2026-11-14, email-code sign-in) has no password: use **Forgot password?**
+on the sign-in form, open the emailed link on the same device, set up the authenticator, then choose a password.
 
 The publishable key (`sb_publishable_...`) is meant to be public; the permission rules protect the data.
 The **secret** key (`sb_secret_...`) skips every rule: never put it in the app, a `VITE_` variable, a GitHub variable or git.

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Account from "./Account";
-import { configured } from "../sync";
+import { LockSettings } from "../DeviceLock";
+import { hasPin } from "../lock";
+import { configured, signedIn } from "../sync";
 import { getErrors, clearErrors, downloadErrors } from "../errors";
 import { getSettings, saveSettings, exportBackup, importBackup, storageUsageKB, clearAllData } from "../storage";
 
@@ -15,6 +17,9 @@ export default function Settings({ tr, onDataCleared, onGo }) {
   const daysSinceBackup = () => { const t = localStorage.getItem("racm_last_backup"); return t ? Math.floor((Date.now() - new Date(t)) / 864e5) : null; };
   const [backupDays, setBackupDays] = useState(daysSinceBackup);
 
+  const [, setTick] = useState(0); // the status chips re-read the lock and sign-in after a change below
+  const changed = () => setTick((n) => n + 1);
+  const initials = (settings.coachName || "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   const set = (k, v) => setSettings((x) => ({ ...x, [k]: v }));
 
   const handleSave = () => {
@@ -50,23 +55,43 @@ export default function Settings({ tr, onDataCleared, onGo }) {
     <div className="screen">
       <h2>{s.title}</h2>
 
-      {/* Coach info */}
+      <div className="card coach-head">
+        <span className="coach-avatar" aria-hidden="true">{initials || "?"}</span>
+        <div>
+          <div className="coach-name">{settings.coachName || s.noName}</div>
+          {settings.club && <div className="muted">{settings.club}</div>}
+          <div className="coach-chips">
+            <span className={`badge ${hasPin() ? "teal" : "amber"}`}>{hasPin() ? s.lockOn : s.lockOff}</span>
+            {configured && <span className={`badge ${signedIn() ? "teal" : "gray"}`}>{signedIn() ? s.cloudOn : s.cloudOff}</span>}
+          </div>
+        </div>
+      </div>
+
       <div className="card settings-section">
-        <div className="settings-label">Coach Info</div>
+        <div className="settings-label">{s.profile}</div>
         <div className="form">
           <label>{s.coachName}
-            <input value={settings.coachName || ""} onChange={(e) => set("coachName", e.target.value)} />
+            <input value={settings.coachName || ""} autoComplete="name" onChange={(e) => set("coachName", e.target.value)} />
           </label>
           <label>{s.club}
-            <input value={settings.club || ""} onChange={(e) => set("club", e.target.value)} />
+            <input value={settings.club || ""} autoComplete="organization" onChange={(e) => set("club", e.target.value)} />
           </label>
           <button className="btn-primary small" style={{ alignSelf: "flex-start" }} onClick={handleSave}>{s.save}</button>
           {saved && <p className="success-msg">{s.saved}</p>}
         </div>
       </div>
 
-      {configured && <Account tr={tr} />}
+      <div className="card settings-section">
+        <div className="settings-label">{s.security}</div>
+        <h3 className="settings-sub">{tr.lock.title}</h3>
+        <LockSettings tr={tr} onChange={changed} />
+        {configured && <>
+          <h3 className="settings-sub">{tr.sync.title}</h3>
+          <Account tr={tr} onChange={changed} />
+        </>}
+      </div>
 
+      <h3 className="settings-group">{s.data}</h3>
       {/* Backup / Restore */}
       <div className="card settings-section">
         <div className="settings-label">{s.backup}</div>
@@ -78,6 +103,7 @@ export default function Settings({ tr, onDataCleared, onGo }) {
           </label>
         </div>
         {restoreMsg && <p className="success-msg" style={{ marginTop: 6 }}>{restoreMsg}</p>}
+        <p className="muted" style={{ marginTop: 8 }}>{s.backupNote}</p>
         <p className={backupDays == null || backupDays > 7 ? "error-msg" : "muted"} style={{ marginTop: 8 }}>
           {backupDays == null ? s.noBackup : s.lastBackup.replace("{days}", backupDays)}
         </p>
@@ -121,7 +147,7 @@ export default function Settings({ tr, onDataCleared, onGo }) {
             <input
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="Type CONFIRM"
+              placeholder={s.confirmWord}
               style={{ borderColor: "var(--rl)" }}
             />
           </label>

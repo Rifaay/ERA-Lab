@@ -116,3 +116,23 @@ test("two devices: adds, deletions and conflicts carry over; children never reac
   await sync();
   assert.deepEqual(st.getAthletes().map((a) => a.id).sort(), ["a1", "c1"], "the phone keeps its copy");
   assert.deepEqual(cloud.get("athletes/a1").data, { id: "a1", private: true }, "and never uploads it again");});
+
+test("password rules: long enough, not the email, not a common word", async () => {
+  const { passwordProblem } = await import("./sync.js");
+  assert.equal(passwordProblem("short1!"), "short");
+  assert.equal(passwordProblem("coach.ahmed-2026", "coach.ahmed@x.com"), "email");
+  assert.equal(passwordProblem("MyArcheryPass99"), "common");
+  assert.equal(passwordProblem("aaaaaaaaaaaaaa"), "common");
+  assert.equal(passwordProblem("river-tent-oak-42"), "");
+});
+
+test("only a token that passed both sign-in steps counts as signed in", async () => {
+  const { signedIn, verifyApp } = await import("./sync.js");
+  const jwt = (aal) => `h.${btoa(JSON.stringify({ aal }))}.s`;
+  mem = new Map();
+  mem.set("racm_auth", JSON.stringify({ email: "c@x", token: jwt("aal1"), refresh: "r", expires: Date.now() + 3.6e6, aal: "aal1" }));
+  assert.equal(signedIn(), false);
+  globalThis.fetch = async (url) => ({ ok: true, status: 200, text: async () => JSON.stringify(url.endsWith("/challenge") ? { id: "ch" } : { access_token: jwt("aal2"), refresh_token: "r2", expires_in: 3600, user: { id: "u1", email: "c@x" } }) });
+  await verifyApp("f1", "123456");
+  assert.equal(signedIn(), true);
+});

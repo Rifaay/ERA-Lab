@@ -72,7 +72,7 @@ export const plan = (local, remote, base) => {
   return { push, drop, take, remove, conflicts, next };
 };
 
-// ── Supabase calls (plain fetch: sign-in by emailed code and one table need no client library) ──────────
+// ── Supabase calls (plain fetch: password sign-in, an authenticator app and one table need no client library) ──
 const call = async (path, { method = "GET", body, token, prefer } = {}, f = fetch) => {
   const res = await f(URL_ + path, {
     method,
@@ -80,26 +80,70 @@ const call = async (path, { method = "GET", body, token, prefer } = {}, f = fetc
     body: body && JSON.stringify(body),
   });
   const text = await res.text();
-  if (!res.ok) { const e = new Error((text && (JSON.parse(text).msg || JSON.parse(text).message)) || `HTTP ${res.status}`); e.status = res.status; throw e; }
+  if (!res.ok) {
+    let j = {}; try { j = JSON.parse(text); } catch { /* not JSON: a proxy or outage page */ }
+    const e = new Error(j.msg || j.message || j.error_description || `HTTP ${res.status}`); e.status = res.status; e.code = j.error_code || j.code; throw e;
+  }
   return text ? JSON.parse(text) : null;
 };
 
+// Sign-in has two steps: email + password (aal1), then a code from an authenticator app (aal2). The database only
+// answers aal2 tokens (migrations/0003), so a stolen password alone reaches nothing.
+const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
 export const account = () => get(AUTH, null)?.email || "";
-// The email carries a link back to this page (Supabase's own sender) or a code (once Resend sends with a custom template).
+export const signedIn = () => get(AUTH, null)?.aal === "aal2"; // both steps done: sync may run
+export const resetting = () => Boolean(get(AUTH, null)?.recovery);
 const here = () => location.href.split("#")[0];
-export const sendCode = (email) => call(`/auth/v1/otp?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, create_user: true } });
-const keep = (s) => {
+const keep = (s, extra = {}) => {
   if (get(STATE, {}).user !== s.user.id) { put(STATE, { user: s.user.id, base: {} }); } // another account: compare from scratch
-  put(AUTH, { email: s.user.email, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000 });
+  put(AUTH, { email: s.user.email, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000, aal: claims(s.access_token).aal || "aal1", ...extra });
 };
-export const verifyCode = async (email, code) => keep(await call("/auth/v1/verify", { method: "POST", body: { type: "email", email, token: code.trim() } }));
-// Opening the emailed link lands here with the session in the address (#access_token=…). Keep it, then wipe the address.
+
+// Client-side rules are for the coach's benefit; set the same minimum in Supabase so the server enforces it too.
+const COMMON = ["password", "123456", "qwerty", "archery", "eralab", "letmein", "welcome", "admin", "iloveyou", "abc123"];
+export const passwordProblem = (pw, email = "") => {
+  if (pw.length < 12) return "short";
+  const low = pw.toLowerCase(), name = email.split("@")[0].toLowerCase();
+  if (name.length >= 3 && low.includes(name)) return "email";
+  if (/^(.)\1+$/.test(pw) || COMMON.some((w) => low.includes(w)) || "0123456789abcdefghijklmnopqrstuvwxyz".includes(low)) return "common";
+  return "";
+};
+
+// Returns true when Supabase wants the email address confirmed first (a link is on its way).
+export const signUp = async (email, password) => {
+  const r = await call(`/auth/v1/signup?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, password } });
+  if (r?.access_token) { keep(r); return false; }
+  return true;
+};
+export const signIn = async (email, password) => keep(await call("/auth/v1/token?grant_type=password", { method: "POST", body: { email, password } }));
+export const sendReset = (email) => call(`/auth/v1/recover?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email } });
+export const setPassword = async (password) => {
+  await call("/auth/v1/user", { method: "PUT", body: { password }, token: await token() });
+  put(AUTH, { ...get(AUTH, {}), recovery: false });
+};
+
+// Authenticator app (TOTP). A verified factor means "ask for a code"; none means "set one up".
+export const factors = async () => ((await call("/auth/v1/user", { token: await token() })).factors || []).filter((x) => x.factor_type === "totp");
+export const enrollApp = async () => {
+  const t = await token();
+  for (const x of await factors()) if (x.status !== "verified") await call(`/auth/v1/factors/${x.id}`, { method: "DELETE", token: t }).catch(() => {}); // an earlier, unfinished setup
+  const r = await call("/auth/v1/factors", { method: "POST", token: t, body: { factor_type: "totp", friendly_name: `ERA Lab ${new Date().toISOString().slice(0, 16)}`, issuer: "ERA Lab" } });
+  return { id: r.id, qr: r.totp.qr_code, secret: r.totp.secret };
+};
+export const verifyApp = async (factorId, code) => {
+  const t = await token();
+  const ch = await call(`/auth/v1/factors/${factorId}/challenge`, { method: "POST", token: t, body: {} });
+  const s = await call(`/auth/v1/factors/${factorId}/verify`, { method: "POST", token: t, body: { challenge_id: ch.id, code: code.trim() } });
+  keep(s, { recovery: resetting() });
+};
+
+// Opening an emailed link (confirm address, reset password) lands here with a session in the address. Keep it, wipe it.
 export const finishLinkSignIn = async () => {
   const h = new URLSearchParams(location.hash.slice(1));
   if (!h.get("access_token") || !h.get("refresh_token")) return h.get("error_description") || false;
   history.replaceState(null, "", here());
   const user = await call("/auth/v1/user", { token: h.get("access_token") });
-  keep({ user, access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: Number(h.get("expires_in")) || 3600 });
+  keep({ user, access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: Number(h.get("expires_in")) || 3600 }, { recovery: h.get("type") === "recovery" });
   return true;
 };
 const token = async (f) => {
@@ -107,11 +151,12 @@ const token = async (f) => {
   if (!a) throw new Error("Not signed in");
   if (Date.now() < a.expires - 60_000) return a.token;
   const s = await call("/auth/v1/token?grant_type=refresh_token", { method: "POST", body: { refresh_token: a.refresh } }, f);
-  put(AUTH, { ...a, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000 });
+  put(AUTH, { ...a, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000, aal: claims(s.access_token).aal || a.aal });
   return s.access_token;
 };
-export const signOut = async () => {
-  try { await call("/auth/v1/logout", { method: "POST", token: await token() }); } catch { /* offline or expired: forget it here anyway */ }
+// everywhere: also ends the sessions on the coach's other devices (a lost phone).
+export const signOut = async (everywhere = false) => {
+  try { await call(`/auth/v1/logout?scope=${everywhere ? "global" : "local"}`, { method: "POST", token: await token() }); } catch { /* offline or expired: forget it here anyway */ }
   localStorage.removeItem(AUTH);
 };
 // Erases this coach's whole cloud copy. The device keeps its data.

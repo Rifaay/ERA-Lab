@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { getAthletes, getSessions, saveSession, deleteSession, uid } from "../storage";
 import Icon from "../icons";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
+import Scorecard from "./Scorecard";
+import { scorecardFile, saveHtmlFile } from "../scorecardFile";
 
 const BLANK = {
   date: new Date().toISOString().slice(0, 10),
@@ -42,10 +46,13 @@ export default function SessionLogger({ lang, tr, selectedId }) {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  // Sessions recorded on the Range screen carry the full arrow-by-arrow record the Labeller reads.
-  const downloadRange = (r) => {
-    const a = document.createElement("a"), url = URL.createObjectURL(new Blob([JSON.stringify(r)], { type: "application/json" }));
-    a.href = url; a.download = `${r.session_id}.racm-session.json`; a.click(); URL.revokeObjectURL(url);
+  // Sessions recorded on the Range screen: the same scorecard web file the Range screen saves when the session ends.
+  const downloadScorecard = (r) => {
+    const host = document.createElement("div"), root = createRoot(host);
+    flushSync(() => root.render(<Scorecard s={r} tr={tr} lang={lang} />));
+    const html = host.innerHTML;
+    root.unmount();
+    saveHtmlFile(`Scorecard ${r.session_id}.html`, scorecardFile(html, { lang, title: `Scorecard ${r.session_id}` }));
   };
 
   const handleDelete = (id) => {
@@ -158,7 +165,7 @@ export default function SessionLogger({ lang, tr, selectedId }) {
                   {sess.ramadan && <span className="badge amber"><Icon name="moon" size={13} label={tr.session.ramadan} /></span>}
                 </div>
                 <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {sess.range && <button className="btn-ghost small" onClick={() => downloadRange(sess.range)}>{tr.range.file}</button>}
+                  {sess.range && <button className="btn-ghost small" onClick={() => downloadScorecard(sess.range)}>{tr.range.file}</button>}
                   <button className="del-btn" onClick={() => handleDelete(sess.id)}><Icon name="x" size={16} /></button>
                 </span>
               </div>

@@ -16,17 +16,19 @@ await db.exec(`
   create table auth.users (id uuid primary key);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claims', true)::jsonb ->> 'sub', '')::uuid $$;
+  create function auth.jwt() returns jsonb language sql stable as
+    $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql"]) await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8"));
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql"]) await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8"));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
 test.beforeEach(() => db.exec(`delete from records; insert into auth.users values ('${A}'), ('${B}') on conflict do nothing`));
 
 // Each call runs as the given visitor and is rolled back, so tests can't leak into each other.
-const as = async (who, sql, params) => {
+const as = async (who, sql, params, aal = "aal2") => {
   try {
     await db.exec("begin");
-    await db.query(`select set_config('request.jwt.claims', $1, true)`, [who ? JSON.stringify({ sub: who }) : ""]);
+    await db.query(`select set_config('request.jwt.claims', $1, true)`, [who ? JSON.stringify({ sub: who, aal }) : ""]);
     await db.exec(`set local role ${who ? "authenticated" : "anon"}`);
     return await db.query(sql, params);
   } finally {
@@ -82,4 +84,10 @@ test("deleting the account erases its data", async () => {
   await seed(A);
   await db.query(`delete from auth.users where id = $1`, [A]);
   assert.equal((await db.query("select * from records")).rows.length, 0);
+});
+
+test("a password-only sign-in (no authenticator code) reaches nothing", async () => {
+  await seed(A);
+  assert.equal((await as(A, "select * from records", [], "aal1")).rows.length, 0);
+  await assert.rejects(as(A, insertAthlete, [], "aal1"), /row-level security/);
 });
