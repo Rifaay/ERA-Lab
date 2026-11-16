@@ -19,6 +19,8 @@ export function reviewFromLabels(labels, ctx) {
     date: labels.date || (labels.labelled_at || "").slice(0, 10), cameraAngle: labels.camera_angle || "",
     verdict: labels.verdict || null, faults: [...(labels.faults || [])], notes: labels.notes || "",
     holdS: hold, phasesMarked: Object.values(at).filter((t) => t != null).length,
+    phases: Object.fromEntries(Object.entries(at).filter(([, t]) => t != null).map(([k, t]) => [k, +(+t).toFixed(3)])),
+    clipStart: ctx.clipStart || "stance",
     shot: labels.shot ? { session_id: labels.shot.session_id, end: labels.shot.end, arrow: labels.shot.arrow, score: labels.shot.score ?? null } : null,
     savedAt: labels.labelled_at || null,
   };

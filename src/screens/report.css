@@ -106,3 +106,11 @@
   .rd-sec h2 { font-size: 13pt; break-after: avoid; }
   .rd-foot { display: none; }
 }
+
+/* Snapshots from the labeller: two to a row on paper and on screen */
+.rd-snaps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 6px 0 12px; }
+.rd-snaps figure { margin: 0; break-inside: avoid; }
+.rd-snaps img { width: 100%; display: block; border-radius: 4px; border: 1px solid #ccc; }
+.rd-snaps figcaption { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #555; margin-top: 2px; }
+.rd-x { border: 0; background: none; color: #b00; font-size: 14px; cursor: pointer; padding: 2px 6px; min-height: 0; }
+@media print { .rd-x { display: none; } }

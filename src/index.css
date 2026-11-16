@@ -435,3 +435,11 @@ button.row:hover .row-name { color: var(--blue); }
 .lab .lt-color.on { outline: 3px solid var(--bone); outline-offset: 2px; }
 .lab .lt-hint { font-size: 12px; color: var(--muted); margin: 0; }
 .lab .lab-draw { position: absolute; touch-action: none; z-index: 2; }
+.lab .lt-snap { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--gold); border-radius: 10px; background: var(--ink-2); }
+.lab .lt-snap img { width: 100%; max-height: 40vh; object-fit: contain; border-radius: 6px; background: #000; }
+.lab .lt-start { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+.lab .lt-start select { min-height: 36px; }
+.lab .lt-notice { display: grid; gap: 4px; font-size: 13px; }
+.lab .lt-notice > .lt-btn { justify-self: start; border-color: var(--nile); }
+.lab .lt-notice p { margin: 0; }
+.lab .lt-note { color: var(--muted); font-style: italic; }

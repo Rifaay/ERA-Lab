@@ -25,6 +25,9 @@ def once(text, old, new, what):
 # ── script ──────────────────────────────────────────────────────────────────
 js = once(js, "'use strict';\n", "", "strict directive")
 js = once(js, "const n=face==='40s'?5:10;", "const n=face==='40s'?5:face==='80r'?6:10;", "80 cm reduced face in the mini target")
+js = once(js, "  L.phases.forEach(p=>{ if(p.source&&p.source!=='auto') return; const i=sugg[p.key];",
+          "  env.adjust&&env.adjust(sugg,conf,f,n); // the clip's start and what the coach's reviews taught (src/review/learn.js)\n  L.phases.forEach(p=>{ if(p.source&&p.source!=='auto') return; const i=sugg[p.key];", "learned suggestion hook")
+js = once(js, "function renderPhases(){", "function renderPhases(){ env.phases&&env.phases(L&&L.phases,cur&&cur.name);", "phase change hook")
 js = once(js, "getComputedStyle(document.documentElement)", "getComputedStyle(host)", "colour lookup")
 # Session sheets recorded in the app join the ones found as files in the opened folder.
 js = once(js, "  sessions=[];\n", "  sessions=[];\n  const appSessions=env.sessions();\n", "session list")

@@ -55,7 +55,7 @@ function Progress({ rows, label }) {
   );
 }
 
-export default function ReportDoc({ d, athlete, tr, lang, show, coach, waCategory }) {
+export default function ReportDoc({ d, athlete, tr, lang, show, coach, waCategory, snaps = [], onRemoveSnap }) {
   const s = tr.stats, rp = tr.rp, st = d.st, prev = d.prev, main = st.groups[0], prevMain = prev.groups.find((g) => g.key === main?.key);
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const date = (iso, o = { day: "numeric", month: "short", year: "numeric" }) => { const [y, m, dd] = iso.split("-").map(Number); return new Date(y, m - 1, dd).toLocaleDateString(locale, o); };
@@ -168,7 +168,18 @@ export default function ReportDoc({ d, athlete, tr, lang, show, coach, waCategor
       {has("video") && (
         <section className="rd-sec">
           <h2>{rp.videoTitle}</h2>
-          {!d.video.clips ? <p className="rd-muted">{rp.noVideo}</p> : (
+          {snaps.length > 0 && (
+            <div className="rd-snaps">
+              {snaps.map((x) => (
+                <figure key={x.id}>
+                  <img src={x.url} alt="" />
+                  <figcaption>{new Date(x.takenAt).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "short" })}
+                    {onRemoveSnap && <button type="button" className="rd-x" aria-label={rp.snapRemove} onClick={() => onRemoveSnap(x.id)}>✕</button>}</figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+          {!d.video.clips ? (!snaps.length && <p className="rd-muted">{rp.noVideo}</p>) : (
             <>
               <p>{fill(rp.videoLead, { n: d.video.clips, good: d.video.good })}</p>
               {d.video.faults.length > 0 && <table className="rd-table"><thead><tr><th>{rp.fault}</th><th className="n">{rp.clips}</th></tr></thead>

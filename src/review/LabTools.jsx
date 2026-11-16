@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { angleOf } from "./draw";
+import { STARTS, getStart, setStart, notice } from "./learn";
+import { getReviews, uid } from "../storage";
+import { putClip } from "../clipStore";
+import { FAULTS } from "../clips";
 
 const COLORS = ["#f2c40c", "#ff3b30", "#00e0c6", "#ffffff"];
 const TOOLS = [["line", "╱"], ["arrow", "➚"], ["circle", "◯"], ["angle", "∠"], ["pen", "✎"]];
@@ -48,13 +52,17 @@ const paint = (c, shapes, w, h, ar, scale = 1) => {
 // Tools on top of the Labeller's video, so the coach marks body points and draws without changing tabs.
 // Points: the Labeller's own points, placed with its own logic (its "Place points" button and point list, clicked
 // for the coach). Drawings: lines, arrows, circles, angles and freehand, kept per clip on this device.
-export default function LabTools({ host, tr, clipRef }) {
+export default function LabTools({ host, tr, clip: openClip, archerId, phases }) {
   const l = tr.lab;
   const [slot, setSlot] = useState(null);
   const [tool, setTool] = useState(null); // null | "points" | a drawing tool
   const [color, setColor] = useState(COLORS[0]);
   const [shapes, setShapes] = useState([]);
   const [pointName, setPointName] = useState("");
+  const [start, setStartState] = useState("stance");
+  const [snap, setSnap] = useState(null); // { blob, url } while the coach chooses what to do with it
+  const [snapMsg, setSnapMsg] = useState("");
+  const [open, setOpen] = useState(false); // ERA Lab notices, folded by default
   const [, setTick] = useState(0);
   const cv = useRef(null), draft = useRef(null), clip = useRef("");
   const $ = (id) => host.querySelector("#" + id);
@@ -77,8 +85,6 @@ export default function LabTools({ host, tr, clipRef }) {
     const list = $("ptList"), vid = $("vid");
     const read = () => {
       setPointName(list.querySelector(".pt.on span:nth-child(2)")?.textContent || "");
-      const name = clipRef.current || "";
-      if (name !== clip.current) { clip.current = name; setShapes(load()[name] || []); }
       setTick((n) => n + 1);
     };
     const seen = new MutationObserver(read);
@@ -88,6 +94,12 @@ export default function LabTools({ host, tr, clipRef }) {
     read();
     return () => { seen.disconnect(); vid.removeEventListener("loadedmetadata", read); };
   }, [slot]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A new clip: its own drawings and start, and nothing left over from the last one.
+  useEffect(() => {
+    clip.current = openClip;
+    setShapes(load()[openClip] || []); setStartState(getStart(openClip)); setSnap(null); setSnapMsg(""); // eslint-disable-line react-hooks/set-state-in-effect -- reset per clip
+  }, [openClip]);
 
   const pointsOn = () => $("ptMode")?.classList.contains("on");
   const setPoints = (on) => { if (pointsOn() !== on) $("ptMode").click(); };
@@ -165,7 +177,7 @@ export default function LabTools({ host, tr, clipRef }) {
   };
 
   // A still of the current frame with the drawings and the Labeller's points, at the video's own size.
-  const savePicture = () => {
+  const takeSnapshot = () => {
     const vid = $("vid"), ov = $("ov");
     if (!vid.videoWidth) return;
     const W = vid.videoWidth, H = vid.videoHeight, c = document.createElement("canvas");
@@ -174,13 +186,23 @@ export default function LabTools({ host, tr, clipRef }) {
     g.drawImage(vid, 0, 0, W, H);
     if (ov?.width) g.drawImage(ov, 0, 0, W, H);
     paint(g, shapes, W, H, W / H, W / 640);
-    c.toBlob((b) => {
-      if (!b) return;
-      const a = document.createElement("a"), url = URL.createObjectURL(b);
-      a.href = url; a.download = `${(clip.current || "clip").replace(/\.[^.]+$/, "")}_${vid.currentTime.toFixed(2)}s.png`; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }, "image/png");
+    vid.pause();
+    c.toBlob((b) => { if (b) { setSnapMsg(""); setSnap({ blob: b, url: URL.createObjectURL(b), at: vid.currentTime }); } }, "image/jpeg", 0.88);
   };
+  const closeSnap = () => { if (snap) URL.revokeObjectURL(snap.url); setSnap(null); };
+  const downloadSnap = () => {
+    const a = document.createElement("a");
+    a.href = snap.url; a.download = `${(clip.current || "clip").replace(/\.[^.]+$/, "")}_${snap.at.toFixed(2)}s.jpg`; a.click();
+  };
+  const reportSnap = async () => {
+    try {
+      await putClip({ id: "snap-" + uid(), kind: "snap", athleteId: archerId || "", clipId: clip.current, blob: snap.blob, mime: "image/jpeg", size: snap.blob.size, takenAt: Date.now(), inReport: true });
+      closeSnap(); setSnapMsg(l.snapAdded);
+    } catch { setSnapMsg(l.snapFull); }
+  };
+  const chooseStart = (k) => { setStartState(k); if (clip.current) setStart(clip.current, k); };
+  const seen = phases ? notice(getReviews(), archerId, phases, openClip) : null;
+  const hints = seen ? seen.faults.length + seen.similar.length : 0;
 
   if (!slot) return null;
   const on = tool === "points" && pointsOn();
@@ -199,9 +221,40 @@ export default function LabTools({ host, tr, clipRef }) {
         ))}
         <button type="button" className="lt-btn" disabled={!shapes.length} onClick={() => keep(shapes.slice(0, -1))}>{l.undo}</button>
         <button type="button" className="lt-btn" disabled={!shapes.length} onClick={() => window.confirm(l.confirmClear) && keep([])}>{l.clear}</button>
-        <button type="button" className="lt-btn" onClick={savePicture}>{l.picture}</button>
+        <button type="button" className="lt-btn" onClick={takeSnapshot}>{l.snapshot}</button>
       </div>
       {tool && <p className="lt-hint" role="status">{l.hints[tool]}</p>}
+      {snap && (
+        <div className="lt-snap" role="dialog" aria-label={l.snapshot}>
+          <img src={snap.url} alt="" />
+          <div className="lt-row">
+            <button type="button" className="lt-btn on" onClick={downloadSnap}>{l.download}</button>
+            <button type="button" className="lt-btn" onClick={reportSnap} disabled={!archerId}>{l.toReport}</button>
+            <button type="button" className="lt-btn" onClick={closeSnap}>{l.close}</button>
+          </div>
+          {!archerId && <p className="lt-hint">{l.noArcher}</p>}
+        </div>
+      )}
+      {snapMsg && <p className="lt-hint" role="status">{snapMsg}</p>}
+      <div className="lt-row">
+        <label className="lt-start">{l.startsAt}
+          <select value={start} onChange={(e) => chooseStart(e.target.value)}>
+            {STARTS.map((k) => <option key={k} value={k}>{l.starts[k]}</option>)}
+          </select>
+        </label>
+      </div>
+      {seen && (seen.n >= 3 || hints > 0) && (
+        <div className="lt-notice">
+          <button type="button" className="lt-btn" aria-expanded={open} onClick={() => setOpen(!open)}>{l.notices.replace("{n}", hints)}</button>
+          {open && <>
+            <p className="lt-hint">{l.learned.replace("{n}", seen.n)}</p>
+            {seen.hold != null && seen.usualHold != null && <p>{l.holdVs.replace("{now}", seen.hold.toFixed(2)).replace("{usual}", seen.usualHold.toFixed(2))}</p>}
+            {seen.faults.map((f) => <p key={f.fault}>⚑ {l.faultHint.replace("{fault}", tr.quick.faults[FAULTS.indexOf(f.fault)] || f.fault).replace("{times}", f.times).replace("{of}", f.of)}</p>)}
+            {seen.similar.map((x) => <p key={x.id} className="lt-note">“{x.notes}” <small>{x.date}</small></p>)}
+            {!hints && <p className="lt-hint">{l.nothing}</p>}
+          </>}
+        </div>
+      )}
     </>,
     slot,
   );

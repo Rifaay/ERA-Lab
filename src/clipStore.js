@@ -24,13 +24,17 @@ const run = async (mode, fn) => {
 export const hasClipStore = () => typeof indexedDB !== "undefined";
 export const putClip = (clip) => run("readwrite", (s) => s.put(clip));
 export const getClip = (id) => run("readonly", (s) => s.get(id));
-export const listClips = () => run("readonly", (s) => s.getAll());
+// Snapshots (a frame with the coach's drawings) live here too, marked kind "snap": { id, kind, athleteId, clipId, blob,
+// takenAt, inReport }. The clip library lists only clips.
+const all = () => run("readonly", (s) => s.getAll());
+export const listClips = async () => (await all()).filter((c) => c.kind !== "snap");
+export const listSnaps = async (athleteId) => (await all()).filter((c) => c.kind === "snap" && (!athleteId || c.athleteId === athleteId));
 export const deleteClip = (id) => run("readwrite", (s) => s.delete(id));
 export const updateClip = async (id, change) => { const c = await getClip(id); if (c) await putClip({ ...c, ...change }); };
 
 // Deleting an archer deletes their video too.
 export const deleteClipsOf = async (athleteId) => {
   if (!hasClipStore()) return;
-  for (const c of await listClips()) if (c.athleteId === athleteId) await deleteClip(c.id);
+  for (const c of await all()) if (c.athleteId === athleteId) await deleteClip(c.id);
 };
 export const clearClips = () => (hasClipStore() ? run("readwrite", (s) => s.clear()) : Promise.resolve());

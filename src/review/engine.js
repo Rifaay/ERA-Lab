@@ -333,6 +333,7 @@ function suggest(){
     if(j>0){ let k=j; while(k>0&&!quiet(k)) k--; sugg.raise=k+1; conf.raise=.4;
       if(k>0){ sugg.stance=0; conf.stance=.5; sugg.hook=Math.max(0,Math.round(k*.6)); conf.hook=.2 } }
   }
+  env.adjust&&env.adjust(sugg,conf,f,n); // the clip's start and what the coach's reviews taught (src/review/learn.js)
   L.phases.forEach(p=>{ if(p.source&&p.source!=='auto') return; const i=sugg[p.key];
     if(i==null){ Object.assign(p,{start_s:null,start_frame:null,source:null,confidence:null}); return }
     p.start_frame=i; p.start_s=+(i/f).toFixed(4); p.source='auto'; p.confidence=conf[p.key] });
@@ -373,7 +374,7 @@ function undo(){ const k=undoStack.pop(); if(k==null) return; const p=L.phases[k
 $('markBtn').onclick=mark;
 function flash(){const f=$('flash');f.classList.add('go');requestAnimationFrame(()=>requestAnimationFrame(()=>f.classList.remove('go')))}
 
-function renderPhases(){
+function renderPhases(){ env.phases&&env.phases(L&&L.phases,cur&&cur.name);
   const box=$('phaseList'); box.innerHTML='';
   PHASES.forEach((ph,i)=>{
     const p=L.phases[i]; const d=document.createElement('div'); d.className='phase'+(i===selPhase?' next':'');

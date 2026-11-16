@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { listSnaps, deleteClip, hasClipStore } from "../clipStore";
 import { createPortal } from "react-dom";
 import { getAthletes, getSessions, getReviews, getAssessments, getGoals, getProgressLogs, getSettings, calcWACategory } from "../storage";
 import { periodOf, shiftPeriod, isoDay } from "../stats";
@@ -51,8 +52,23 @@ export default function Report({ tr, lang, selectedId }) {
     window.addEventListener("afterprint", done);
     window.print();
   };
+  // Snapshots the coach added from the labeller, taken in this period. They live on this device only.
+  const [snaps, setSnaps] = useState([]);
+  const [snapTick, setSnapTick] = useState(0);
+  useEffect(() => {
+    if (!athlete || !hasClipStore()) return;
+    let live = true, urls = [];
+    listSnaps(athlete.id).then((all) => {
+      if (!live) return;
+      const inside = all.filter((x) => x.inReport && isoDay(new Date(x.takenAt)) >= period.from && isoDay(new Date(x.takenAt)) <= period.to).sort((a, b) => a.takenAt - b.takenAt);
+      urls = inside.map((x) => URL.createObjectURL(x.blob));
+      setSnaps(inside.map((x, i) => ({ id: x.id, url: urls[i], takenAt: x.takenAt })));
+    }).catch(() => setSnaps([]));
+    return () => { live = false; urls.forEach((u) => URL.revokeObjectURL(u)); };
+  }, [athlete?.id, period.from, period.to, snapTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  const removeSnap = async (id) => { if (window.confirm(rp.snapRemove)) { await deleteClip(id); setSnapTick((n) => n + 1); } };
   const toggle = (k) => setShow(show.includes(k) ? show.filter((x) => x !== k) : [...show, k]);
-  const doc = d && <ReportDoc d={d} athlete={athlete} tr={tr} lang={lang} show={show} coach={getSettings().coachName}
+  const doc = d && <ReportDoc d={d} athlete={athlete} tr={tr} lang={lang} show={show} coach={getSettings().coachName} snaps={snaps} onRemoveSnap={removeSnap}
     waCategory={calcWACategory(athlete.discipline, athlete.gender, athlete.ageBand)} />;
 
   return (
