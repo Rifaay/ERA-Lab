@@ -48,8 +48,8 @@ ${sheetHtml}
 </html>`;
 
 // Hands a finished web file to the device: the share sheet where there is one (WhatsApp, Drive), else a download.
-export async function saveHtmlFile(name, html) {
-  const file = new File([html], name, { type: "text/html" });
+export async function saveHtmlFile(name, html, type = "text/html") {
+  const file = new File([html], name, { type });
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === "AbortError") return; }
   }

@@ -478,3 +478,11 @@ button.row:hover .row-name { color: var(--blue); }
   .pz-comp { grid-template-columns: 1fr 1fr auto; }
   .pz-comp input:not([type=date]) { grid-column: 1 / -1; order: -1; }
 }
+
+/* "?" explainers */
+.help { position: relative; display: inline-flex; vertical-align: middle; }
+.help-btn { width: 26px; height: 26px; min-height: 26px; padding: 0; border-radius: 50%; border: 0; background: var(--black); color: var(--yellow); font: 800 14px var(--font-body); cursor: pointer; flex: none; }
+.help-pop { position: absolute; top: 32px; inset-inline-end: 0; z-index: 40; width: min(300px, 80vw); display: grid; gap: 4px; padding: 12px 14px; background: var(--black); color: var(--white); border-radius: var(--r-md); box-shadow: 0 8px 24px rgba(0, 0, 0, .3); font-size: 13px; line-height: 1.45; text-align: start; animation: pop var(--t-s) var(--ease-out) both; }
+.help-pop b { color: var(--yellow); font: 700 15px var(--font-head); text-transform: uppercase; }
+.pz-hintrow { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+.pz-actions { align-items: center; }

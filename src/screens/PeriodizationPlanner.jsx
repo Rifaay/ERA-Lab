@@ -3,7 +3,8 @@ import { getAthletes, getPlan, savePlan, getSessions, getGoals, getExercises, ui
 import { PHASES, COLORS, MIX, DEFAULT_RULES, rulesOf, autoPlan, compsIn, weekStart, ramadanWeeks, shotByDay, shotByWeek, loadRatio, warnings } from "../plan";
 import { isoDay, planWeek } from "../stats";
 import { saveHtmlFile } from "../scorecardFile";
-import { planFile } from "../planFile";
+import { getSettings } from "../storage";
+import Help from "../Help";
 import { useApp } from "../context";
 import ArcherSelect from "../ArcherSelect";
 import Icon from "../icons";
@@ -93,7 +94,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
 
       {tab === "season" && <>
         <div className="card">
-          <div className="card-title">{pl.comps}</div>
+          <div className="card-header"><div className="card-title">{pl.comps}</div><Help text={pl.help.comps} /></div>
           <p className="muted">{pl.compsIntro}</p>
           {comps.map((c) => (
             <div key={c.id} className="pz-comp">
@@ -119,6 +120,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
           <button className="btn-primary small" onClick={build}>{pl.build}</button>
           <button className="btn-ghost small" onClick={rebuild}>{pl.rebuild}</button>
           <button className="btn-ghost small" onClick={clear}>{pl.clear}</button>
+          <Help text={pl.help.build} />
         </div>
         <p className="muted">{edited.size ? fill(pl.editedNote, { n: edited.size }) : pl.buildNote}</p>
 
@@ -129,7 +131,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
           ))}
           <button className={`phase-chip ${armed === "none" ? "armed" : ""}`} aria-pressed={armed === "none"} onClick={() => setArmed(armed === "none" ? null : "none")}>{pl.erase}</button>
         </div>
-        <p className="muted" style={{ fontSize: 12 }}>{armed ? pl.paintHint : pl.tapHint}</p>
+        <div className="pz-hintrow"><p className="muted" style={{ fontSize: 12 }}>{armed ? pl.paintHint : pl.tapHint}</p><Help text={pl.help.season} /></div>
 
         <div className="week-grid pz-grid">
           {Array.from({ length: 52 }, (_, i) => i + 1).map((w) => {
@@ -159,7 +161,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
 
       {tab === "rules" && <RulesView {...{ rules, pl }} set={setRule} onReset={() => window.confirm(pl.confirmRules) && rebuildWith({ rules: {} })} />}
 
-      {tab === "send" && <SendView {...{ plan, year, pl, tr, lang, athlete, goals, exercises, shot, ramadan, nowWeek }} />}
+      {tab === "send" && <SendView {...{ plan, year, pl, lang, athlete, goals, exercises, shot, ramadan, nowWeek }} />}
     </div>
   );
 }
@@ -174,7 +176,7 @@ function WeekEditor({ w, plan, year, lang, pl, shot, comps, ramadan, goals, exer
     <div className="card pz-week" role="region" aria-label={`${pl.wk}${w}`}>
       <div className="card-header">
         <div className="card-title">{pl.wk}{w} · {new Date(y, mo - 1, d).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "short" })}</div>
-        <button className="del-btn" onClick={onClose} aria-label={pl.close}><Icon name="x" size={16} /></button>
+        <span><Help text={pl.help.week} /><button className="del-btn" onClick={onClose} aria-label={pl.close}><Icon name="x" size={16} /></button></span>
       </div>
       {comps.filter((x) => x.week === w).map((x) => <p key={x.id}><span className={`wk-comp p${x.priority}`}>{x.priority}</span> {x.name}</p>)}
       <div className="form">
@@ -218,7 +220,7 @@ function LoadView({ plan, year, pl, shot, byDay, warns, nowWeek, onDismiss, onRe
   const ratios = weeks.map((w) => (w <= nowWeek ? loadRatio(byDay, year, w) : null));
   return <>
     <div className="card">
-      <div className="card-title">{pl.loadTitle}</div>
+      <div className="card-header"><div className="card-title">{pl.loadTitle}</div><Help text={pl.help.load} /></div>
       <p className="muted">{pl.loadIntro}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="pz-chart" role="img" aria-label={pl.loadTitle} dir="ltr">
         {weeks.map((w, i) => {
@@ -235,7 +237,7 @@ function LoadView({ plan, year, pl, shot, byDay, warns, nowWeek, onDismiss, onRe
       <p className="muted pz-key">{pl.chartKey}</p>
     </div>
     <div className="card">
-      <div className="card-title">{pl.warnTitle}</div>
+      <div className="card-header"><div className="card-title">{pl.warnTitle}</div><Help text={pl.help.warnings} /></div>
       {!warns.length && <p className="muted">{pl.noWarn}</p>}
       {warns.map((x) => (
         <div key={x.key} className="pz-warn">
@@ -253,7 +255,7 @@ function RulesView({ rules, pl, set, onReset }) {
   const n = (path, v, step = 1) => <input type="number" min="0" step={step} value={v} onChange={(e) => set(path, e.target.value === "" ? "" : Math.max(0, +e.target.value))} />;
   return <>
     <div className="card form">
-      <div className="card-title">{pl.rulesTitle}</div>
+      <div className="card-header"><div className="card-title">{pl.rulesTitle}</div><Help text={pl.help.rules} /></div>
       <p className="muted">{pl.rulesIntro}</p>
       <label>{pl.peakArrows}{n(["peakArrows"], rules.peakArrows, 10)}</label>
       <div className="form-row">
@@ -298,17 +300,27 @@ function RulesView({ rules, pl, set, onReset }) {
   </>;
 }
 
-function SendView({ plan, year, pl, tr, lang, athlete, goals, exercises, shot, ramadan, nowWeek }) {
+function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramadan, nowWeek }) {
   const [opt, setOpt] = useState({ from: "now", comps: true, targets: true, mix: true, exercises: true, goals: true, notes: true, shot: false });
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
   const send = async () => {
-    const first = opt.from === "now" && nowWeek >= 1 && nowWeek <= 52 ? nowWeek : 1;
-    await saveHtmlFile(`${pl.fileName} ${athlete.name} ${year}.html`, planFile({ plan, year, first, opt, pl, tr, lang, athlete, goals, exercises, shot, ramadan }));
-    setMsg(pl.sent);
+    setBusy(true); setMsg("");
+    try {
+      const [{ planPdf }, { default: fonts }] = await Promise.all([import("../planPdf"), import("../pdfFonts")]); // loaded only now
+      const first = opt.from === "now" && nowWeek >= 1 && nowWeek <= 52 ? nowWeek : 1;
+      const pdf = planPdf({ plan, year, first, opt, pl, lang, athlete, goals, exercises, shot, ramadan, fonts, coach: getSettings().coachName || "" });
+      await saveHtmlFile(`${pl.fileName} ${athlete.name} ${year}.pdf`, pdf, "application/pdf");
+      setMsg(pl.sent);
+    } catch (e) {
+      console.warn("PDF failed", e);
+      setMsg(location.protocol === "file:" ? pl.pdfOffline : pl.pdfFailed);
+    }
+    setBusy(false);
   };
   return (
     <div className="card form">
-      <div className="card-title">{pl.sendTitle}</div>
+      <div className="card-header"><div className="card-title">{pl.sendTitle}</div><Help text={pl.help.send} /></div>
       <p className="muted">{pl.sendIntro}</p>
       <label>{pl.fromLabel}
         <select value={opt.from} onChange={(e) => setOpt({ ...opt, from: e.target.value })}>
@@ -318,7 +330,7 @@ function SendView({ plan, year, pl, tr, lang, athlete, goals, exercises, shot, r
       {["comps", "targets", "mix", "exercises", "goals", "notes", "shot"].map((k) => (
         <label key={k} className="pz-check"><input type="checkbox" checked={opt[k]} onChange={() => setOpt({ ...opt, [k]: !opt[k] })} />{pl.include[k]}</label>
       ))}
-      <button className="btn-primary" style={{ alignSelf: "flex-start" }} onClick={send}><Icon name="download" size={18} />{pl.send}</button>
+      <button className="btn-primary" style={{ alignSelf: "flex-start" }} onClick={send} disabled={busy}><Icon name="download" size={18} />{busy ? pl.making : pl.send}</button>
       {msg && <p className="success-msg" role="status">{msg}</p>}
     </div>
   );
