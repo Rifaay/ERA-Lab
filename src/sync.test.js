@@ -6,7 +6,7 @@ let mem = new Map();
 globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
 globalThis.window = { alert: () => {} };
 
-const { plan, isAdult, shareable, syncNow } = await import("./sync.js");
+const { plan, isAdult, shareable, syncNow, awayTooLong, markSeen, AWAY_MS } = await import("./sync.js");
 const st = await import("./storage.js");
 
 // The cloud: rows keyed "kind/id", answering the three requests sync.js makes.
@@ -157,4 +157,14 @@ test("the account's role comes from the server, not from the note the owner can 
   globalThis.fetch = async () => ({ ok: false, status: 404, text: async () => "{}" });
   assert.equal(await loadRole(), "coach", "project without the roles table: the note is the fallback");
   assert.equal(role(), "coach");
+});
+
+test("away more than 45 minutes: sign in again; less, or never noted, or signed out: stay", () => {
+  mem = new Map();
+  const now = 1_800_000_000_000;
+  assert.equal(awayTooLong(now), false);                              // signed out
+  mem.set("racm_auth", JSON.stringify({ email: "c@x" }));
+  assert.equal(awayTooLong(now), false);                              // no time noted yet
+  markSeen(now - AWAY_MS + 60_000); assert.equal(awayTooLong(now), false);
+  markSeen(now - AWAY_MS - 60_000); assert.equal(awayTooLong(now), true);
 });

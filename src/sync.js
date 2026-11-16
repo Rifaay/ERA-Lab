@@ -157,6 +157,11 @@ export const verifyApp = async (factorId, code) => {
   keep(s, { recovery: resetting() });
 };
 
+// The code in the same email, typed into the app: works when the link would open in another browser (iPhone home-screen
+// app, mail app's own browser) or was already used up by a mail scanner. type: "signup" | "recovery".
+export const verifyEmailCode = async (email, code, type) =>
+  keep(await call("/auth/v1/verify", { method: "POST", body: { type, email, token: code.trim() } }), { recovery: type === "recovery" });
+
 // Opening an emailed link (confirm address, reset password) lands here with a session in the address. Keep it, wipe it.
 export const finishLinkSignIn = async () => {
   const h = new URLSearchParams(location.hash.slice(1));
@@ -185,6 +190,16 @@ export const signOut = async (everywhere = false) => {
   localStorage.removeItem(AUTH);
   globalThis.dispatchEvent?.(new Event("racm-signed-out"));
 };
+// Away from the app for more than 45 minutes (closed, or in the background): sign in again. The app notes the time
+// every minute while it is open and whenever it is hidden, so a phone that kills the app still leaves a recent time.
+export const AWAY_MS = 45 * 60_000;
+const SEEN = "racm_seen";
+export const markSeen = (now = Date.now()) => { try { localStorage.setItem(SEEN, String(now)); } catch { /* storage full */ } };
+export const awayTooLong = (now = Date.now()) => {
+  const seen = Number(localStorage.getItem(SEEN));
+  return Boolean(account()) && seen > 0 && now - seen > AWAY_MS; // no time noted yet (first open after this update): stay in
+};
+
 // Erases this coach's whole cloud copy. The device keeps its data.
 export const deleteCloudCopy = async () => {
   await call(`/rest/v1/records?coach_id=eq.${get(STATE, {}).user}`, { method: "DELETE", token: await token() });

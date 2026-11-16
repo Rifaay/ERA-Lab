@@ -26,15 +26,17 @@ import Legal             from "./screens/Legal";
 import "./index.css";
 import "./motion.css";
 
-// The coaching cycle is the navigation: six stages, each holding the screens that belong to it.
+// The bottom bar: five stages, each holding the screens that belong to it. Video analysis is the coach's own work, so it
+// is the raised button in the middle. Archers plot on their own phones, so Range opens on their live scores and the
+// coach's own plotting comes second.
 const STAGES = [
-  { key: "home",   icon: "home",   screens: ["dashboard", "archer", "profile", "settings", "legal"] },
-  { key: "plan",   icon: "calendar", screens: ["planner", "goals", "exercises"] },
-  { key: "range",  icon: "target",   screens: ["range", "live"] },
-  { key: "review", icon: "clip",     screens: ["clips", "review"] },
-  { key: "assess", icon: "assess",   screens: ["rubric", "session"] },
-  { key: "report", icon: "chart",    screens: ["stats", "report"] },
+  { key: "home",     icon: "home",     screens: ["dashboard", "archer", "profile", "settings", "legal"] },
+  { key: "plan",     icon: "calendar", screens: ["planner", "goals", "exercises"] },
+  { key: "review",   icon: "clip",     screens: ["clips", "review"] },
+  { key: "range",    icon: "target",   screens: ["live", "range"] },
+  { key: "progress", icon: "chart",    screens: ["stats", "report", "rubric", "session"] },
 ];
+const CENTER = "review";
 const stageOf = (screen) => STAGES.find((s) => s.screens.includes(screen));
 const SCREENS = STAGES.flatMap((s) => s.screens);
 // Screens about one archer. With none chosen they show the list of archers instead of a dead end.
@@ -211,9 +213,9 @@ export default function App({ tr, lang, setLang, open }) {
 
           <nav className="stage-nav" aria-label="ERA Lab">
             {STAGES.map((s) => (
-              <button key={s.key} className={`stage-btn ${s.key === "range" ? "go" : ""} ${stage.key === s.key ? "active" : ""}`}
+              <button key={s.key} className={`stage-btn ${s.key === CENTER ? "go" : ""} ${stage.key === s.key ? "active" : ""}`}
                 aria-current={stage.key === s.key ? "page" : undefined} onClick={() => goStage(s)}>
-                {s.key === "range" ? <span className="disc"><Icon name={s.icon} size={26} /></span> : <Icon name={s.icon} size={24} />}
+                {s.key === CENTER ? <span className="disc"><Icon name={s.icon} size={26} /></span> : <Icon name={s.icon} size={24} />}
                 {tr.stages[s.key]}
               </button>
             ))}

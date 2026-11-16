@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  account, signedIn, resetting, loadRole, passwordProblem, signIn, signUp, sendReset, setPassword,
+  account, signedIn, resetting, loadRole, passwordProblem, signIn, signUp, sendReset, setPassword, verifyEmailCode,
   factors, enrollApp, verifyApp, verifyAny, signOut, syncNow, deleteCloudCopy, lastSync, conflicts,
 } from "../sync";
 import { digits } from "../lock";
@@ -13,7 +13,7 @@ export default function Account({ tr, as = "coach", onChange }) {
   const s = tr.sync, coach = as === "coach";
   const [, setTick] = useState(0);
   const refresh = () => { setTick((n) => n + 1); onChange?.(); };
-  const [mode, setMode] = useState("in"); // signed out: in | up | reset
+  const [mode, setMode] = useState("in"); // signed out: in | up | reset, then signup | recovery while waiting for the emailed code
   const [email, setEmail] = useState(account);
   const [pw, setPw] = useState("");
   const [code, setCode] = useState("");
@@ -35,7 +35,7 @@ export default function Account({ tr, as = "coach", onChange }) {
   const why = (e) => {
     if (e.status === 429) return s.tooMany;
     if (navigator.onLine === false || e instanceof TypeError) return s.offline;
-    return { invalid_credentials: s.badLogin, email_not_confirmed: s.notConfirmed, weak_password: s.weak, mfa_verification_failed: s.badCode, signup_disabled: s.signupOff }[e.code]
+    return { invalid_credentials: s.badLogin, email_not_confirmed: s.notConfirmed, weak_password: s.weak, mfa_verification_failed: s.badCode, otp_expired: s.badCode, signup_disabled: s.signupOff }[e.code]
       || (stage === "step2" && /totp|code/i.test(e.message) ? s.badCode : e.message);
   };
   const run = async (fn) => {
@@ -89,6 +89,25 @@ export default function Account({ tr, as = "coach", onChange }) {
     </ol>
   );
 
+  const emailed = mode === "signup" || mode === "recovery";
+  if (stage === "out" && emailed) return (
+    <div className="acct">
+      {steps}
+      <p className="muted">{mode === "signup" ? s.confirmSent : s.resetSent}</p>
+      <form className="form" onSubmit={(e) => {
+        e.preventDefault();
+        run(async () => { await verifyEmailCode(email.trim(), code, mode); setCode(""); if (mode === "signup") await sameRole(); refresh(); });
+      }}>
+        <label>{s.emailCode}
+          <input inputMode="numeric" autoComplete="one-time-code" dir="ltr" value={code} onChange={(e) => setCode(digits(e.target.value, 8))} />
+        </label>
+        <button className="btn-primary wide-btn" disabled={busy || code.length < 6}>{s.useCode}</button>
+        <button type="button" className="link-btn" onClick={() => { setMode("in"); setCode(""); setErr(""); }}>{s.back}</button>
+        {err && <p className="error-msg" role="alert">{err}</p>}
+      </form>
+    </div>
+  );
+
   if (stage === "out") return (
     <div className="acct">
       {steps}
@@ -103,8 +122,8 @@ export default function Account({ tr, as = "coach", onChange }) {
       <form className="form" onSubmit={(e) => {
         e.preventDefault();
         const em = email.trim();
-        if (mode === "reset") return run(async () => { await sendReset(em); setMsg(s.resetSent); });
-        if (mode === "up") { const w = weak(pw); if (w) return setErr(w); return run(async () => { if (await signUp(em, pw, as)) { setMsg(s.confirmSent); setMode("in"); setPw(""); } else refresh(); }); }
+        if (mode === "reset") return run(async () => { await sendReset(em); setMode("recovery"); });
+        if (mode === "up") { const w = weak(pw); if (w) return setErr(w); return run(async () => { if (await signUp(em, pw, as)) { setMode("signup"); setPw(""); } else refresh(); }); }
         run(async () => { await signIn(em, pw); setPw(""); await sameRole(); refresh(); });
       }}>
         <label>{s.email}
