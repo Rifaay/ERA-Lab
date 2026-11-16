@@ -24,7 +24,7 @@ const corr = (xs, ys) => {
 // The planner numbers its weeks 1 to 52 from 1 January (as the archer screen does); blocks follow those weeks.
 // Counted in UTC: in local time a summer date is an hour short of whole days (daylight saving), which lands on the week before.
 export const planWeek = (iso) => { const [y, m, d] = iso.split("-").map(Number); return Math.min(52, Math.floor((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / (7 * DAY)) + 1); };
-const planWeekStart = (year, w) => isoDay(new Date(year, 0, 1 + (w - 1) * 7));
+export const planWeekStart = (year, w) => isoDay(new Date(year, 0, 1 + (w - 1) * 7));
 
 // kind: "week" (Monday to Sunday), "month", "block" (a run of weeks with one phase in the archer's plan), "all".
 // plans: the archer's plans ({year, weeks: {n: phase}}). Returns null when the anchor falls outside any block.
