@@ -15,7 +15,7 @@ export default function Welcome({ tr, lang, setLang, start = "", onDone }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const finish = (role) => { setUi({ role }); onDone(); };
+  const finish = (role, local = false) => { setUi({ role, local }); onDone(); };
 
   // An archer who is signed in may already be linked (a second phone, or after clearing the app).
   const signedArcher = step === "archer" && Boolean(account());
@@ -58,7 +58,7 @@ export default function Welcome({ tr, lang, setLang, start = "", onDone }) {
           {configured
             ? <div className="card"><Account tr={tr} as="coach" onChange={() => { setTick((n) => n + 1); if (signedIn()) finish("coach"); }} /></div>
             : <p className="muted">{w.noCloud}</p>}
-          <button className="btn-ghost wide-btn" onClick={() => finish("coach")}>{configured ? w.skip : w.open}</button>
+          <button className="btn-ghost wide-btn" onClick={() => finish("coach", true)}>{configured ? w.skip : w.open}</button>
           {configured && <p className="muted">{w.skipNote}</p>}
         </>}
 

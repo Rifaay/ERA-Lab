@@ -348,6 +348,16 @@ export const t = {
       leave: "Leave my coach", confirmLeave: "Leave your coach? Your arrows will stop being sent. You'll need a new code to join again.",
       account: "Account",
     },
+    lab: {
+      tools: "Video tools", points: "Body points", nextPoint: "Next point", colour: "Colour",
+      line: "Line", arrow: "Arrow", circle: "Circle", angle: "Angle", pen: "Draw",
+      undo: "Undo", clear: "Clear", picture: "Save picture", confirmClear: "Remove every drawing on this clip?",
+      hints: {
+        points: "Tap the video to place the point named on the button; it moves on to the next point. Tap the button to skip to another.",
+        line: "Press and drag on the video.", arrow: "Press and drag; the arrow points where you lift.", circle: "Press the centre and drag out.",
+        angle: "Tap one end, then the corner, then the other end. The angle shows at the corner.", pen: "Draw freely on the video.",
+      },
+    },
     live: {
       title: "Live scores", signIn: "Sign in to your cloud copy (Coach profile → Security) to give archers their own app and see their scores live.", noCloud: "This copy of ERA Lab has no cloud connection, so live scores aren't available.",
       offline: "No connection. Showing the last scores received.",
@@ -759,6 +769,16 @@ export const t = {
       coachLink: "مدربك", linked: "هذا الهاتف مرتبط بمدربك. كل سهم تسجّله يُرسل إليه وأنت ترمي.",
       leave: "غادر مدربي", confirmLeave: "مغادرة مدربك؟ سيتوقف إرسال سهامك، وستحتاج رمزاً جديداً للانضمام مجدداً.",
       account: "الحساب",
+    },
+    lab: {
+      tools: "أدوات الفيديو", points: "نقاط الجسم", nextPoint: "النقطة التالية", colour: "اللون",
+      line: "خط", arrow: "سهم", circle: "دائرة", angle: "زاوية", pen: "رسم حر",
+      undo: "تراجع", clear: "امسح", picture: "احفظ صورة", confirmClear: "إزالة كل الرسوم على هذا المقطع؟",
+      hints: {
+        points: "اضغط على الفيديو لوضع النقطة المكتوبة على الزر؛ ينتقل بعدها إلى النقطة التالية. اضغط الزر للانتقال إلى غيرها.",
+        line: "اضغط واسحب على الفيديو.", arrow: "اضغط واسحب؛ يشير السهم إلى حيث ترفع إصبعك.", circle: "اضغط على المركز واسحب للخارج.",
+        angle: "اضغط على طرف، ثم على الزاوية، ثم على الطرف الآخر. تظهر الزاوية عند رأسها.", pen: "ارسم بحرية على الفيديو.",
+      },
     },
     live: {
       title: "النتائج المباشرة", signIn: "سجّل الدخول إلى نسختك السحابية (ملف المدرب ← الأمان) لتمنح الرماة تطبيقهم وترى نتائجهم مباشرة.", noCloud: "هذه النسخة من ERA Lab بلا اتصال سحابي، لذا النتائج المباشرة غير متاحة.",

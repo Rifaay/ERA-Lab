@@ -183,6 +183,7 @@ export const token = async (f) => {
 export const signOut = async (everywhere = false) => {
   try { await call(`/auth/v1/logout?scope=${everywhere ? "global" : "local"}`, { method: "POST", token: await token() }); } catch { /* offline or expired: forget it here anyway */ }
   localStorage.removeItem(AUTH);
+  globalThis.dispatchEvent?.(new Event("racm-signed-out"));
 };
 // Erases this coach's whole cloud copy. The device keeps its data.
 export const deleteCloudCopy = async () => {

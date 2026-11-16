@@ -3,7 +3,7 @@ import App from './App.jsx'
 import Welcome from './Welcome.jsx'
 import ArcherApp from './ArcherApp.jsx'
 import { t } from './i18n'
-import { account, loadRole, finishLinkSignIn } from './sync'
+import { account, loadRole, finishLinkSignIn, configured } from './sync'
 import { myLink } from './archer'
 import { getUi, setUi, appRole } from './ui'
 import { watchDigits } from './digits'
@@ -23,13 +23,17 @@ export default function Root() {
       .catch((e) => console.warn('Sign-in link failed', e))
       .finally(() => setReady(true))
   }, [])
+  useEffect(() => { // signed out (here, on another device, or the session ran out): back to the sign-in page
+    window.addEventListener('racm-signed-out', again)
+    return () => window.removeEventListener('racm-signed-out', again)
+  }, [])
   if (!ready) return null
-  const tr = t[lang], who = appRole()
+  const tr = t[lang], who = appRole(configured)
   if (who === 'archer') {
     return account() && myLink()
       ? <ArcherApp tr={tr} lang={lang} setLang={setLang} onLeft={again} />
       : <Welcome tr={tr} lang={lang} setLang={setLang} start="archer" onDone={again} />
   }
   if (who === 'coach') return <App tr={tr} lang={lang} setLang={setLang} open={open} />
-  return <Welcome tr={tr} lang={lang} setLang={setLang} onDone={again} />
+  return <Welcome tr={tr} lang={lang} setLang={setLang} start={getUi().role === 'archer' ? 'archer' : getUi().role === 'coach' ? 'coach' : ''} onDone={again} />
 }

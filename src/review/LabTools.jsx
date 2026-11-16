@@ -1,0 +1,208 @@
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { angleOf } from "./draw";
+
+const COLORS = ["#f2c40c", "#ff3b30", "#00e0c6", "#ffffff"];
+const TOOLS = [["line", "╱"], ["arrow", "➚"], ["circle", "◯"], ["angle", "∠"], ["pen", "✎"]];
+const KEY = "racm_drawings";
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+const saveAll = (all) => { try { localStorage.setItem(KEY, JSON.stringify(all)); } catch { /* storage full: drawings stay for this visit */ } };
+
+// The picture inside the letterboxed <video>, relative to the viewer (the same sum the Labeller uses for its points).
+const pictureRect = (viewer, vid) => {
+  const r = vid.getBoundingClientRect(), p = viewer.getBoundingClientRect(), vw = vid.videoWidth || r.width || 1, vh = vid.videoHeight || r.height || 1;
+  const k = Math.min(r.width / vw, r.height / vh), w = vw * k, h = vh * k;
+  return { x: r.left - p.left - viewer.clientLeft + (r.width - w) / 2, y: r.top - p.top - viewer.clientTop + (r.height - h) / 2, w, h };
+};
+
+// Draws shapes (points in 0–1 of the picture) onto a 2D context of size w × h. `ar` is the video's width / height.
+const paint = (c, shapes, w, h, ar, scale = 1) => {
+  for (const s of shapes) {
+    const P = s.p.map(([x, y]) => [x * w, y * h]);
+    c.strokeStyle = c.fillStyle = s.c; c.lineWidth = 3 * scale; c.lineCap = c.lineJoin = "round";
+    c.shadowColor = "rgba(0,0,0,.7)"; c.shadowBlur = 3 * scale;
+    c.beginPath();
+    if (s.t === "circle" && P[1]) { c.arc(P[0][0], P[0][1], Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]), 0, 7); }
+    else { P.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); }
+    c.stroke();
+    if (s.t === "arrow" && P[1]) {
+      const [a, b] = P, ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = 16 * scale;
+      c.beginPath(); c.moveTo(b[0], b[1]);
+      c.lineTo(b[0] - L * Math.cos(ang - 0.45), b[1] - L * Math.sin(ang - 0.45));
+      c.lineTo(b[0] - L * Math.cos(ang + 0.45), b[1] - L * Math.sin(ang + 0.45)); c.closePath(); c.fill();
+    }
+    if (s.t === "angle") {
+      for (const [x, y] of P) { c.beginPath(); c.arc(x, y, 4 * scale, 0, 7); c.fill(); }
+      if (s.p.length === 3) {
+        const deg = angleOf(s.p[0], s.p[1], s.p[2], ar);
+        c.font = `700 ${18 * scale}px system-ui, sans-serif`; c.shadowBlur = 0;
+        const label = `${deg.toFixed(0)}°`, tx = P[1][0] + 10 * scale, ty = P[1][1] - 10 * scale, tw = c.measureText(label).width;
+        c.fillStyle = "rgba(0,0,0,.75)"; c.fillRect(tx - 4 * scale, ty - 18 * scale, tw + 8 * scale, 24 * scale);
+        c.fillStyle = s.c; c.fillText(label, tx, ty);
+      }
+    }
+    c.shadowBlur = 0;
+  }
+};
+
+// Tools on top of the Labeller's video, so the coach marks body points and draws without changing tabs.
+// Points: the Labeller's own points, placed with its own logic (its "Place points" button and point list, clicked
+// for the coach). Drawings: lines, arrows, circles, angles and freehand, kept per clip on this device.
+export default function LabTools({ host, tr, clipRef }) {
+  const l = tr.lab;
+  const [slot, setSlot] = useState(null);
+  const [tool, setTool] = useState(null); // null | "points" | a drawing tool
+  const [color, setColor] = useState(COLORS[0]);
+  const [shapes, setShapes] = useState([]);
+  const [pointName, setPointName] = useState("");
+  const [, setTick] = useState(0);
+  const cv = useRef(null), draft = useRef(null), clip = useRef("");
+  const $ = (id) => host.querySelector("#" + id);
+
+  // A row above the video controls, and a canvas over the picture.
+  useEffect(() => {
+    const transport = host.querySelector(".transport"), viewer = $("viewer");
+    if (!transport || !viewer) return;
+    const bar = document.createElement("div"); bar.className = "lab-tools";
+    transport.before(bar);
+    const canvas = document.createElement("canvas"); canvas.className = "lab-draw";
+    viewer.appendChild(canvas); cv.current = canvas;
+    setSlot(bar); // eslint-disable-line react-hooks/set-state-in-effect -- the portal target only exists once the Labeller is mounted
+    return () => { bar.remove(); canvas.remove(); };
+  }, [host]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Follow the Labeller: which clip is open, which point comes next, whether its point mode is on.
+  useEffect(() => {
+    if (!slot) return;
+    const list = $("ptList"), vid = $("vid");
+    const read = () => {
+      setPointName(list.querySelector(".pt.on span:nth-child(2)")?.textContent || "");
+      const name = clipRef.current || "";
+      if (name !== clip.current) { clip.current = name; setShapes(load()[name] || []); }
+      setTick((n) => n + 1);
+    };
+    const seen = new MutationObserver(read);
+    seen.observe(list, { childList: true, subtree: true });
+    seen.observe($("ptMode"), { childList: true, characterData: true, subtree: true });
+    vid.addEventListener("loadedmetadata", read);
+    read();
+    return () => { seen.disconnect(); vid.removeEventListener("loadedmetadata", read); };
+  }, [slot]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pointsOn = () => $("ptMode")?.classList.contains("on");
+  const setPoints = (on) => { if (pointsOn() !== on) $("ptMode").click(); };
+
+  // Redraw on every change of size, shapes or draft.
+  const redraw = () => {
+    const canvas = cv.current, viewer = $("viewer"), vid = $("vid");
+    if (!canvas || !viewer || !vid) return;
+    const R = pictureRect(viewer, vid), dpr = devicePixelRatio || 1;
+    Object.assign(canvas.style, { left: R.x + "px", top: R.y + "px", width: R.w + "px", height: R.h + "px", pointerEvents: tool && tool !== "points" ? "auto" : "none" });
+    canvas.width = R.w * dpr; canvas.height = R.h * dpr;
+    const c = canvas.getContext("2d"); c.scale(dpr, dpr);
+    const ar = (vid.videoWidth || 16) / (vid.videoHeight || 9);
+    paint(c, draft.current ? [...shapes, draft.current] : shapes, R.w, R.h, ar);
+  };
+  useEffect(() => {
+    if (!slot) return;
+    redraw();
+    const ro = new ResizeObserver(redraw); ro.observe($("viewer"));
+    const vid = $("vid"); vid.addEventListener("loadedmetadata", redraw);
+    return () => { ro.disconnect(); vid.removeEventListener("loadedmetadata", redraw); };
+  });
+
+  const keep = (next) => {
+    setShapes(next);
+    if (!clip.current) return;
+    const all = load();
+    if (next.length) all[clip.current] = next; else delete all[clip.current];
+    saveAll(all);
+  };
+
+  // Drawing on the canvas: press, drag, lift. An angle takes three taps: one end, the corner, the other end.
+  useEffect(() => {
+    const canvas = cv.current;
+    if (!canvas || !tool || tool === "points") return;
+    const at = (e) => { const r = canvas.getBoundingClientRect(); return [+((e.clientX - r.left) / r.width).toFixed(4), +((e.clientY - r.top) / r.height).toFixed(4)]; };
+    const down = (e) => {
+      e.preventDefault(); canvas.setPointerCapture?.(e.pointerId); $("vid").pause();
+      const p = at(e);
+      if (tool === "angle") {
+        const d = draft.current?.t === "angle" ? draft.current : { t: "angle", c: color, p: [] };
+        d.p = [...d.p, p];
+        if (d.p.length === 3) { draft.current = null; keep([...shapes, d]); } else { draft.current = d; redraw(); }
+        return;
+      }
+      draft.current = { t: tool, c: color, p: [p, p] }; redraw();
+    };
+    const move = (e) => {
+      const d = draft.current;
+      if (!d || d.t === "angle" || !e.buttons) return;
+      const p = at(e);
+      d.p = d.t === "pen" ? [...d.p, p] : [d.p[0], p]; redraw();
+    };
+    const up = () => {
+      const d = draft.current;
+      if (!d || d.t === "angle") return;
+      draft.current = null;
+      const [a, b] = [d.p[0], d.p[d.p.length - 1]];
+      if (d.t === "pen" ? d.p.length > 2 : Math.hypot(a[0] - b[0], a[1] - b[1]) > 0.01) keep([...shapes, d]); else redraw();
+    };
+    canvas.addEventListener("pointerdown", down); canvas.addEventListener("pointermove", move);
+    canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+    return () => { canvas.removeEventListener("pointerdown", down); canvas.removeEventListener("pointermove", move); canvas.removeEventListener("pointerup", up); canvas.removeEventListener("pointercancel", up); };
+  }, [tool, color, shapes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const choose = (t) => {
+    draft.current = null;
+    const next = tool === t ? null : t;
+    setPoints(next === "points");
+    setTool(next);
+  };
+  const nextPoint = () => {
+    const items = [...$("ptList").children], i = items.findIndex((x) => x.classList.contains("on"));
+    items[(i + 1) % items.length]?.click();
+  };
+
+  // A still of the current frame with the drawings and the Labeller's points, at the video's own size.
+  const savePicture = () => {
+    const vid = $("vid"), ov = $("ov");
+    if (!vid.videoWidth) return;
+    const W = vid.videoWidth, H = vid.videoHeight, c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.drawImage(vid, 0, 0, W, H);
+    if (ov?.width) g.drawImage(ov, 0, 0, W, H);
+    paint(g, shapes, W, H, W / H, W / 640);
+    c.toBlob((b) => {
+      if (!b) return;
+      const a = document.createElement("a"), url = URL.createObjectURL(b);
+      a.href = url; a.download = `${(clip.current || "clip").replace(/\.[^.]+$/, "")}_${vid.currentTime.toFixed(2)}s.png`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, "image/png");
+  };
+
+  if (!slot) return null;
+  const on = tool === "points" && pointsOn();
+  return createPortal(
+    <>
+      <div className="lt-row" role="toolbar" aria-label={l.tools}>
+        <button type="button" className={`lt-btn ${on ? "on" : ""}`} aria-pressed={on} onClick={() => choose("points")}>{l.points}</button>
+        {on && <button type="button" className="lt-btn lt-next" onClick={nextPoint} title={l.nextPoint}>{pointName || "—"} ›</button>}
+        {TOOLS.map(([t, icon]) => (
+          <button key={t} type="button" className={`lt-btn lt-ico ${tool === t ? "on" : ""}`} aria-pressed={tool === t} aria-label={l[t]} title={l[t]} onClick={() => choose(t)}>{icon}</button>
+        ))}
+      </div>
+      <div className="lt-row">
+        {COLORS.map((c) => (
+          <button key={c} type="button" className={`lt-color ${color === c ? "on" : ""}`} style={{ background: c }} aria-label={l.colour} aria-pressed={color === c} onClick={() => setColor(c)} />
+        ))}
+        <button type="button" className="lt-btn" disabled={!shapes.length} onClick={() => keep(shapes.slice(0, -1))}>{l.undo}</button>
+        <button type="button" className="lt-btn" disabled={!shapes.length} onClick={() => window.confirm(l.confirmClear) && keep([])}>{l.clear}</button>
+        <button type="button" className="lt-btn" onClick={savePicture}>{l.picture}</button>
+      </div>
+      {tool && <p className="lt-hint" role="status">{l.hints[tool]}</p>}
+    </>,
+    slot,
+  );
+}

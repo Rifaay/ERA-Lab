@@ -422,3 +422,16 @@ button.row:hover .row-name { color: var(--blue); }
 @media (min-width: 900px) {
   .subnav button { flex: none; }
 }
+
+/* Labeller: tools on the video (points and drawing) */
+.lab .lab-tools { display: grid; gap: 6px; flex: none; }
+.lab .lt-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; align-items: center; }
+.lab .lt-btn { flex: none; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--ink-2); color: var(--bone); font: 600 13px var(--font-body); cursor: pointer; white-space: nowrap; }
+.lab .lt-btn.on { background: var(--gold); color: #000; border-color: var(--gold); }
+.lab .lt-btn:disabled { opacity: .4; cursor: default; }
+.lab .lt-ico { min-width: 44px; padding: 0; font-size: 19px; }
+.lab .lt-next { border-color: var(--gold); color: var(--gold); max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+.lab .lt-color { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; }
+.lab .lt-color.on { outline: 3px solid var(--bone); outline-offset: 2px; }
+.lab .lt-hint { font-size: 12px; color: var(--muted); margin: 0; }
+.lab .lab-draw { position: absolute; touch-action: none; z-index: 2; }
