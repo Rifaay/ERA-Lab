@@ -122,12 +122,16 @@ export const passwordProblem = (pw, email = "") => {
   return "";
 };
 
-// Returns true when Supabase wants the email address confirmed first (a link is on its way).
-export const signUp = async (email, password, as = "coach") => {
-  const r = await call(`/auth/v1/signup?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, password, data: { role: as } } });
+// true: Supabase wants the address confirmed first (an email is on its way). false: signed in already.
+// "exists": the address already has an account. Supabase then answers as if it worked but sends nothing; the sign that
+// gives it away is a user with no identities.
+export const signUp = async (email, password, as = "coach", f = fetch) => {
+  const r = await call(`/auth/v1/signup?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, password, data: { role: as } } }, f);
   if (r?.access_token) { keep(r); return false; }
+  if (Array.isArray(r?.identities) && r.identities.length === 0) return "exists";
   return true;
 };
+export const resendSignup = (email) => call(`/auth/v1/resend?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { type: "signup", email } });
 export const signIn = async (email, password) => keep(await call("/auth/v1/token?grant_type=password", { method: "POST", body: { email, password } }));
 export const sendReset = (email) => call(`/auth/v1/recover?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email } });
 export const setPassword = async (password) => {

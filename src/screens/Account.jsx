@@ -1,21 +1,27 @@
 import { useEffect, useState } from "react";
 import {
-  account, signedIn, resetting, loadRole, passwordProblem, signIn, signUp, sendReset, setPassword, verifyEmailCode,
+  account, signedIn, resetting, role, loadRole, passwordProblem, signIn, signUp, resendSignup, sendReset, setPassword, verifyEmailCode,
   factors, enrollApp, verifyApp, verifyAny, signOut, syncNow, deleteCloudCopy, lastSync, conflicts,
 } from "../sync";
 import { digits } from "../lock";
 
-// The sign-in form, for a coach (`as="coach"`) or an archer (`as="archer"`).
+// The sign-in form. Inside the coach's or the archer's app it is fixed to that role (`as`). On the welcome page `as` is
+// left out: signing in needs no role (the account knows it), and creating an account asks coach or archer.
 // Coach: email + password, then a code from an authenticator app; until both are done the database answers nothing
 // (migrations/0003) and the app doesn't sync. Archer: email + password only; an archer's account can reach nothing
 // but the sessions their own phone uploads (migrations/0004).
-export default function Account({ tr, as = "coach", onChange }) {
-  const s = tr.sync, coach = as === "coach";
+export default function Account({ tr, as, onChange }) {
+  const s = tr.sync;
+  const [pick, setPick] = useState("coach"); // creating an account on the welcome page
+  const coach = (as || (account() ? role() : pick)) === "coach";
   const [, setTick] = useState(0);
   const refresh = () => { setTick((n) => n + 1); onChange?.(); };
   const [mode, setMode] = useState("in"); // signed out: in | up | reset, then signup | recovery while waiting for the emailed code
   const [email, setEmail] = useState(account);
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [wait, setWait] = useState(0); // seconds before the emailed code can be sent again
+  useEffect(() => { if (wait > 0) { const t = setTimeout(() => setWait(wait - 1), 1000); return () => clearTimeout(t); } }, [wait]);
   const [code, setCode] = useState("");
   const [app, setApp] = useState(null); // step 2: { id, qr?, secret? }
   const [backup, setBackup] = useState(null); // signed in, adding a second authenticator: { id, qr, secret }
@@ -46,7 +52,7 @@ export default function Account({ tr, as = "coach", onChange }) {
   const weak = (p) => ({ short: s.short, email: s.emailInPw, common: s.common })[passwordProblem(p, email)] || "";
   const report = (r) => setMsg(s.done.replace("{sent}", r.sent).replace("{received}", r.received));
   // An archer's account can't be used as a coach's, or the other way round: the two apps keep different data.
-  const sameRole = async () => { if ((await loadRole()) !== as) { await signOut(); throw Object.assign(new Error("role"), { shown: coach ? s.isArcher : s.isCoach }); } };
+  const sameRole = async () => { const r = await loadRole(); if (as && r !== as) { await signOut(); throw Object.assign(new Error("role"), { shown: coach ? s.isArcher : s.isCoach }); } };
 
   // Step 2: find the coach's authenticator, or start setting one up.
   useEffect(() => {
@@ -65,9 +71,16 @@ export default function Account({ tr, as = "coach", onChange }) {
   </>;
   const pwField = (label, auto) => (
     <label>{label}
-      <input type="password" autoComplete={auto} value={pw} onChange={(e) => setPw(e.target.value)} />
+      <span className="pw-wrap">
+        <input type={showPw ? "text" : "password"} autoComplete={auto} value={pw} onChange={(e) => setPw(e.target.value)} />
+        <button type="button" className="pw-show" onClick={() => setShowPw(!showPw)} aria-pressed={showPw}>{showPw ? s.hide : s.show}</button>
+      </span>
     </label>
   );
+  const resend = () => run(async () => {
+    await (mode === "signup" ? resendSignup(email.trim()) : sendReset(email.trim()));
+    setMsg(s.resent); setWait(60); // Supabase sends one email a minute to the same address
+  });
   const codeField = (
     <label>{s.code}
       <input inputMode="numeric" autoComplete="one-time-code" dir="ltr" value={code} onChange={(e) => setCode(digits(e.target.value, 6))} />
@@ -80,7 +93,7 @@ export default function Account({ tr, as = "coach", onChange }) {
     </div>
   );
   // Where the coach is in signing in. Archers have one step, so they get no stepper.
-  const steps = coach && stage !== "in" && (
+  const steps = coach && stage !== "in" && (as || account() || mode === "up" || mode === "signup") && (
     <ol className="acct-steps" aria-label={s.stepsLabel}>
       {[s.stepAccount, s.stepApp].map((label, i) => {
         const at = stage === "out" ? 0 : 1;
@@ -93,17 +106,22 @@ export default function Account({ tr, as = "coach", onChange }) {
   if (stage === "out" && emailed) return (
     <div className="acct">
       {steps}
-      <p className="muted">{mode === "signup" ? s.confirmSent : s.resetSent}</p>
+      <p className="acct-step">{s.checkEmail}</p>
+      <p className="muted">{(mode === "signup" ? s.confirmSent : s.resetSent)} <b dir="ltr">{email.trim()}</b></p>
       <form className="form" onSubmit={(e) => {
         e.preventDefault();
         run(async () => { await verifyEmailCode(email.trim(), code, mode); setCode(""); if (mode === "signup") await sameRole(); refresh(); });
       }}>
         <label>{s.emailCode}
-          <input inputMode="numeric" autoComplete="one-time-code" dir="ltr" value={code} onChange={(e) => setCode(digits(e.target.value, 8))} />
+          <input className="code-input" inputMode="numeric" autoComplete="one-time-code" dir="ltr" autoFocus value={code} onChange={(e) => setCode(digits(e.target.value, 8))} />
         </label>
         <button className="btn-primary wide-btn" disabled={busy || code.length < 6}>{s.useCode}</button>
-        <button type="button" className="link-btn" onClick={() => { setMode("in"); setCode(""); setErr(""); }}>{s.back}</button>
-        {err && <p className="error-msg" role="alert">{err}</p>}
+        <p className="muted">{s.noEmail}</p>
+        <div className="btn-row">
+          <button type="button" className="btn-ghost small" disabled={busy || wait > 0} onClick={resend}>{wait > 0 ? s.resendIn.replace("{n}", wait) : s.resend}</button>
+          <button type="button" className="btn-ghost small" onClick={() => { setMode(mode === "signup" ? "up" : "reset"); setCode(""); setErr(""); setMsg(""); }}>{s.changeEmail}</button>
+        </div>
+        {msgs}
       </form>
     </div>
   );
@@ -118,12 +136,31 @@ export default function Account({ tr, as = "coach", onChange }) {
           ))}
         </div>
       )}
-      <p className="muted">{mode === "reset" ? s.resetIntro : mode === "up" ? (coach ? s.upIntroCoach : s.upIntroArcher) : (coach ? s.intro : s.introArcher)}</p>
+      {mode === "up" && !as && (
+        <fieldset className="role-pick">
+          <legend>{s.iam}</legend>
+          {[["coach", s.roleCoach, s.roleCoachSub], ["archer", s.roleArcher, s.roleArcherSub]].map(([k, label, sub]) => (
+            <label key={k} className={pick === k ? "on" : ""}>
+              <input type="radio" name="role" value={k} checked={pick === k} onChange={() => setPick(k)} />
+              <b>{label}</b><small>{sub}</small>
+            </label>
+          ))}
+        </fieldset>
+      )}
+      <p className="muted">{mode === "reset" ? s.resetIntro : mode === "up" ? (coach ? s.upIntroCoach : s.upIntroArcher) : !as ? s.introAny : (coach ? s.intro : s.introArcher)}</p>
       <form className="form" onSubmit={(e) => {
         e.preventDefault();
         const em = email.trim();
-        if (mode === "reset") return run(async () => { await sendReset(em); setMode("recovery"); });
-        if (mode === "up") { const w = weak(pw); if (w) return setErr(w); return run(async () => { if (await signUp(em, pw, as)) { setMode("signup"); setPw(""); } else refresh(); }); }
+        if (mode === "reset") return run(async () => { await sendReset(em); setMode("recovery"); setWait(60); });
+        if (mode === "up") {
+          const w = weak(pw); if (w) return setErr(w);
+          return run(async () => {
+            const r = await signUp(em, pw, as || pick);
+            if (r === "exists") { setMode("in"); setPw(""); setErr(s.exists); }
+            else if (r) { setMode("signup"); setPw(""); setWait(60); }
+            else { await sameRole(); refresh(); }
+          });
+        }
         run(async () => { await signIn(em, pw); setPw(""); await sameRole(); refresh(); });
       }}>
         <label>{s.email}

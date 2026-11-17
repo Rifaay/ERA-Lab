@@ -6,7 +6,7 @@ let mem = new Map();
 globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
 globalThis.window = { alert: () => {} };
 
-const { plan, isAdult, shareable, syncNow, awayTooLong, markSeen, AWAY_MS } = await import("./sync.js");
+const { plan, isAdult, shareable, syncNow, awayTooLong, markSeen, AWAY_MS, signUp } = await import("./sync.js");
 const st = await import("./storage.js");
 
 // The cloud: rows keyed "kind/id", answering the three requests sync.js makes.
@@ -167,4 +167,11 @@ test("away more than 45 minutes: sign in again; less, or never noted, or signed 
   assert.equal(awayTooLong(now), false);                              // no time noted yet
   markSeen(now - AWAY_MS + 60_000); assert.equal(awayTooLong(now), false);
   markSeen(now - AWAY_MS - 60_000); assert.equal(awayTooLong(now), true);
+});
+
+test("sign-up: an address that already has an account is told apart from a new one", async () => {
+  mem = new Map();
+  const answer = (body) => async () => ({ ok: true, status: 200, text: async () => JSON.stringify(body) });
+  assert.equal(await signUp("a@x", "pw", "coach", answer({ id: "u", identities: [] })), "exists");
+  assert.equal(await signUp("b@x", "pw", "coach", answer({ id: "u", identities: [{ id: "i" }] })), true);
 });

@@ -1,24 +1,23 @@
 import { useEffect, useState } from "react";
 import Account from "./screens/Account";
 import Logo from "./Logo";
-import Icon from "./icons";
-import { configured, account, signedIn, signOut } from "./sync";
+import { configured, account, signedIn, signOut, role, resetting } from "./sync";
 import { claim, loadLink, myLink } from "./archer";
 import { setUi } from "./ui";
 
-// First screen on a new device: who is this, a coach or an archer? Then that person's sign-in.
-// A coach may skip the account (the app works on the device alone); an archer needs one, plus the coach's invite code.
-export default function Welcome({ tr, lang, setLang, start = "", onDone }) {
+// The sign-in page on a device nobody is signed in to. Signing in needs no role: the account says whether this is a
+// coach or an archer and the right app opens. Creating an account asks which. A coach may also skip the account (the
+// app then works on this device alone); an archer needs one, plus the coach's invite code.
+export default function Welcome({ tr, lang, setLang, onDone }) {
   const w = tr.welcome;
-  const [step, setStep] = useState(start); // "" choose | coach | archer
   const [, setTick] = useState(0);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const finish = (role, local = false) => { setUi({ role, local }); onDone(); };
+  const finish = (r, local = false) => { setUi({ role: r, local }); onDone(); };
 
-  // An archer who is signed in may already be linked (a second phone, or after clearing the app).
-  const signedArcher = step === "archer" && Boolean(account());
+  // A signed-in archer still needs their coach's code, unless this account is linked already (a second phone).
+  const signedArcher = Boolean(account()) && role() === "archer" && !resetting();
   useEffect(() => {
     if (!signedArcher || myLink()) return;
     let live = true;
@@ -26,6 +25,7 @@ export default function Welcome({ tr, lang, setLang, start = "", onDone }) {
     return () => { live = false; };
   }, [signedArcher]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const changed = () => { setTick((n) => n + 1); if (signedIn() && role() === "coach" && !resetting()) finish("coach"); };
   const join = async (e) => {
     e.preventDefault(); setBusy(true); setErr("");
     try { await claim(code); finish("archer"); }
@@ -40,31 +40,15 @@ export default function Welcome({ tr, lang, setLang, start = "", onDone }) {
         <button className="lang-toggle" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={tr.shell.language}>{tr.langToggle}</button>
       </header>
       <div className="welcome-body">
-        {step === "" && <>
+        {!signedArcher && <>
           <h1>{w.title}</h1>
-          <p className="muted">{w.sub}</p>
-          <button className="role-card" onClick={() => setStep("coach")}>
-            <Icon name="assess" size={32} /><span><b>{w.coach}</b><small>{w.coachSub}</small></span><Icon name="next" size={20} />
-          </button>
-          <button className="role-card" onClick={() => setStep("archer")} disabled={!configured}>
-            <Icon name="archer" size={32} /><span><b>{w.archer}</b><small>{configured ? w.archerSub : w.archerOff}</small></span><Icon name="next" size={20} />
-          </button>
-        </>}
-
-        {step !== "" && <button className="btn-ghost small welcome-back" onClick={() => { setStep(""); setErr(""); }}><Icon name="prev" size={16} />{w.back}</button>}
-
-        {step === "coach" && <>
-          <h1>{w.coachTitle}</h1>
           {configured
-            ? <div className="card"><Account tr={tr} as="coach" onChange={() => { setTick((n) => n + 1); if (signedIn()) finish("coach"); }} /></div>
+            ? <div className="card"><Account tr={tr} onChange={changed} /></div>
             : <p className="muted">{w.noCloud}</p>}
-          <button className="btn-ghost wide-btn" onClick={() => finish("coach", true)}>{configured ? w.skip : w.open}</button>
-          {configured && <p className="muted">{w.skipNote}</p>}
-        </>}
-
-        {step === "archer" && !signedArcher && <>
-          <h1>{w.archerTitle}</h1>
-          <div className="card"><Account tr={tr} as="archer" onChange={() => setTick((n) => n + 1)} /></div>
+          {!account() && <div className="welcome-local">
+            <button className="btn-ghost wide-btn" onClick={() => finish("coach", true)}>{configured ? w.skip : w.open}</button>
+            {configured && <p className="muted">{w.skipNote}</p>}
+          </div>}
         </>}
 
         {signedArcher && <>

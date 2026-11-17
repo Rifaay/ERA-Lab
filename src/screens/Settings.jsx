@@ -87,7 +87,7 @@ export default function Settings({ tr, onDataCleared, onGo }) {
         <LockSettings tr={tr} onChange={changed} />
         {configured && <>
           <h3 className="settings-sub">{tr.sync.title}</h3>
-          <Account tr={tr} onChange={changed} />
+          <Account tr={tr} as="coach" onChange={changed} />
         </>}
       </div>
 

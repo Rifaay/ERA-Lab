@@ -486,3 +486,16 @@ button.row:hover .row-name { color: var(--blue); }
 .help-pop b { color: var(--yellow); font: 700 15px var(--font-head); text-transform: uppercase; }
 .pz-hintrow { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
 .pz-actions { align-items: center; }
+
+/* Sign-in page: password with Show, coach/archer choice when creating an account, the device-only option apart */
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { width: 100%; padding-inline-end: 72px; }
+.pw-show { position: absolute; inset-inline-end: 4px; top: 50%; translate: 0 -50%; min-height: 36px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: none; font: 600 14px var(--font-body); color: var(--g600); cursor: pointer; }
+.role-pick { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.role-pick legend { font-weight: 600; margin-bottom: 6px; }
+.role-pick label { display: grid; gap: 2px; padding: 12px; border: 2px solid var(--g200); border-radius: var(--r-md); cursor: pointer; }
+.role-pick label.on { border-color: var(--black); background: var(--g50); }
+.role-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.role-pick label:has(input:focus-visible) { outline: 2px solid var(--black); outline-offset: 2px; }
+.role-pick small { color: var(--g600); font-size: 13px; }
+.welcome-local { display: grid; gap: 6px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--g200); }
