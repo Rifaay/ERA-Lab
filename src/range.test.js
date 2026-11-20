@@ -1,7 +1,7 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { scoreOf, scoreKeys, newSession, record, undoLast, summary, finish, scorecard, rings, spotsOf, faceRadiusCm } from "./range.js";
+import { scoreOf, scoreKeys, newSession, record, undoLast, summary, finish, scorecard, rings, spotsOf, faceRadiusCm, loupeAt } from "./range.js";
 
 const setup = { type: "Technical", distance: "70", face: "122", perEnd: "3", wind: "Calm", temp: "", sleep: "7.5", goal: "hold expansion" };
 const start = 1_800_000_000_000;
@@ -100,4 +100,17 @@ test("80 cm reduced face scores 5 to 10; a 3-spot has three spots; typing a scor
   assert.equal(s.ends[0].arrows[0].spot, 2);
   record(s, 0, 0, { score: "9" }, 2000);
   assert.equal("spot" in s.ends[0].arrows[0], false);
+});
+
+test("loupe: above the finger and following it smoothly; beside it only when there is no room above", () => {
+  const w = 360, top = 150, size = Math.min(w * 0.42, 170);
+  const a = loupeAt(180, 300, w, top), b = loupeAt(184, 300, w, top);
+  assert.ok(a.ly + a.size < 300, "above the fingertip");
+  assert.equal(b.lx - a.lx, 4, "moves with the finger, no jump");
+  const c = loupeAt(178, 300, w, top), d = loupeAt(182, 300, w, top);
+  assert.ok(Math.abs(d.lx - c.lx) <= 4, "crossing the middle doesn't flip sides");
+  assert.ok(loupeAt(5, 300, w, top).lx >= 0 && loupeAt(355, 300, w, top).lx <= w - size, "stays on the target");
+  const e = loupeAt(100, 0, w, 20); // finger at the very top of the screen
+  const fx = 100, inX = fx >= e.lx && fx <= e.lx + e.size, inY = 0 >= e.ly && 0 <= e.ly + e.size;
+  assert.ok(!(inX && inY), "never under the finger");
 });

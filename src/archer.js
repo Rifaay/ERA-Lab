@@ -10,6 +10,11 @@ const get = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; }
 const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 const rest = async (path, opt = {}) => api("/rest/v1/" + path, { ...opt, token: await token() });
 
+// The invite as a link (and QR code): opening it starts the archer's sign-up with the code already filled in.
+export const INVITE_RE = /^[A-HJ-NP-Z2-9]{8}$/;
+export const inviteUrl = (code, at = location) => `${at.origin}${at.pathname}?invite=${code}`;
+export const inviteFrom = (search) => { const c = new URLSearchParams(search).get("invite")?.toUpperCase() || ""; return INVITE_RE.test(c) ? c : ""; };
+
 // ── Archer's phone ──────────────────────────────────────────────────────────────────────────────────────
 export const myLink = () => get(LINK, null); // { coach_id, athlete_id, name } once joined
 export const claim = async (code) => {

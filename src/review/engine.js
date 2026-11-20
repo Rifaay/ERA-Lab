@@ -537,6 +537,35 @@ function ptAt(k,f){ // exact, else interpolate between nearest marks ≤30 frame
   if(a!=null&&b!=null&&b-a<=30){const u=(f-a)/(b-a),A=m[a],B=m[b];return [A[0]+(B[0]-A[0])*u,A[1]+(B[1]-A[1])*u,'i']}
   if(a!=null&&f-a<=1) return [...m[a].slice(0,2),'i']; return null;
 }
+/* ---------- zoom ----------
+   The <video> element itself is scaled, so the browser draws the clip from its own full resolution: zooming in shows
+   real detail instead of enlarging screen pixels. Overlays are canvases covering only the visible part of the picture,
+   drawn at screen resolution, so points and drawings stay sharp and never need a giant canvas. */
+let Z={k:1,x:0,y:0}; const ZMAX=5;
+function inViewer(e){ const v=viewerEl, r=v.getBoundingClientRect(); return [e.clientX-r.left-v.clientLeft, e.clientY-r.top-v.clientTop] }
+function visible(R){ const w=viewerEl.clientWidth, h=viewerEl.clientHeight, x=Math.max(0,R.x), y=Math.max(0,R.y);
+  return {x, y, w:Math.max(1,Math.min(w,R.x+R.w)-x), h:Math.max(1,Math.min(h,R.y+R.h)-y)} }
+function applyZoom(){ const w=vid.offsetWidth, h=vid.offsetHeight;
+  Z.k=Math.min(ZMAX,Math.max(1,Z.k)); Z.x=Math.min(0,Math.max(w*(1-Z.k),Z.x)); Z.y=Math.min(0,Math.max(h*(1-Z.k),Z.y)); // the picture always fills the box
+  vid.style.transformOrigin='0 0'; vid.style.transform=Z.k===1?'':`translate(${Z.x}px,${Z.y}px) scale(${Z.k})`;
+  $('zoomReset').textContent=Z.k.toFixed(1).replace(/\.0$/,'')+'×'; $('zoomOut').disabled=Z.k<=1; $('zoomIn').disabled=Z.k>=ZMAX;
+  draw(); dispatchEvent(new Event('racm-zoom')) }
+function zoomAt(k,px=vid.offsetWidth/2,py=vid.offsetHeight/2){ // px,py: the spot in the viewer that stays under the finger
+  k=Math.min(ZMAX,Math.max(1,k)); Z.x=px-(px-Z.x)*k/Z.k; Z.y=py-(py-Z.y)*k/Z.k; Z.k=k; applyZoom() }
+$('zoomIn').onclick=()=>zoomAt(Z.k*1.5); $('zoomOut').onclick=()=>zoomAt(Z.k/1.5); $('zoomReset').onclick=()=>{Z={k:1,x:0,y:0};applyZoom()};
+vid.addEventListener('loadedmetadata',()=>{Z={k:1,x:0,y:0};applyZoom()}); // each clip starts whole
+viewerEl.addEventListener('wheel',e=>{ if(!vid.videoWidth) return; e.preventDefault(); const [x,y]=inViewer(e); zoomAt(Z.k*(e.deltaY<0?1.15:1/1.15),x,y) },{passive:false});
+// Two fingers: pinch to zoom and move. One finger, when zoomed, on the picture itself (not while placing points or drawing): move.
+const fingers=new Map(); let pinch=null;
+viewerEl.addEventListener('pointerdown',e=>{ if(e.target.closest('button,.zoom')) return; fingers.set(e.pointerId,inViewer(e));
+  if(fingers.size===2){ const [a,b]=[...fingers.values()]; pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),m:[(a[0]+b[0])/2,(a[1]+b[1])/2],k:Z.k} }
+  else if(fingers.size===1 && Z.k>1 && e.target===vid) pinch={pan:inViewer(e)} });
+viewerEl.addEventListener('pointermove',e=>{ if(!fingers.has(e.pointerId)) return; fingers.set(e.pointerId,inViewer(e)); if(!pinch) return;
+  if(pinch.pan){ const p=inViewer(e); Z.x+=p[0]-pinch.pan[0]; Z.y+=p[1]-pinch.pan[1]; pinch.pan=p; applyZoom(); return }
+  if(fingers.size<2) return; const [a,b]=[...fingers.values()], m=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+  Z.x+=m[0]-pinch.m[0]; Z.y+=m[1]-pinch.m[1]; pinch.m=m; zoomAt(pinch.k*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch.d,m[0],m[1]) });
+['pointerup','pointercancel'].forEach(t=>viewerEl.addEventListener(t,e=>{ fingers.delete(e.pointerId); if(fingers.size<2) pinch=null }));
+
 function videoRect(){ // the picture inside the letterboxed <video> box, relative to the viewer
   const v=$('viewer'), r=vid.getBoundingClientRect(), p=v.getBoundingClientRect(), vw=vid.videoWidth||r.width||1, vh=vid.videoHeight||r.height||1, k=Math.min(r.width/vw,r.height/vh), w=vw*k, h=vh*k;
   return {x:r.left-p.left-v.clientLeft+(r.width-w)/2, y:r.top-p.top-v.clientTop+(r.height-h)/2, w, h} }
@@ -544,16 +573,16 @@ function angleDeg(a,b,c){ // signed angle between a->b (forearm) and b->c (hand)
   const ar=vid.videoWidth/vid.videoHeight; const v1=[(b[0]-a[0])*ar,b[1]-a[1]], v2=[(c[0]-b[0])*ar,c[1]-b[1]];
   const d=Math.atan2(v1[0]*v2[1]-v1[1]*v2[0], v1[0]*v2[0]+v1[1]*v2[1]); return d*180/Math.PI }
 function drawOverlay(){
-  if(!L) return; const R=videoRect(), dpr=devicePixelRatio||1;
-  Object.assign(ov.style,{left:R.x+'px',top:R.y+'px',width:R.w+'px',height:R.h+'px',pointerEvents:ptMode?'auto':'none',cursor:ptMode?'crosshair':'default'});
-  ov.width=R.w*dpr; ov.height=R.h*dpr; const c=ov.getContext('2d'); c.scale(dpr,dpr); c.clearRect(0,0,R.w,R.h);
+  if(!L) return; const R=videoRect(), dpr=devicePixelRatio||1, V=visible(R), s=Math.max(.5,1/Math.sqrt(Z.k)); // zoomed in: smaller dots, for precise placing
+  Object.assign(ov.style,{left:V.x+'px',top:V.y+'px',width:V.w+'px',height:V.h+'px',pointerEvents:ptMode?'auto':'none',cursor:ptMode?'crosshair':'default'});
+  ov.width=V.w*dpr; ov.height=V.h*dpr; const c=ov.getContext('2d'); c.scale(dpr,dpr); c.clearRect(0,0,V.w,V.h); c.translate(R.x-V.x,R.y-V.y);
   const f=frameOf(vid.currentTime), P={}; for(const p of POINTS){const q=ptAt(p.k,f); if(q) P[p.k]=q}
   const line=(a,b,col)=>{ if(P[a]&&P[b]){c.strokeStyle=col;c.lineWidth=2.5;c.beginPath();c.moveTo(P[a][0]*R.w,P[a][1]*R.h);c.lineTo(P[b][0]*R.w,P[b][1]*R.h);c.stroke()} };
   line('bow_shoulder','bow_elbow','#9b8fd0'); line('bow_elbow','bow_wrist','#9b8fd0'); line('bow_shoulder','draw_shoulder','#888');
   line('draw_shoulder','draw_elbow','#2bb3a3'); line('draw_elbow','draw_wrist','#2bb3a3'); line('draw_wrist','draw_hand','#f2c40c');
   for(const p of POINTS){const q=P[p.k]; if(!q) continue; const x=q[0]*R.w,y=q[1]*R.h;
-    c.beginPath(); c.arc(x,y,q[2]==='m'?6:4.5,0,7); c.fillStyle=p.c; c.globalAlpha=q[2]==='i'?.55:1; c.fill(); c.globalAlpha=1;
-    c.lineWidth=1.5; c.strokeStyle='#000'; c.stroke(); if(q[2]==='m'){c.strokeStyle='#fff';c.beginPath();c.arc(x,y,9,0,7);c.stroke()} }
+    c.beginPath(); c.arc(x,y,(q[2]==='m'?6:4.5)*s,0,7); c.fillStyle=p.c; c.globalAlpha=q[2]==='i'?.55:1; c.fill(); c.globalAlpha=1;
+    c.lineWidth=1.5; c.strokeStyle='#000'; c.stroke(); if(q[2]==='m'){c.strokeStyle='#fff';c.beginPath();c.arc(x,y,9*s,0,7);c.stroke()} }
   const box=$('angleBox');
   if(P.draw_elbow&&P.draw_wrist&&P.draw_hand){ const a=angleDeg(P.draw_elbow,P.draw_wrist,P.draw_hand);
     let base=null; const an=L.phases.find(p=>p.key==='anchor'&&p.start_frame!=null);
@@ -571,8 +600,8 @@ function renderPoints(){
 }
 $('ptMode').onclick=()=>{ptMode=!ptMode; if(ptMode) vid.pause(); renderPoints(); drawOverlay()};
 ov.addEventListener('click',e=>{
-  if(!ptMode||!L) return; const r=ov.getBoundingClientRect(), x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height, f=frameOf(vid.currentTime), pts=ensurePts();
-  if(e.shiftKey){ let best=null,bd=.04; for(const p of POINTS){const q=pts[p.k]?.[f]; if(q){const d=Math.hypot(q[0]-x,q[1]-y); if(d<bd){bd=d;best=p.k}}} if(best) delete pts[best][f]; }
+  if(!ptMode||!L) return; const R=videoRect(), [vx,vy]=inViewer(e), x=(vx-R.x)/R.w, y=(vy-R.y)/R.h, f=frameOf(vid.currentTime), pts=ensurePts();
+  if(e.shiftKey){ let best=null,bd=.04/Z.k; for(const p of POINTS){const q=pts[p.k]?.[f]; if(q){const d=Math.hypot(q[0]-x,q[1]-y); if(d<bd){bd=d;best=p.k}}} if(best) delete pts[best][f]; }
   else { (pts[POINTS[selPt].k] ||= {})[f]=[+x.toFixed(5),+y.toFixed(5),'m']; selPt=Math.min(POINTS.length-1,selPt+1) }
   dirty=true; renderPoints(); drawOverlay();
 });

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { getAthletes } from "../storage";
 import { signedIn, configured } from "../sync";
-import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, pullArchers } from "../archer";
+import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, pullArchers, inviteUrl } from "../archer";
+import qrcode from "qrcode-generator";
+
+const qrImage = (text) => { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createDataURL(6, 2); };
 import { RING_FILL, rings, summary, scoreValue } from "../range";
 import EndStrip from "../EndStrip";
 
@@ -79,12 +82,21 @@ export function ArcherLink({ tr, athlete, onChange }) {
   const l = tr.live;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
   const [, setTick] = useState(0);
   const on = configured && signedIn();
   useEffect(() => { if (on) refreshInvites().then(() => { setTick((n) => n + 1); onChange?.(); }).catch(() => {}); }, [on, athlete.id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!configured) return null;
 
   const link = linkOf(athlete.id), expired = isExpired(link);
+  // The phone's share sheet (WhatsApp, Messages…); without one, the message is copied to paste anywhere.
+  const share = async (code) => {
+    const url = inviteUrl(code), text = l.shareText.replace("{name}", athlete.name).replace("{code}", code);
+    try {
+      if (navigator.share) await navigator.share({ title: "ERA Lab", text, url });
+      else { await navigator.clipboard.writeText(`${text}\n${url}`); setMsg(l.copied); }
+    } catch (e) { if (e.name !== "AbortError") setErr(e.message); }
+  };
   const run = async (fn) => { setBusy(true); setErr(""); try { await fn(); } catch (e) { setErr(navigator.onLine === false || e instanceof TypeError ? tr.sync.offline : e.message); } setBusy(false); setTick((n) => n + 1); onChange?.(); };
   return (
     <div className="card link-card">
@@ -97,6 +109,10 @@ export function ArcherLink({ tr, athlete, onChange }) {
           </>
         : link && !expired ? <>
             <p className="muted">{l.codeIntro.replace("{name}", athlete.name)}</p>
+            <img className="invite-qr" src={qrImage(inviteUrl(link.code))} alt={l.qrAlt} width="200" height="200" />
+            <button className="btn-primary" disabled={busy} onClick={() => share(link.code)}>{l.share}</button>
+            {msg && <p className="success-msg" role="status">{msg}</p>}
+            <p className="muted">{l.orCode}</p>
             <p className="invite-code" dir="ltr">{link.code.slice(0, 4)} {link.code.slice(4)}</p>
             <p className="muted">{l.expires.replace("{date}", new Date(link.expires_at).toLocaleDateString())}</p>
             <button className="btn-ghost small" disabled={busy} onClick={() => run(() => createInvite(athlete))}>{l.newCode}</button>

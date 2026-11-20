@@ -17,6 +17,7 @@ export const MARKUP = `<div class="lab">
     <div class="viewer" id="viewer">
       <video id="vid" playsinline muted preload="auto"></video>
       <canvas id="ov" style="position:absolute;pointer-events:none"></canvas>
+      <div class="zoom" role="group" aria-label="Zoom"><button type="button" id="zoomOut" aria-label="Zoom out">−</button><button type="button" id="zoomReset" aria-label="Back to whole picture">1×</button><button type="button" id="zoomIn" aria-label="Zoom in">+</button></div>
       <div class="angle" id="angleBox" hidden></div>
       <div class="hud" id="hud" hidden></div>
       <div class="flash" id="flash"></div>

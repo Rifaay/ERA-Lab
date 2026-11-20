@@ -128,3 +128,13 @@ export const finish = (s, id, now = Date.now()) => {
     range: s,
   };
 };
+
+// The loupe rides just above the fingertip and follows it, so the finger never reaches it and it never jumps sides.
+// Only when there is no room above (finger near the top of the screen) does it sit beside the finger instead.
+// fx, fy: finger in px from the target's top-left; w: target width; top: target's distance from the top of the screen.
+export const loupeAt = (fx, fy, w, top) => {
+  const size = Math.min(w * 0.42, 170), lift = 28, minY = 8 - top;
+  const lx = Math.max(0, Math.min(w - size, fx - size / 2)), ly = fy - size - lift;
+  if (ly >= minY) return { lx, ly, size };
+  return { lx: fx > w / 2 ? Math.max(0, fx - size - lift) : Math.min(w - size, fx + lift), ly: Math.max(minY, fy - size / 2), size };
+};

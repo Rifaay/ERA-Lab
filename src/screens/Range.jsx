@@ -7,7 +7,7 @@ import QuickTag from "../QuickTag";
 import { useApp } from "../context";
 import { ringOf } from "../insights";
 import Icon from "../icons";
-import { FACES, RING_FILL, rings, spotsOf, scoreOf, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
+import { FACES, RING_FILL, rings, spotsOf, scoreOf, loupeAt, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
 import Scorecard from "./Scorecard";
 import { scorecardFile } from "../scorecardFile";
 import { localize } from "../digits";
@@ -77,7 +77,7 @@ function Target({ face, label, arrows, pick, onHit }) {
   const at = (ev) => {
     const q = local(ev.clientX, ev.clientY), box = ref.current.getBoundingClientRect();
     const clamp = (v) => Math.max(-1.08, Math.min(1.08, v)); // a miss off the face stays visible on the edge
-    return { k: q.k, x: clamp(q.x), y: clamp(q.y), side: ev.clientX > box.left + box.width / 2 ? "l" : "r", low: ev.clientY < box.top + box.height * 0.45 };
+    return { k: q.k, x: clamp(q.x), y: clamp(q.y), ...loupeAt(ev.clientX - box.left, ev.clientY - box.top, box.width, box.top) };
   };
 
   // The page may scroll (touch-action: pan-y), so a touch that starts on the face cancels scrolling for that touch.
@@ -131,7 +131,7 @@ function Target({ face, label, arrows, pick, onHit }) {
       <p className="rg-face">{label}</p>
       <svg ref={ref} viewBox={`-110 ${top - 110} 220 ${220 + (spots - 1) * GAP}`} role="img" aria-label={label} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => setAim(null)}>{drawing}</svg>
       {aim && (
-        <svg className={`rg-loupe ${aim.side}${aim.low ? " b" : ""}`} viewBox={`${cx - Z} ${cy - Z} ${2 * Z} ${2 * Z}`} aria-hidden="true">
+        <svg className="rg-loupe" style={{ left: aim.lx, top: aim.ly, width: aim.size }} viewBox={`${cx - Z} ${cy - Z} ${2 * Z} ${2 * Z}`} aria-hidden="true">
           {drawing}{cross(0.7, "#000")}{cross(0.3, "#fff")}
           <text x={cx} y={cy + Z - 3} fontSize="5.5" fontWeight="700" textAnchor="middle" fill="#f2c40c" stroke="#000" strokeWidth=".5" paintOrder="stroke" fontFamily="monospace">{scoreOf(face, aim.x, aim.y)}</text>
         </svg>

@@ -66,3 +66,13 @@ test("the coach's app shows unfinished sessions as live and copies each finished
   assert.deepEqual([saved[0].athleteId, saved[0].range.session_id, saved[0].score, saved[0].fromArcher], ["a1", "done-1", "9", true]);
   assert.equal(A.importFinished(rows, env), 0, "already there");
 });
+
+test("invite link: carries the code, and only a well-formed code is read back", () => {
+  const url = A.inviteUrl("ABCD2345", { origin: "https://x.io", pathname: "/ERA-Lab/" });
+  assert.equal(url, "https://x.io/ERA-Lab/?invite=ABCD2345");
+  assert.equal(A.inviteFrom(new URL(url).search), "ABCD2345");
+  assert.equal(A.inviteFrom("?invite=abcd2345"), "ABCD2345");     // typed in lower case
+  assert.equal(A.inviteFrom("?invite=ABCD0O11"), "");             // 0, O, 1 are never used
+  assert.equal(A.inviteFrom("?invite=<script>"), "");
+  assert.equal(A.inviteFrom(""), "");
+});

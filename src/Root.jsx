@@ -4,7 +4,7 @@ import Welcome from './Welcome.jsx'
 import ArcherApp from './ArcherApp.jsx'
 import { t } from './i18n'
 import { account, loadRole, finishLinkSignIn, configured, awayTooLong, markSeen, signOut } from './sync'
-import { myLink } from './archer'
+import { myLink, inviteFrom } from './archer'
 import { getUi, setUi, appRole } from './ui'
 import { watchDigits } from './digits'
 
@@ -27,7 +27,9 @@ export default function Root() {
   }, [])
   useEffect(() => { // arriving from an emailed link (confirm address, reset password): the account says whose app this is
     const away = awayTooLong()
-    markSeen();
+    markSeen()
+    const invite = inviteFrom(location.search) // opened from a coach's invite link or QR code
+    if (invite) { setUi({ invite, role: 'archer' }); history.replaceState(null, '', location.pathname + location.hash) };
     (away ? signOut() : Promise.resolve()).then(finishLinkSignIn)
       .then(async (r) => { if (r === true) { if ((await loadRole()) === 'coach') setOpen('settings') } else if (r) window.alert(r) })
       .catch((e) => console.warn('Sign-in link failed', e))

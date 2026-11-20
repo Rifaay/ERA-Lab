@@ -18,6 +18,11 @@ const pictureRect = (viewer, vid) => {
   const k = Math.min(r.width / vw, r.height / vh), w = vw * k, h = vh * k;
   return { x: r.left - p.left - viewer.clientLeft + (r.width - w) / 2, y: r.top - p.top - viewer.clientTop + (r.height - h) / 2, w, h };
 };
+// Zoomed in, the picture is bigger than the viewer: the canvas covers only the part on screen (as the Labeller's does).
+const shown = (R, viewer) => {
+  const x = Math.max(0, R.x), y = Math.max(0, R.y);
+  return { x, y, w: Math.max(1, Math.min(viewer.clientWidth, R.x + R.w) - x), h: Math.max(1, Math.min(viewer.clientHeight, R.y + R.h) - y) };
+};
 
 // Draws shapes (points in 0–1 of the picture) onto a 2D context of size w × h. `ar` is the video's width / height.
 const paint = (c, shapes, w, h, ar, scale = 1) => {
@@ -108,10 +113,10 @@ export default function LabTools({ host, tr, clip: openClip, archerId, phases })
   const redraw = () => {
     const canvas = cv.current, viewer = $("viewer"), vid = $("vid");
     if (!canvas || !viewer || !vid) return;
-    const R = pictureRect(viewer, vid), dpr = devicePixelRatio || 1;
-    Object.assign(canvas.style, { left: R.x + "px", top: R.y + "px", width: R.w + "px", height: R.h + "px", pointerEvents: tool && tool !== "points" ? "auto" : "none" });
-    canvas.width = R.w * dpr; canvas.height = R.h * dpr;
-    const c = canvas.getContext("2d"); c.scale(dpr, dpr);
+    const R = pictureRect(viewer, vid), V = shown(R, viewer), dpr = devicePixelRatio || 1;
+    Object.assign(canvas.style, { left: V.x + "px", top: V.y + "px", width: V.w + "px", height: V.h + "px", pointerEvents: tool && tool !== "points" ? "auto" : "none" });
+    canvas.width = V.w * dpr; canvas.height = V.h * dpr;
+    const c = canvas.getContext("2d"); c.scale(dpr, dpr); c.translate(R.x - V.x, R.y - V.y);
     const ar = (vid.videoWidth || 16) / (vid.videoHeight || 9);
     paint(c, draft.current ? [...shapes, draft.current] : shapes, R.w, R.h, ar);
   };
@@ -119,8 +124,8 @@ export default function LabTools({ host, tr, clip: openClip, archerId, phases })
     if (!slot) return;
     redraw();
     const ro = new ResizeObserver(redraw); ro.observe($("viewer"));
-    const vid = $("vid"); vid.addEventListener("loadedmetadata", redraw);
-    return () => { ro.disconnect(); vid.removeEventListener("loadedmetadata", redraw); };
+    const vid = $("vid"); vid.addEventListener("loadedmetadata", redraw); window.addEventListener("racm-zoom", redraw);
+    return () => { ro.disconnect(); vid.removeEventListener("loadedmetadata", redraw); window.removeEventListener("racm-zoom", redraw); };
   });
 
   const keep = (next) => {
@@ -135,8 +140,13 @@ export default function LabTools({ host, tr, clip: openClip, archerId, phases })
   useEffect(() => {
     const canvas = cv.current;
     if (!canvas || !tool || tool === "points") return;
-    const at = (e) => { const r = canvas.getBoundingClientRect(); return [+((e.clientX - r.left) / r.width).toFixed(4), +((e.clientY - r.top) / r.height).toFixed(4)]; };
+    const at = (e) => { // relative to the whole picture, which may reach past the canvas when zoomed in
+      const viewer = $("viewer"), R = pictureRect(viewer, $("vid")), p = viewer.getBoundingClientRect();
+      const x = e.clientX - p.left - viewer.clientLeft - R.x, y = e.clientY - p.top - viewer.clientTop - R.y;
+      return [+(x / R.w).toFixed(4), +(y / R.h).toFixed(4)];
+    };
     const down = (e) => {
+      if (!e.isPrimary) { draft.current = null; redraw(); return; } // a second finger: that's a pinch, not a drawing
       e.preventDefault(); canvas.setPointerCapture?.(e.pointerId); $("vid").pause();
       const p = at(e);
       if (tool === "angle") {
@@ -180,12 +190,16 @@ export default function LabTools({ host, tr, clip: openClip, archerId, phases })
   const takeSnapshot = () => {
     const vid = $("vid"), ov = $("ov");
     if (!vid.videoWidth) return;
-    const W = vid.videoWidth, H = vid.videoHeight, c = document.createElement("canvas");
-    c.width = W; c.height = H;
+    // Zoomed in, the still is the part on screen, cut from the clip at its own resolution; whole picture otherwise.
+    const W = vid.videoWidth, H = vid.videoHeight, viewer = $("viewer"), R = pictureRect(viewer, vid), V = shown(R, viewer);
+    const sx = (V.x - R.x) / R.w * W, sy = (V.y - R.y) / R.h * H, sw = Math.round(V.w / R.w * W), sh = Math.round(V.h / R.h * H);
+    const c = document.createElement("canvas");
+    c.width = sw; c.height = sh;
     const g = c.getContext("2d");
-    g.drawImage(vid, 0, 0, W, H);
-    if (ov?.width) g.drawImage(ov, 0, 0, W, H);
-    paint(g, shapes, W, H, W / H, W / 640);
+    g.drawImage(vid, sx, sy, sw, sh, 0, 0, sw, sh);
+    if (ov?.width) g.drawImage(ov, 0, 0, sw, sh); // the points layer covers exactly the part on screen
+    g.translate(-sx, -sy);
+    paint(g, shapes, W, H, W / H, sw / 640);
     vid.pause();
     c.toBlob((b) => { if (b) { setSnapMsg(""); setSnap({ blob: b, url: URL.createObjectURL(b), at: vid.currentTime }); } }, "image/jpeg", 0.88);
   };

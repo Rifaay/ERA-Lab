@@ -10,13 +10,13 @@ import { digits } from "../lock";
 // Coach: email + password, then a code from an authenticator app; until both are done the database answers nothing
 // (migrations/0003) and the app doesn't sync. Archer: email + password only; an archer's account can reach nothing
 // but the sessions their own phone uploads (migrations/0004).
-export default function Account({ tr, as, onChange }) {
+export default function Account({ tr, as, onChange, invited = false }) {
   const s = tr.sync;
-  const [pick, setPick] = useState("coach"); // creating an account on the welcome page
+  const [pick, setPick] = useState(invited ? "archer" : "coach"); // creating an account on the welcome page
   const coach = (as || (account() ? role() : pick)) === "coach";
   const [, setTick] = useState(0);
   const refresh = () => { setTick((n) => n + 1); onChange?.(); };
-  const [mode, setMode] = useState("in"); // signed out: in | up | reset, then signup | recovery while waiting for the emailed code
+  const [mode, setMode] = useState(invited ? "up" : "in"); // signed out: in | up | reset, then signup | recovery while waiting for the emailed code
   const [email, setEmail] = useState(account);
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -41,7 +41,7 @@ export default function Account({ tr, as, onChange }) {
   const why = (e) => {
     if (e.status === 429) return s.tooMany;
     if (navigator.onLine === false || e instanceof TypeError) return s.offline;
-    return { invalid_credentials: s.badLogin, email_not_confirmed: s.notConfirmed, weak_password: s.weak, mfa_verification_failed: s.badCode, otp_expired: s.badCode, signup_disabled: s.signupOff }[e.code]
+    return { invalid_credentials: s.badLogin, email_not_confirmed: s.notConfirmed, weak_password: s.weak, mfa_verification_failed: s.badCode, otp_expired: s.oldCode, signup_disabled: s.signupOff }[e.code]
       || (stage === "step2" && /totp|code/i.test(e.message) ? s.badCode : e.message);
   };
   const run = async (fn) => {

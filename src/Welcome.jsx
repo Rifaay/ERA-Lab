@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import Account from "./screens/Account";
 import Logo from "./Logo";
 import { configured, account, signedIn, signOut, role, resetting } from "./sync";
-import { claim, loadLink, myLink } from "./archer";
-import { setUi } from "./ui";
+import { claim, loadLink, myLink, INVITE_RE } from "./archer";
+import { getUi, setUi } from "./ui";
 
 // The sign-in page on a device nobody is signed in to. Signing in needs no role: the account says whether this is a
 // coach or an archer and the right app opens. Creating an account asks which. A coach may also skip the account (the
@@ -11,27 +11,28 @@ import { setUi } from "./ui";
 export default function Welcome({ tr, lang, setLang, onDone }) {
   const w = tr.welcome;
   const [, setTick] = useState(0);
-  const [code, setCode] = useState("");
+  const invited = getUi().invite || ""; // from the coach's invite link
+  const [code, setCode] = useState(invited);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const finish = (r, local = false) => { setUi({ role: r, local }); onDone(); };
+  const finish = (r, local = false) => { setUi({ role: r, local, invite: "" }); onDone(); };
 
   // A signed-in archer still needs their coach's code, unless this account is linked already (a second phone).
   const signedArcher = Boolean(account()) && role() === "archer" && !resetting();
-  useEffect(() => {
-    if (!signedArcher || myLink()) return;
-    let live = true;
-    loadLink().then((l) => { if (live && l) finish("archer"); }).catch(() => {});
-    return () => { live = false; };
-  }, [signedArcher]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const changed = () => { setTick((n) => n + 1); if (signedIn() && role() === "coach" && !resetting()) finish("coach"); };
   const join = async (e) => {
-    e.preventDefault(); setBusy(true); setErr("");
+    e?.preventDefault(); setBusy(true); setErr("");
     try { await claim(code); finish("archer"); }
     catch (x) { setErr(x.code === "bad_invite" ? w.badCode : /already linked/.test(x.message) ? w.already : navigator.onLine === false || x instanceof TypeError ? tr.sync.offline : x.message); }
     setBusy(false);
   };
+  useEffect(() => {
+    if (!signedArcher || myLink()) return;
+    let live = true;
+    loadLink().then((l) => { if (!live) return; if (l) finish("archer"); else if (INVITE_RE.test(invited)) join(); }).catch(() => {}); // came by link: join straight away
+    return () => { live = false; };
+  }, [signedArcher]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const changed = () => { setTick((n) => n + 1); if (signedIn() && role() === "coach" && !resetting()) finish("coach"); };
 
   return (
     <main className="welcome" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
@@ -42,8 +43,9 @@ export default function Welcome({ tr, lang, setLang, onDone }) {
       <div className="welcome-body">
         {!signedArcher && <>
           <h1>{w.title}</h1>
+          {invited && <p className="acct-ok">✓ {w.invited}</p>}
           {configured
-            ? <div className="card"><Account tr={tr} onChange={changed} /></div>
+            ? <div className="card"><Account tr={tr} onChange={changed} invited={Boolean(invited)} /></div>
             : <p className="muted">{w.noCloud}</p>}
           {!account() && <div className="welcome-local">
             <button className="btn-ghost wide-btn" onClick={() => finish("coach", true)}>{configured ? w.skip : w.open}</button>
