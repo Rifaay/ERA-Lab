@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildSeason, buildTargets, autoPlan, rulesOf, warnings, shotByDay, shotByWeek, loadRatio, weekStart, ramadanWeeks } from "./plan.js";
+import { buildSeason, buildTargets, autoPlan, rulesOf, warnings, shotByDay, shotByWeek, loadRatio, weekStart, ramadanWeeks, monthGrid, dayFilled, phaseOfDay } from "./plan.js";
 
 const Y = 2027;
 const at = (w) => weekStart(Y, w);
@@ -70,4 +70,18 @@ test("returning to full volume after a lighter week is not a jump; going above r
 test("a week the coach gave only a phase still gets that phase's numbers", () => {
   const p = autoPlan({ comps: [], edited: [3], weeks: { 3: "taper" } }, Y, []);
   assert.equal(p.weeks[3], "taper"); assert.equal(p.targets[3].arrows, 410);
+});
+
+test("calendar: a month as Monday-first rows; days know their plan week; empty days don't count", () => {
+  const nov = monthGrid(2026, 10); // November 2026 starts on a Sunday
+  assert.equal(nov.length % 7, 0);
+  assert.equal(nov.indexOf("2026-11-01"), 6);
+  assert.equal(nov.filter(Boolean).length, 30);
+  assert.equal(nov.filter(Boolean).at(-1), "2026-11-30");
+  assert.equal(monthGrid(2027, 1).filter(Boolean).length, 28); // February 2027
+  assert.equal(monthGrid(2028, 1).filter(Boolean).length, 29); // leap year
+  assert.equal(phaseOfDay({ weeks: { 1: "gpp" } }, "2026-01-07"), "gpp");
+  assert.equal(phaseOfDay({ weeks: { 1: "gpp" } }, "2026-01-08"), null);
+  assert.equal(dayFilled({ focus: "", exercises: [] }), false);
+  assert.equal(dayFilled({ note: "rest" }), true);
 });

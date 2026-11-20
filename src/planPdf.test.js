@@ -22,3 +22,20 @@ test("the plan PDF has a ? note per section, week jumps, safe web links only, in
     assert.ok(!pdf.includes("javascript:alert"));
   }
 });
+
+test("the plan PDF lists the coach's planned days, with links that open and none that are unsafe", () => {
+  const plan = autoPlan({ comps: [] }, 2026, []);
+  plan.days = {
+    "2026-08-03": { focus: "Anchor and release", arrows: 120, exercises: ["e1"], materials: "https://example.com/drill\njavascript:alert(1)\nBring the clicker", note: "Easy day" },
+    "2026-08-04": { focus: "", exercises: [] }, // empty: left out
+    "2025-12-30": { focus: "Last year" },        // another year: left out
+  };
+  const exercises = [{ id: "e1", name: "SPT", videoUrl: "https://example.com/v" }];
+  for (const lang of ["en", "ar"]) {
+    const opt = { comps: true, targets: true, mix: true, exercises: true, goals: true, notes: true };
+    const pdf = Buffer.from(planPdf({ plan, year: 2026, first: 1, opt, pl: t[lang].planner, lang, athlete: { name: "A" }, goals: [], exercises, fonts })).toString("latin1");
+    assert.ok(pdf.includes("https://example.com/drill"), "a material link opens");
+    assert.ok(pdf.includes("https://example.com/v"), "the day's exercise video opens");
+    assert.ok(!pdf.includes("javascript:alert"));
+  }
+});

@@ -1,7 +1,18 @@
 // The season plan: phases built back from the archer's A competitions, week targets in archery terms, what was shot,
 // the load ratio and warnings. Every number here is a default the coach can change (plan.rules), and every week the
 // coach touches is theirs: building again never overwrites an edited week.
-import { planWeek, planWeekStart, addDays } from "./stats.js";
+import { planWeek, planWeekStart, addDays, isoDay } from "./stats.js";
+
+// The calendar view: the year in months, a month in days. Each day sits in its plan week (phase, targets) and may
+// carry the coach's own plan for that day: plan.days["2026-03-14"] = { focus, arrows, exercises: [ids], materials, note }.
+export const monthGrid = (year, month) => { // month 0-11; rows of 7 starting Monday, null outside the month
+  const lead = (new Date(year, month, 1).getDay() + 6) % 7, n = new Date(year, month + 1, 0).getDate();
+  const cells = [...Array(lead).fill(null), ...Array.from({ length: n }, (_, i) => isoDay(new Date(year, month, i + 1)))];
+  while (cells.length % 7) cells.push(null);
+  return cells;
+};
+export const dayFilled = (d) => Boolean(d && (d.focus || d.arrows || d.note || d.materials || d.exercises?.length));
+export const phaseOfDay = (plan, iso) => plan.weeks?.[planWeek(iso)] || null;
 
 export const PHASES = ["gpp", "spp", "precomp", "taper", "comp", "transition", "accum", "intens", "realiz"];
 export const COLORS = { gpp: "#3498db", spp: "#9b59b6", precomp: "#f39c12", taper: "#95a5a6", comp: "#e74c3c", transition: "#2ecc71", accum: "#1abc9c", intens: "#e67e22", realiz: "#c0392b" };

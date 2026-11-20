@@ -5,7 +5,8 @@
 // - exercise names open their video links; bookmarks list the sections.
 // Text is drawn with Noto Naskh Arabic (Arabic and Latin letters), so Arabic plans and Arabic names print correctly.
 import { jsPDF } from "jspdf";
-import { PHASES, COLORS, MIX, compsIn, weekStart } from "./plan.js";
+import { PHASES, COLORS, MIX, compsIn, weekStart, dayFilled } from "./plan.js";
+import { planWeek } from "./stats.js";
 
 const W = 595.28, H = 841.89, M = 36; // A4 in points, margin
 const MIXC = { tech: "#3498db", dist: "#9b59b6", score: "#f39c12", sim: "#e74c3c" };
@@ -143,6 +144,15 @@ export function planPdf({ plan, year, first = 1, opt, pl, lang, athlete, goals, 
     font(8, false, MUTED); text(opt.shot ? pl.chartPdfShot : pl.chartPdf, M, y);
   }
 
+  // An exercise as a line: its name opens its video when it has one.
+  const exLine = (e, yy) => {
+    const u = safeUrl(e.videoUrl), detail = [e.sets && `${e.sets}×${e.reps || ""}`, e.frequency].filter(Boolean).join(sep);
+    font(9.5, !!u, u ? LINK : INK); const label = `•  ${e.name}`; text(label, M + 18, yy);
+    const lw = doc.getTextWidth(label) + (u ? 12 : 0);
+    if (u) { outArrow(X0(M + 18 + lw - 8, 5), yy - 1); doc.setDrawColor(LINK); doc.setLineWidth(0.5); doc.line(X0(M + 18, lw), yy + 2, X0(M + 18, lw) + lw, yy + 2); doc.link(X0(M + 18, lw), yy - 10, lw, 13, { url: u }); }
+    if (detail) { font(8.5, false, MUTED); text(n(detail), M + 26 + lw, yy); }
+  };
+
   // ── week by week ──
   const weekPage = {};
   section(pl.weeksTitle, "weeks");
@@ -180,11 +190,7 @@ export function planPdf({ plan, year, first = 1, opt, pl, lang, athlete, goals, 
     if (opt.exercises && ex.length) {
       yy += 12; font(9.5, true); text(pl.exercises, M + 14, yy);
       for (const e of ex) {
-        yy += 14; const u = safeUrl(e.videoUrl), detail = [e.sets && `${e.sets}×${e.reps || ""}`, e.frequency].filter(Boolean).join(sep);
-        font(9.5, !!u, u ? LINK : INK); const label = `•  ${e.name}`; text(label, M + 18, yy);
-        const lw = doc.getTextWidth(label) + (u ? 12 : 0);
-        if (u) { outArrow(X0(M + 18 + lw - 8, 5), yy - 1); doc.setDrawColor(LINK); doc.setLineWidth(0.5); doc.line(X0(M + 18, lw), yy + 2, X0(M + 18, lw) + lw, yy + 2); doc.link(X0(M + 18, lw), yy - 10, lw, 13, { url: u }); }
-        if (detail) { font(8.5, false, MUTED); text(n(detail), M + 26 + lw, yy); }
+        yy += 14; exLine(e, yy);
       }
     }
     if (opt.goals && gs.length) {
@@ -196,6 +202,34 @@ export function planPdf({ plan, year, first = 1, opt, pl, lang, athlete, goals, 
       font(9.5); noteLines.forEach((l, i) => text(l, M + 20, yy + 14 + i * 13));
     }
     y = top + h + 8;
+  }
+
+  // ── day by day: what the coach planned for single days (the calendar view) ──
+  const days = Object.entries(plan.days || {})
+    .filter(([iso, d]) => iso.startsWith(`${year}-`) && planWeek(iso) >= first && dayFilled(d)).sort(([a], [b]) => a.localeCompare(b));
+  if (days.length) {
+    section(pl.cal.daysTitle, "days");
+    for (const [iso, d] of days) {
+      const ex = (d.exercises || []).map((id) => X[id]).filter(Boolean);
+      const mat = (d.materials || "").split(/\n+/).map((s) => s.trim()).filter(Boolean);
+      const focusL = d.focus ? wrap(d.focus, W - 2 * M - 190) : [], noteL = d.note ? wrap(d.note, W - 2 * M - 40) : [];
+      const h = 24 + Math.max(0, focusL.length - 1) * 13 + (ex.length + mat.length) * 14 + (noteL.length ? 6 + noteL.length * 13 : 0);
+      room(h + 6);
+      const top = y, k = plan.weeks?.[planWeek(iso)];
+      doc.setFillColor(k ? COLORS[k] : "#cccccc"); doc.rect(X0(M, 3), top, 3, h, "F");
+      font(10.5, true); text(date(iso, { weekday: "short", day: "numeric", month: "short" }), M + 10, top + 14);
+      focusL.forEach((l, i) => text(l, M + 120, top + 14 + i * 13));
+      if (d.arrows) { const s = `${n(d.arrows)} ${pl.arrowsShort}`; font(10, true); text(s, W - M - 4 - doc.getTextWidth(s), top + 14); }
+      let yy = top + 14 + Math.max(0, focusL.length - 1) * 13;
+      for (const e of ex) { yy += 14; exLine(e, yy); }
+      for (const line of mat) { // a link opens; other lines are plain text
+        yy += 14; const u = safeUrl(line), s = `›  ${wrap(line, W - 2 * M - 60)[0]}`;
+        font(9.5, false, u ? LINK : INK); text(s, M + 18, yy);
+        if (u) { const lw = doc.getTextWidth(s); doc.link(X0(M + 18, lw), yy - 10, lw, 13, { url: u }); }
+      }
+      if (noteL.length) { yy += 6; font(9.5, false, MUTED); noteL.forEach((l) => { yy += 13; text(l, M + 18, yy); }); }
+      y = top + h + 6;
+    }
   }
 
   // ── goals and exercises, all of them ──
@@ -227,7 +261,7 @@ export function planPdf({ plan, year, first = 1, opt, pl, lang, athlete, goals, 
   // ── every explainer on one page, for PDF apps that don't open the "?" notes ──
   newPage();
   section(pl.aboutTitle, "about", 0);
-  for (const key of ["glance", "comps", "loadPlan", "weeks", "goals", "exercises"]) {
+  for (const key of ["glance", "comps", "loadPlan", "weeks", "days", "goals", "exercises"]) {
     const lines = wrap(help[key].body, W - 2 * M - 20);
     room(lines.length * 13 + 26);
     font(11, true); text(help[key].title, M, y += 14);

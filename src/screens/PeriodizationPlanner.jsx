@@ -8,6 +8,7 @@ import Help from "../Help";
 import { useApp } from "../context";
 import ArcherSelect from "../ArcherSelect";
 import Icon from "../icons";
+import SeasonCalendar from "./SeasonCalendar";
 
 const TABS = ["season", "load", "rules", "send"];
 const fill = (t, v) => t.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
@@ -34,6 +35,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
   const [armed, setArmed] = useState(null);
   const [sel, setSel] = useState(null); // the week open in the editor
   const [comp, setComp] = useState({ name: "", date: "", priority: "A" });
+  const [view, setView] = useState("cal"); // the season as a calendar (months, days) or as 52 plan weeks
 
   const autoRamadan = useMemo(() => ramadanWeeks(year), [year]);
   const byDay = useMemo(() => shotByDay(getSessions(), selectedId), [selectedId]);
@@ -142,6 +144,16 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
         </div>
         <p className="muted">{edited.size ? fill(pl.editedNote, { n: edited.size }) : pl.buildNote}</p>
 
+        <div className="seg pz-view" role="tablist" aria-label={pl.cal.view}>
+          {[["cal", pl.cal.calView], ["weeks", pl.cal.weeksView]].map(([k, label]) => (
+            <button key={k} type="button" role="tab" aria-selected={view === k} className={view === k ? "active" : ""} onClick={() => setView(k)}>{label}</button>
+          ))}
+        </div>
+        {view === "cal" && <SeasonCalendar key={year} {...{ plan, year, lang, pl, comps, exercises, today }}
+          onDay={(iso, d) => { const days = { ...plan.days }; if (d) days[iso] = d; else delete days[iso]; setPlan({ ...plan, days }); }}
+          onWeek={(w) => { setView("weeks"); setSel(w); setArmed(null); }} />}
+
+        {view === "weeks" && <>
         <div className="phase-palette" aria-label={pl.legend}>
           {PHASES.map((k) => (
             <button key={k} className={`phase-chip ${armed === k ? "armed" : ""}`} aria-pressed={armed === k}
@@ -171,6 +183,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
         {sel && <WeekEditor key={sel} w={sel} {...{ plan, year, lang, pl, shot, comps, ramadan, goals, exercises, edited }}
           onChange={(change) => touch(sel, change)} onAuto={() => rebuildWith({ edited: [...edited].filter((x) => x !== sel) })}
           onRamadan={(on) => setRamadan(sel, on)} onClose={() => setSel(null)} />}
+        </>}
       </>}
 
       {tab === "load" && <LoadView {...{ plan, year, pl, shot, byDay, warns, nowWeek }}

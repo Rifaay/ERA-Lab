@@ -294,6 +294,7 @@ export const t = {
     },
     planner: {
       title: "Season plan", noAthlete: "Select an athlete first.", year: "Year", prevYear: "Previous year", nextYear: "Next year",
+      cal: { daysTitle: "Day by day", view: "Season view", calView: "Calendar", weeksView: "Weeks", hint: "Tap a month, then a day, to plan that day's training. Colours are the phases of the plan weeks.", allMonths: "All months", prevMonth: "Previous month", nextMonth: "Next month", key: "Colour: the week's phase · A/B/C: competition · dot: day planned.", openWeek: "Plan week {w} · {phase} — open the week", focus: "Focus of the day", focusHint: "e.g. Anchor and release, 18 m blank bale", arrows: "Arrows", materials: "Training materials and links", materialsHint: "Drills, videos, documents… one link per line", note: "Notes", clear: "Clear this day", confirmClear: "Remove everything planned for this day?" },
       tabs: { season: "Season", load: "Load", rules: "Rules", send: "Send" },
       comps: "Competitions", compsIntro: "Add each competition with its date and priority. A is the event to peak for, B matters, C is practice. The season is built back from the A events.",
       priority: "Priority", prio: { A: "A · peak", B: "B · important", C: "C · practice" }, compName: "Competition name", compDate: "Date", add: "Add", remove: "Remove",
@@ -332,6 +333,7 @@ export const t = {
         comps: { title: "Competitions", body: "The events this season is planned around. A: the event to be at your best for; the weeks before it are built backwards from its date. B: important, slightly lighter week. C: practice, the plan doesn't change for it." },
         loadPlan: { title: "Arrows planned", body: "How many arrows each week asks for. Volume climbs in preparation, every few weeks one is lighter so the body recovers, and it drops before competitions (the taper) so the archer arrives fresh." },
         weeks: { title: "Week by week", body: "What each week asks for: total arrows, the mix of shooting (technique, distance, scored rounds, competition practice), physical and mental sessions, exercises, goals and the coach's note. The coloured edge is the week's phase." },
+        days: { title: "Day by day", body: "The days your coach planned one by one: the focus of the day, how many arrows, the exercises (tap a name for its video), training materials (tap a link to open it) and notes. The coloured edge is the phase of that day's plan week." },
         goals: { title: "Goals", body: "What this training is working toward. Each week lists the goals it serves, so practice always has a reason." },
         exercises: { title: "Exercises", body: "The drills set for this archer. Tap a blue, underlined name to open its video." },
         about: { title: "What each part means", body: "A short explanation of every part of this plan." },
@@ -775,6 +777,7 @@ export const t = {
     },
     planner: {
       title: "خطة الموسم", noAthlete: "اختر رياضياً أولاً.", year: "السنة", prevYear: "السنة السابقة", nextYear: "السنة التالية",
+      cal: { daysTitle: "يوماً بيوم", view: "عرض الموسم", calView: "التقويم", weeksView: "الأسابيع", hint: "اضغط شهراً ثم يوماً لتخطط تدريب ذلك اليوم. الألوان هي مراحل أسابيع الخطة.", allMonths: "كل الشهور", prevMonth: "الشهر السابق", nextMonth: "الشهر التالي", key: "اللون: مرحلة الأسبوع · A/B/C: بطولة · نقطة: يوم مخطط.", openWeek: "أسبوع الخطة {w} · {phase} — افتح الأسبوع", focus: "تركيز اليوم", focusHint: "مثلاً: التثبيت والإطلاق، ١٨ م على الهدف الفارغ", arrows: "الأسهم", materials: "مواد التدريب والروابط", materialsHint: "تمارين، فيديوهات، ملفات… رابط في كل سطر", note: "ملاحظات", clear: "امسح هذا اليوم", confirmClear: "حذف كل ما خُطط لهذا اليوم؟" },
       tabs: { season: "الموسم", load: "الحمل", rules: "القواعد", send: "إرسال" },
       comps: "البطولات", compsIntro: "أضف كل بطولة بتاريخها وأولويتها. A هي البطولة التي نبلغ فيها الذروة، B مهمة، C للتدريب. يُبنى الموسم رجوعاً من بطولات A.",
       priority: "الأولوية", prio: { A: "A · ذروة", B: "B · مهمة", C: "C · تدريب" }, compName: "اسم البطولة", compDate: "التاريخ", add: "أضف", remove: "إزالة",
@@ -813,6 +816,7 @@ export const t = {
         comps: { title: "البطولات", body: "البطولات التي بُنيت حولها هذه الخطة. A: البطولة التي يجب أن تكون فيها في أفضل حال؛ تُبنى الأسابيع قبلها رجوعاً من تاريخها. B: مهمة، أسبوعها أخف قليلاً. C: للتدريب، لا تتغير الخطة لأجلها." },
         loadPlan: { title: "السهام المخططة", body: "عدد السهام المطلوب كل أسبوع. يرتفع الحجم في الإعداد، ويكون أسبوع أخف كل بضعة أسابيع ليتعافى الجسم، وينخفض قبل البطولات (التخفيف) ليصل الرامي منتعشاً." },
         weeks: { title: "أسبوعاً بأسبوع", body: "ما يطلبه كل أسبوع: مجموع السهام، توزيع الرمي (تقنية، مسافة، جولات بنتيجة، محاكاة بطولة)، الجلسات البدنية والذهنية، التمارين، الأهداف وملاحظة المدرب. الحافة الملونة هي مرحلة الأسبوع." },
+        days: { title: "يوماً بيوم", body: "الأيام التي خططها مدربك يوماً بيوم: تركيز اليوم، عدد السهام، التمارين (اضغط الاسم لفيديو التمرين)، مواد التدريب (اضغط الرابط لفتحه) والملاحظات. الحافة الملونة هي مرحلة أسبوع ذلك اليوم." },
         goals: { title: "الأهداف", body: "ما يعمل هذا التدريب من أجله. يذكر كل أسبوع الأهداف التي يخدمها، فيكون لكل تمرين سبب." },
         exercises: { title: "التمارين", body: "التمارين المحددة لهذا الرامي. اضغط الاسم الأزرق المسطّر لفتح الفيديو." },
         about: { title: "معنى كل جزء", body: "شرح قصير لكل جزء في هذه الخطة." },
