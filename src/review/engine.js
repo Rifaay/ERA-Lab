@@ -143,6 +143,17 @@ function setPane(p){
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>setPane(b.dataset.pane));
 $('clipsToggle').onclick=()=>setPane(document.body.dataset.pane==='clips'?'video':'clips');
 $('scrim').onclick=()=>setPane('video');
+// The dock under the video (phones): one tap opens that tray of tools, a second tap on it closes it again.
+const dockBtns=[...document.querySelectorAll('#dock button')];
+function openTray(k){
+  document.querySelectorAll('.tray').forEach(t=>t.classList.toggle('open',t.dataset.tray===k));
+  dockBtns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tray===k)));
+  requestAnimationFrame(draw); // the video area changed height
+}
+dockBtns.forEach(b=>b.onclick=()=>openTray(b.getAttribute('aria-pressed')==='true'?null:b.dataset.tray));
+$('moreDetails').onclick=()=>setPane('details');
+$('moreFiles').onclick=()=>$('fileInput').click();
+vid.addEventListener('loadedmetadata',()=>{document.body.dataset.clip='1'}); // a clip is open: on phones the app bar steps aside
 addEventListener('keydown',e=>{ if(e.key==='Escape'&&document.body.dataset.pane==='clips') setPane('video') });
 function mediaErrorText(){
   const c=vid.error&&vid.error.code;
@@ -161,7 +172,7 @@ function waitForVideo(ms=20000){
   });
 }
 function clipFailed(c,msg){
-  L=null; motion=null; events=[]; dirty=false; c.failed=true;
+  L=null; motion=null; events=[]; dirty=false; c.failed=true; delete document.body.dataset.clip;
   vid.pause(); if(vidURL){URL.revokeObjectURL(vidURL);vidURL=null} vid.removeAttribute('src'); vid.load();
   CLIP_BTNS.forEach(id=>$(id).disabled=true);
   $('drop').hidden=true; $('hud').hidden=true; $('angleBox').hidden=true; ov.width=0;
@@ -664,7 +675,7 @@ addEventListener('beforeunload',e=>{ if(dirty){e.preventDefault();e.returnValue=
     destroy() {
       ac.abort(); _ro.disconnect(); tracking = false;
       vid.pause(); if (vidURL) URL.revokeObjectURL(vidURL);
-      delete document.body.dataset.pane;
+      delete document.body.dataset.pane; delete document.body.dataset.clip;
     },
   };
 }

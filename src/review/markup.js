@@ -24,22 +24,34 @@ export const MARKUP = `<div class="lab">
       <div class="vid-error" id="vidErr" role="alert" hidden></div>
       <div class="drop" id="drop"><h2>Drag a folder or videos here</h2><div style="max-width:520px;line-height:1.6">Or click <b>Open athlete folder</b> and choose the folder itself, then <b>Select folder</b>. The folder picker never shows the videos inside — that's normal.<br>Or click <b>Open video files</b> to pick clips one by one.<br><span style="opacity:.7">Works best in Chrome or Edge. Nothing is uploaded; clips stay on this PC.</span></div></div>
     </div>
-    <div class="transport">
-      <button class="btn" id="playBtn" disabled title="Space">Play</button>
+    <div class="timeline" id="tl"><canvas id="tlc"></canvas></div>
+    <div class="status" id="status"></div>
+    <!-- One tray at a time on phones, chosen in the dock below; all trays show on wider screens. -->
+    <div class="tray open" data-tray="play">
+      <span class="time" id="time">--</span>
       <button class="btn" id="backBtn" disabled title="←" aria-label="Back one frame">−1 frame</button>
+      <button class="btn" id="playBtn" disabled title="Space">Play</button>
       <button class="btn" id="fwdBtn" disabled title="→" aria-label="Forward one frame">+1 frame</button>
       <select class="sel" id="rate" title="Playback speed">
         <option value="1">1×</option><option value="0.5">½×</option><option value="0.25" selected>¼×</option><option value="0.125">⅛×</option>
       </select>
-      <span class="time" id="time">--</span>
-      <span class="tsp" style="flex:1"></span>
-      <button class="btn" id="analyseBtn" disabled title="A">Analyse motion</button>
-      <button class="btn" id="suggestBtn" disabled title="S">Suggest phases</button>
-      <button class="btn gold" id="markBtn" disabled title="M or Enter">Mark next phase</button>
     </div>
-    <div class="timeline" id="tl"><canvas id="tlc"></canvas></div>
-    <div class="legend" id="legend"></div>
-    <div class="status" id="status"></div>
+    <div class="tray" data-tray="phases">
+      <button class="btn gold" id="markBtn" disabled title="M or Enter">Mark next phase</button>
+      <button class="btn" id="suggestBtn" disabled title="S">Suggest phases</button>
+      <button class="btn" id="analyseBtn" disabled title="A">Analyse motion</button>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="tray" data-tray="points"><div class="tray-slot" id="slotPoints"></div><button class="btn" id="trackBtn" title="T">Track forward</button></div>
+    <div class="tray" data-tray="draw"><div class="tray-slot" id="slotDraw"></div></div>
+    <div class="tray" data-tray="more"><div class="tray-slot" id="slotMore"></div><button class="btn" type="button" id="moreDetails">Verdict, faults and notes</button><button class="btn" type="button" id="moreFiles">Add video files</button></div>
+    <nav class="dock" id="dock" aria-label="Video tools">
+      <button type="button" data-tray="play" aria-pressed="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"/></svg><span class="dl">Play</span></button>
+      <button type="button" data-tray="phases" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span class="dl">Phases</span></button>
+      <button type="button" data-tray="points" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="2"/><circle cx="17" cy="9" r="2"/><circle cx="10" cy="17" r="2"/><path d="M8.6 8.4l1 6.7M15.1 9.6l-3.4 5.8"/></svg><span class="dl">Points</span></button>
+      <button type="button" data-tray="draw" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-1L19 8a2.1 2.1 0 0 0-3-3L5 16z"/><path d="M14 7l3 3"/></svg><span class="dl">Draw</span></button>
+      <button type="button" data-tray="more" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span class="dl">More</span></button>
+    </nav>
   </main>
 
   <nav class="lab-tabs" id="tabs" aria-label="Sections"><button data-pane="clips" aria-current="false">Clips</button><button data-pane="video" aria-current="page">Video</button><button data-pane="details" aria-current="false">Phases &amp; notes</button></nav>
@@ -51,7 +63,7 @@ export const MARKUP = `<div class="lab">
       <label class="keys" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="snapChk" checked> Snap taps to motion events</label>
     </div>
     <h3>Body points <span style="text-transform:none;letter-spacing:0">(manual + tracking)</span></h3>
-    <div class="row"><button class="btn" id="ptMode" title="P">Place points: off</button><button class="btn" id="trackBtn" title="T">Track forward</button></div>
+    <div class="row"><button class="btn" id="ptMode" title="P">Place points: off</button></div>
     <div id="ptList" style="margin-top:8px"></div>
     <div class="keys">Pick a point, turn on <b>Place points</b>, click it on the video. <span class="kbd">Shift</span>+click removes it on this frame. <span class="kbd">T</span> tracks all points placed on this frame forward.</div>
     <h3>Arrow (from session sheet)</h3>

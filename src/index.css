@@ -423,7 +423,6 @@ button.row:hover .row-name { color: var(--blue); }
 }
 
 /* Labeller: tools on the video (points and drawing) */
-.lab .lab-tools { display: grid; gap: 6px; flex: none; }
 .lab .lt-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; align-items: center; }
 .lab .lt-btn { flex: none; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--ink-2); color: var(--bone); font: 600 13px var(--font-body); cursor: pointer; white-space: nowrap; }
 .lab .lt-btn.on { background: var(--gold); color: #000; border-color: var(--gold); }
@@ -441,7 +440,7 @@ button.row:hover .row-name { color: var(--blue); }
 .lab .lt-notice { display: grid; gap: 4px; font-size: 13px; }
 .lab .lt-notice > .lt-btn { justify-self: start; border-color: var(--nile); }
 .lab .lt-notice p { margin: 0; }
-.lab .lt-note { color: var(--muted); font-style: italic; }
+.lab .lt-note { color: var(--muted); }
 
 /* Season plan */
 .pz-tabs { margin: 8px 0 14px; grid-template-columns: repeat(4, 1fr); }
@@ -528,3 +527,11 @@ button.row:hover .row-name { color: var(--blue); }
 .cal-links { margin: -4px 0 0; padding-inline-start: 18px; font-size: 13px; word-break: break-all; }
 @media (max-width: 420px) { .cal-day { min-height: 48px; padding: 3px; } .cal-day .fx { display: none; } .cal-day:has(.fx)::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--black); } }
 .cal-day .wk-comp { top: 3px; inset-inline-start: auto; inset-inline-end: 3px; }
+
+/* Video review on a phone: while a clip is open the app bar steps aside so the video and its dock get the room. */
+@media (max-width: 759px), (max-height: 520px) { body[data-clip] .stage-nav { display: none; } }
+/* Narrow phones: the logo tile carries the brand on its own, so the archer's name gets the width. */
+@media (max-width: 480px) {
+  .topbar .wordmark, .topbar .topbar-spacer { display: none; }
+  .topbar .archer-btn { flex: 1 1 auto; min-width: 0; max-width: none; justify-content: space-between; }
+}

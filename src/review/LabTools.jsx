@@ -7,7 +7,15 @@ import { putClip } from "../clipStore";
 import { FAULTS } from "../clips";
 
 const COLORS = ["#f2c40c", "#ff3b30", "#00e0c6", "#ffffff"];
-const TOOLS = [["line", "╱"], ["arrow", "➚"], ["circle", "◯"], ["angle", "∠"], ["pen", "✎"]];
+// Line icons on the app's 24 px grid with a 1.5 stroke, like icons.jsx.
+const ic = (d) => <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>;
+const TOOLS = [
+  ["line", ic(<path d="M5 19L19 5" />)],
+  ["arrow", ic(<><path d="M5 19L19 5" /><path d="M10 5h9v9" /></>)],
+  ["circle", ic(<circle cx="12" cy="12" r="7.5" />)],
+  ["angle", ic(<><path d="M19 19H5L15 5" /><path d="M9.5 19a5 5 0 0 0-1.6-4" /></>)],
+  ["pen", ic(<><path d="M4 20l4-1L19 8a2.1 2.1 0 0 0-3-3L5 16z" /><path d="M14 7l3 3" /></>)],
+];
 const KEY = "racm_drawings";
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
 const saveAll = (all) => { try { localStorage.setItem(KEY, JSON.stringify(all)); } catch { /* storage full: drawings stay for this visit */ } };
@@ -72,16 +80,14 @@ export default function LabTools({ host, tr, clip: openClip, archerId, phases })
   const cv = useRef(null), draft = useRef(null), clip = useRef("");
   const $ = (id) => host.querySelector("#" + id);
 
-  // A row above the video controls, and a canvas over the picture.
+  // The tools live in three of the Labeller's trays (Points, Draw, More), and a canvas lies over the picture.
   useEffect(() => {
-    const transport = host.querySelector(".transport"), viewer = $("viewer");
-    if (!transport || !viewer) return;
-    const bar = document.createElement("div"); bar.className = "lab-tools";
-    transport.before(bar);
+    const viewer = $("viewer"), points = $("slotPoints"), drawing = $("slotDraw"), more = $("slotMore");
+    if (!viewer || !points || !drawing || !more) return;
     const canvas = document.createElement("canvas"); canvas.className = "lab-draw";
     viewer.appendChild(canvas); cv.current = canvas;
-    setSlot(bar); // eslint-disable-line react-hooks/set-state-in-effect -- the portal target only exists once the Labeller is mounted
-    return () => { bar.remove(); canvas.remove(); };
+    setSlot({ points, drawing, more }); // eslint-disable-line react-hooks/set-state-in-effect -- the portal targets only exist once the Labeller is mounted
+    return () => { canvas.remove(); };
   }, [host]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Follow the Labeller: which clip is open, which point comes next, whether its point mode is on.
@@ -220,11 +226,17 @@ export default function LabTools({ host, tr, clip: openClip, archerId, phases })
 
   if (!slot) return null;
   const on = tool === "points" && pointsOn();
-  return createPortal(
-    <>
-      <div className="lt-row" role="toolbar" aria-label={l.tools}>
+  const drawing = tool && tool !== "points";
+  return <>
+    {createPortal(<>
+      <div className="lt-row">
         <button type="button" className={`lt-btn ${on ? "on" : ""}`} aria-pressed={on} onClick={() => choose("points")}>{l.points}</button>
         {on && <button type="button" className="lt-btn lt-next" onClick={nextPoint} title={l.nextPoint}>{pointName || "—"} ›</button>}
+      </div>
+      {on && <p className="lt-hint" role="status">{l.hints.points}</p>}
+    </>, slot.points)}
+    {createPortal(<>
+      <div className="lt-row" role="toolbar" aria-label={l.tools}>
         {TOOLS.map(([t, icon]) => (
           <button key={t} type="button" className={`lt-btn lt-ico ${tool === t ? "on" : ""}`} aria-pressed={tool === t} aria-label={l[t]} title={l[t]} onClick={() => choose(t)}>{icon}</button>
         ))}
@@ -235,9 +247,18 @@ export default function LabTools({ host, tr, clip: openClip, archerId, phases })
         ))}
         <button type="button" className="lt-btn" disabled={!shapes.length} onClick={() => keep(shapes.slice(0, -1))}>{l.undo}</button>
         <button type="button" className="lt-btn" disabled={!shapes.length} onClick={() => window.confirm(l.confirmClear) && keep([])}>{l.clear}</button>
-        <button type="button" className="lt-btn" onClick={takeSnapshot}>{l.snapshot}</button>
       </div>
-      {tool && <p className="lt-hint" role="status">{l.hints[tool]}</p>}
+      {drawing && <p className="lt-hint" role="status">{l.hints[tool]}</p>}
+    </>, slot.drawing)}
+    {createPortal(<>
+      <div className="lt-row">
+        <button type="button" className="lt-btn" onClick={takeSnapshot}>{l.snapshot}</button>
+        <label className="lt-start">{l.startsAt}
+          <select value={start} onChange={(e) => chooseStart(e.target.value)}>
+            {STARTS.map((k) => <option key={k} value={k}>{l.starts[k]}</option>)}
+          </select>
+        </label>
+      </div>
       {snap && (
         <div className="lt-snap" role="dialog" aria-label={l.snapshot}>
           <img src={snap.url} alt="" />
@@ -250,26 +271,18 @@ export default function LabTools({ host, tr, clip: openClip, archerId, phases })
         </div>
       )}
       {snapMsg && <p className="lt-hint" role="status">{snapMsg}</p>}
-      <div className="lt-row">
-        <label className="lt-start">{l.startsAt}
-          <select value={start} onChange={(e) => chooseStart(e.target.value)}>
-            {STARTS.map((k) => <option key={k} value={k}>{l.starts[k]}</option>)}
-          </select>
-        </label>
-      </div>
       {seen && (seen.n >= 3 || hints > 0) && (
         <div className="lt-notice">
           <button type="button" className="lt-btn" aria-expanded={open} onClick={() => setOpen(!open)}>{l.notices.replace("{n}", hints)}</button>
           {open && <>
             <p className="lt-hint">{l.learned.replace("{n}", seen.n)}</p>
             {seen.hold != null && seen.usualHold != null && <p>{l.holdVs.replace("{now}", seen.hold.toFixed(2)).replace("{usual}", seen.usualHold.toFixed(2))}</p>}
-            {seen.faults.map((f) => <p key={f.fault}>⚑ {l.faultHint.replace("{fault}", tr.quick.faults[FAULTS.indexOf(f.fault)] || f.fault).replace("{times}", f.times).replace("{of}", f.of)}</p>)}
+            {seen.faults.map((f) => <p key={f.fault}>{l.faultHint.replace("{fault}", tr.quick.faults[FAULTS.indexOf(f.fault)] || f.fault).replace("{times}", f.times).replace("{of}", f.of)}</p>)}
             {seen.similar.map((x) => <p key={x.id} className="lt-note">“{x.notes}” <small>{x.date}</small></p>)}
             {!hints && <p className="lt-hint">{l.nothing}</p>}
           </>}
         </div>
       )}
-    </>,
-    slot,
-  );
+    </>, slot.more)}
+  </>;
 }
