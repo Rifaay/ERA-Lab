@@ -499,3 +499,5 @@ button.row:hover .row-name { color: var(--blue); }
 .role-pick small { color: var(--g600); font-size: 13px; }
 .welcome-local { display: grid; gap: 6px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--g200); }
 .invite-qr { width: 200px; height: 200px; image-rendering: pixelated; border: 1px solid var(--g200); border-radius: var(--r-md); }
+.pz-year { display: flex; align-items: center; gap: 2px; }
+.pz-year input { width: 5.5em; text-align: center; margin: 0; }

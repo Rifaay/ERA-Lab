@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import "./clips.css";
 import { pickMime } from "./clips";
 import Icon from "./icons";
@@ -49,7 +50,8 @@ export default function Recorder({ tr, onDone, onClose }) {
   };
   const stop = () => { rec.current?.stop(); setState("ready"); navigator.vibrate?.([20, 40, 20]); };
 
-  return (
+  // Drawn on the page itself, above the app bar: inside the screen it would sit under it.
+  return createPortal(
     <div className="recorder" role="dialog" aria-label={r.title}>
       <video ref={view} autoPlay muted playsInline />
       {state === "recording" && <div className="rec-time" role="timer"><i />{String(Math.floor(secs / 60)).padStart(2, "0")}:{String(secs % 60).padStart(2, "0")}</div>}
@@ -61,6 +63,7 @@ export default function Recorder({ tr, onDone, onClose }) {
         <button className="rec-side" disabled={state === "recording"} onClick={() => { setState("starting"); setFacing(facing === "environment" ? "user" : "environment"); }} aria-label={r.flip}><Icon name="flip" size={26} /></button>
       </div>
       <p className="rec-hint">{state === "recording" ? r.recordingHint : r.readyHint}</p>
-    </div>
+    </div>,
+    document.body,
   );
 }

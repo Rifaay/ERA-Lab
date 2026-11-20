@@ -65,12 +65,26 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
     if (armed === "none") delete weeks[w]; else weeks[w] = armed;
     touch(w, { weeks });
   };
+  // Each year has its own plan. A competition dated in another year goes into that year's plan, which then opens.
+  const fileInYear = (c) => {
+    const y = +c.date.slice(0, 4), other = upgrade(getPlan(selectedId, y), y);
+    const next = autoPlan({ ...other, comps: [...(other.comps || []), c] }, y, other.ramadan || ramadanWeeks(y));
+    savePlan(next); setYear(y); setPlanState(next); setSel(null);
+  };
   const addComp = () => {
     if (!comp.name.trim() || !comp.date) return;
-    rebuildWith({ comps: [...(plan.comps || []), { ...comp, name: comp.name.trim(), id: uid() }] });
+    const c = { ...comp, name: comp.name.trim(), id: uid() };
+    if (+c.date.slice(0, 4) === year) rebuildWith({ comps: [...(plan.comps || []), c] }); else fileInYear(c);
     setComp({ name: "", date: "", priority: "A" });
   };
-  const setCompField = (id, k, v) => rebuildWith({ comps: plan.comps.map((c) => (c.id === id ? { ...c, [k]: v } : c)) });
+  const setCompField = (id, k, v) => {
+    const c = { ...plan.comps.find((x) => x.id === id), [k]: v };
+    if (k === "date" && v && +v.slice(0, 4) !== year) { // moved to another year
+      setPlan(autoPlan({ ...plan, comps: plan.comps.filter((x) => x.id !== id) }, year, ramadan));
+      return fileInYear(c);
+    }
+    rebuildWith({ comps: plan.comps.map((x) => (x.id === id ? c : x)) });
+  };
   const removeComp = (id) => rebuildWith({ comps: plan.comps.filter((c) => c.id !== id) });
   const setRule = (path, v) => {
     const r = structuredClone(plan.rules || {});
@@ -84,9 +98,13 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
     <div className="screen pz">
       <div className="card-header">
         <h2>{pl.title} — {athlete.name}</h2>
-        <select value={year} onChange={(e) => loadYear(+e.target.value)} style={{ width: "auto" }} aria-label={pl.year}>
-          {[thisYear - 1, thisYear, thisYear + 1].map((y) => <option key={y}>{y}</option>)}
-        </select>
+        <div className="pz-year">
+          <button className="icon-btn" onClick={() => loadYear(year - 1)} aria-label={pl.prevYear}><Icon name="prev" size={18} /></button>
+          <input type="number" inputMode="numeric" min="1990" max="2100" defaultValue={year} key={year} aria-label={pl.year}
+            onBlur={(e) => { const y = +e.target.value; if (y >= 1990 && y <= 2100 && y !== year) loadYear(y); else e.target.value = year; }}
+            onKeyDown={(e) => e.key === "Enter" && e.target.blur()} />
+          <button className="icon-btn" onClick={() => loadYear(year + 1)} aria-label={pl.nextYear}><Icon name="next" size={18} /></button>
+        </div>
       </div>
       <div className="seg pz-tabs" role="tablist">
         {TABS.map((k) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>{pl.tabs[k]}{k === "load" && warns.length ? ` (${warns.length})` : ""}</button>)}
@@ -111,7 +129,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
               {["A", "B", "C"].map((p) => <option key={p} value={p}>{pl.prio[p]}</option>)}
             </select>
             <input value={comp.name} placeholder={pl.compName} onChange={(e) => setComp({ ...comp, name: e.target.value })} />
-            <input type="date" value={comp.date} min={`${year}-01-01`} max={`${year}-12-31`} onChange={(e) => setComp({ ...comp, date: e.target.value })} aria-label={pl.compDate} />
+            <input type="date" value={comp.date} onChange={(e) => setComp({ ...comp, date: e.target.value })} aria-label={pl.compDate} />
             <button className="btn-primary small" onClick={addComp} disabled={!comp.name.trim() || !comp.date}>{pl.add}</button>
           </div>
         </div>

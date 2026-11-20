@@ -293,7 +293,7 @@ export const t = {
       backup: "Backup", restore: "Restore", restoreSuccess: "Data restored.", restoreError: "Could not read file.",
     },
     planner: {
-      title: "Season plan", noAthlete: "Select an athlete first.", year: "Year",
+      title: "Season plan", noAthlete: "Select an athlete first.", year: "Year", prevYear: "Previous year", nextYear: "Next year",
       tabs: { season: "Season", load: "Load", rules: "Rules", send: "Send" },
       comps: "Competitions", compsIntro: "Add each competition with its date and priority. A is the event to peak for, B matters, C is practice. The season is built back from the A events.",
       priority: "Priority", prio: { A: "A · peak", B: "B · important", C: "C · practice" }, compName: "Competition name", compDate: "Date", add: "Add", remove: "Remove",
@@ -774,7 +774,7 @@ export const t = {
       backup: "نسخة احتياطية", restore: "استعادة", restoreSuccess: "تمت الاستعادة.", restoreError: "تعذّر قراءة الملف.",
     },
     planner: {
-      title: "خطة الموسم", noAthlete: "اختر رياضياً أولاً.", year: "السنة",
+      title: "خطة الموسم", noAthlete: "اختر رياضياً أولاً.", year: "السنة", prevYear: "السنة السابقة", nextYear: "السنة التالية",
       tabs: { season: "الموسم", load: "الحمل", rules: "القواعد", send: "إرسال" },
       comps: "البطولات", compsIntro: "أضف كل بطولة بتاريخها وأولويتها. A هي البطولة التي نبلغ فيها الذروة، B مهمة، C للتدريب. يُبنى الموسم رجوعاً من بطولات A.",
       priority: "الأولوية", prio: { A: "A · ذروة", B: "B · مهمة", C: "C · تدريب" }, compName: "اسم البطولة", compDate: "التاريخ", add: "أضف", remove: "إزالة",

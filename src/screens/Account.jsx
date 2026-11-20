@@ -78,7 +78,7 @@ export default function Account({ tr, as, onChange, invited = false }) {
     </label>
   );
   const resend = () => run(async () => {
-    await (mode === "signup" ? resendSignup(email.trim()) : sendReset(email.trim()));
+    await (mode === "signup" ? resendSignup(email.trim().toLowerCase()) : sendReset(email.trim().toLowerCase()));
     setMsg(s.resent); setWait(60); // Supabase sends one email a minute to the same address
   });
   const codeField = (
@@ -107,10 +107,10 @@ export default function Account({ tr, as, onChange, invited = false }) {
     <div className="acct">
       {steps}
       <p className="acct-step">{s.checkEmail}</p>
-      <p className="muted">{(mode === "signup" ? s.confirmSent : s.resetSent)} <b dir="ltr">{email.trim()}</b></p>
+      <p className="muted">{(mode === "signup" ? s.confirmSent : s.resetSent)} <b dir="ltr">{email.trim().toLowerCase()}</b></p>
       <form className="form" onSubmit={(e) => {
         e.preventDefault();
-        run(async () => { await verifyEmailCode(email.trim(), code, mode); setCode(""); if (mode === "signup") await sameRole(); refresh(); });
+        run(async () => { await verifyEmailCode(email.trim().toLowerCase(), code, mode); setCode(""); if (mode === "signup") await sameRole(); refresh(); });
       }}>
         <label>{s.emailCode}
           <input className="code-input" inputMode="numeric" autoComplete="one-time-code" dir="ltr" autoFocus value={code} onChange={(e) => setCode(digits(e.target.value, 8))} />
@@ -150,7 +150,7 @@ export default function Account({ tr, as, onChange, invited = false }) {
       <p className="muted">{mode === "reset" ? s.resetIntro : mode === "up" ? (coach ? s.upIntroCoach : s.upIntroArcher) : !as ? s.introAny : (coach ? s.intro : s.introArcher)}</p>
       <form className="form" onSubmit={(e) => {
         e.preventDefault();
-        const em = email.trim();
+        const em = email.trim().toLowerCase();
         if (mode === "reset") return run(async () => { await sendReset(em); setMode("recovery"); setWait(60); });
         if (mode === "up") {
           const w = weak(pw); if (w) return setErr(w);
@@ -164,7 +164,7 @@ export default function Account({ tr, as, onChange, invited = false }) {
         run(async () => { await signIn(em, pw); setPw(""); await sameRole(); refresh(); });
       }}>
         <label>{s.email}
-          <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input type="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck="false" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         {mode !== "reset" && pwField(mode === "up" ? s.newPassword : s.password, mode === "up" ? "new-password" : "current-password")}
         <button className="btn-primary wide-btn" disabled={busy || !email.includes("@") || (mode !== "reset" && !pw)}>
