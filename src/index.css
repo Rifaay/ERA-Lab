@@ -349,7 +349,7 @@ button.row:hover .row-name { color: var(--blue); }
 .acct-step { font-weight: 700; }
 .acct-ok { color: var(--green-text); font-weight: 600; }
 .acct-qr { display: grid; gap: 6px; justify-items: start; }
-.acct-qr img { background: var(--white); padding: 8px; border: 1.5px solid var(--g200); border-radius: var(--r-md); }
+.acct-qr img { image-rendering: pixelated; background: var(--white); padding: 8px; border: 1.5px solid var(--g200); border-radius: var(--r-md); }
 .acct-qr code { word-break: break-all; font-size: 13px; }
 .acct-danger { padding-top: 10px; border-top: 1px solid var(--g200); }
 .lock-after { display: flex; flex-direction: row; gap: 8px; align-items: center; justify-content: flex-start; justify-self: start; flex-wrap: wrap; text-align: start; }

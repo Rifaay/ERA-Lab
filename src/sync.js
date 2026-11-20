@@ -5,6 +5,7 @@
 // Athletes under 18, or with no birth date, and everything about them never leave the device: the owner's rule is no
 // children's data on a server until guardian consent is settled.
 import { readKind, writeKind } from "./storage.js";
+import { qrImage } from "./qr.js";
 
 const env = import.meta.env || {};
 const URL_ = (env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
@@ -145,7 +146,8 @@ export const enrollApp = async () => {
   const t = await token();
   for (const x of await factors()) if (x.status !== "verified") await call(`/auth/v1/factors/${x.id}`, { method: "DELETE", token: t }).catch(() => {}); // an earlier, unfinished setup
   const r = await call("/auth/v1/factors", { method: "POST", token: t, body: { factor_type: "totp", friendly_name: `ERA Lab ${new Date().toISOString().slice(0, 16)}`, issuer: "ERA Lab" } });
-  return { id: r.id, qr: r.totp.qr_code, secret: r.totp.secret };
+  // Drawn here from the setup link: the SVG Supabase sends often doesn't show in iPhone Safari.
+  return { id: r.id, qr: r.totp.uri ? qrImage(r.totp.uri, 5) : r.totp.qr_code, secret: r.totp.secret };
 };
 // Signing in: the code may come from any of the coach's authenticators (the main one or a backup).
 export const verifyAny = async (code) => {

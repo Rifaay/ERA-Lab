@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import { getAthletes } from "../storage";
 import { signedIn, configured } from "../sync";
 import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, pullArchers, inviteUrl } from "../archer";
-import qrcode from "qrcode-generator";
-
-const qrImage = (text) => { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createDataURL(6, 2); };
+import { qrImage } from "../qr";
 import { RING_FILL, rings, summary, scoreValue } from "../range";
 import EndStrip from "../EndStrip";
 

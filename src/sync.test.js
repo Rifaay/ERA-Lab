@@ -175,3 +175,9 @@ test("sign-up: an address that already has an account is told apart from a new o
   assert.equal(await signUp("a@x", "pw", "coach", answer({ id: "u", identities: [] })), "exists");
   assert.equal(await signUp("b@x", "pw", "coach", answer({ id: "u", identities: [{ id: "i" }] })), true);
 });
+
+test("authenticator setup: the QR code is drawn from the setup link as an image every browser shows", async () => {
+  const { qrImage } = await import("./qr.js");
+  const img = qrImage("otpauth://totp/ERA%20Lab:a@x?secret=JBSWY3DPEHPK3PXP&issuer=ERA%20Lab");
+  assert.match(img, /^data:image\/gif;base64,[A-Za-z0-9+/=]+$/);
+});
