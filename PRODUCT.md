@@ -9,7 +9,7 @@ web
 ## Users
 
 - **Coaches** are the primary users. One archery coach runs their own athletes: plans training, records range sessions, assesses technique, tracks progress and writes reports. Confirmed by the owner, 2026-11-12.
-- **Athletes** get limited access: plotting their own arrows and filling in session information. Confirmed as intended. Not built yet: the app has no accounts, so today whoever holds the device can do everything.
+- **Archers** (adults only) can have their own app, joined with the coach's invite code, link or QR code. It is limited to their own range sessions (plotted arrows go to the coach live), their results, the season plan the coach sends them, the coach's quick notes and their notifications. Archers under 18, or with no birth date, can't be invited and nothing of theirs leaves the coach's device.
 
 ## Product Purpose
 
@@ -22,20 +22,23 @@ It carries one coach's own methodology end to end: four stages (Beginner, Builde
 ## Operating Context
 
 - **Mostly on a phone**, at an outdoor range: standing, between ends, often in direct sun, one hand free.
-- **Also on a desktop**, for convenience and the more advanced work: planning, reports, and (later) video review.
+- **Also on a desktop**, for the more advanced work: planning, reports and video review.
 - Sessions are shot in ends of 3 to 6 arrows at 18 to 90 m on 122, 80 or 40 cm target faces.
-- No server. All data stays in the browser on the device; backup and restore move it between devices.
-- Opened three ways: hosted web app (installable, offline), one self-contained file, or locally on the PC.
+- The device is the working copy and the app runs offline. An optional cloud copy (Supabase, EU region, free plan) keeps a coach's devices in step and carries archers' live sessions, shared plans, notes and notifications. Signing in is email and password plus an authenticator code for coaches; archers use email and password. Sign-in emails carry codes only and go through the owner's Gmail.
+- Opened three ways: hosted web app at https://rifaay.github.io/ERA-Lab/ (installable, offline), one self-contained file, or locally on the PC.
 
 ## Capabilities and Constraints
 
-- Six stages: Home (who needs you, archer screen, profile, settings), Plan (planner, goals, exercises), Range (setup, range, review of the session), Review (video), Assess (rubric, sessions), Report (PDF).
-- Review (video): opens an athlete folder on a PC, marks eight shot phases, fault tags and body points on a clip, links the clip to its arrow, saves labels next to the clip and a short record in the app.
-- Range: one press-slide-lift on the target records an arrow with position, score and time; ends roll over; miss, score-only keypad, undo, move.
+- Coach's app, five stages: Home (who needs you, archer screen, profile, settings), Plan (season planner as year, months and days; goals; exercises), Video in the centre (clips, full analysis; coach only), Range (live scores of linked archers, plotting), Progress (stats, report, rubric, sessions).
+- Archer's app, four tabs: Range (plotting first), Plan (the plan the coach sent), Results, Me (coach link, notifications, account).
+- Video: records or imports clips, marks eight shot phases, fault tags and body points (on-device pose tracking), zoom without loss, drawing tools, links a clip to its end or arrow, saves labels next to the clip and a short record in the app.
+- Range: one press-slide-lift on the target records an arrow with position, score and time; ends roll over; miss, score-only keypad, undo, move. The coach can watch, send a quick note, and end or remove a session.
+- Notifications (web push; on iPhone only from the Home Screen app): coach hears when an archer joins, starts and finishes; archer gets a new season plan and a 07:00 reminder on planned days. Each kind can be turned off per phone.
+- Season plan exports as an interactive PDF; reports and scorecards save as PDF.
 - English and Arabic, with right-to-left layout.
-- React 19 with Vite; no UI library; one stylesheet. A strict content security policy allows no network calls except Google Fonts.
+- React 19 with Vite; no UI library; one main stylesheet. A strict content security policy allows network calls only to Google Fonts and the project's own Supabase.
 - Terms in use: end, arrow, face, stage (S1 to S4), rubric, discipline (recurve RC, barebow BB), WA category.
-- Undecided: how athletes get their limited access without accounts; whether a server is added (gated on five paying coaches and on guardian consent for minors).
+- Undecided: whether new sign-ups should default to coach or archer (today: coach, chosen on the sign-up form); guardian consent for archers under 18, which keeps their data off the server until settled.
 
 ## Brand Commitments
 
@@ -61,7 +64,7 @@ The owner's personal brand design system is binding: "Ahmed Rifaay — Design Sy
 1. The coach's question comes first: who needs me this week, and are they improving?
 2. One action records one thing. Range entry must not take attention away from the athlete.
 3. Readable where it is used: outdoors, in sun, on a phone, in either language.
-4. Data stays with the coach. Nothing leaves the device unless the coach exports it.
+4. Data stays with the coach. Nothing leaves the device unless the coach turns on the cloud copy, and never a minor's.
 5. The method is the product. Screens follow the coaching cycle, not a list of features.
 
 ## Accessibility & Inclusion

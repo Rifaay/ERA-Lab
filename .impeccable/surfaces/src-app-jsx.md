@@ -15,7 +15,7 @@ Chosen structure: "Who needs you" as home, with "One archer at a time" opening w
 
 Must stay untouched: all stored data and screen functions; the brand system in PRODUCT.md.
 
-Unresolved: the logo file's location; how athletes get limited access.
+Unresolved: none recorded (logo supplied 2026-11-13; archers have their own app since 2026-11-14).
 
 ## Direction contract
 
@@ -25,7 +25,7 @@ OWN-WORLD: The owner's brand system. Black shell bands, white work surface, blue
 
 STORY: The coach opens the app, sees how many archers need them and the reason in plain words, taps one, sees that archer's plan, range, assessment, goals and report in order, and starts a range session from there.
 
-FIRST VIEWPORT: Black header with the wordmark, language switch and settings; a large count line ("2 archers need you") with the date beneath. Then the attention list: name, reason in red, last end as an end strip, one outlined blue action. Then archers on track: name, last session line, arrow average with trend. Fixed black bottom bar with five stages; Range is the yellow centre button.
+FIRST VIEWPORT: Black header with the wordmark, language switch and settings; a large count line ("2 archers need you") with the date beneath. Then the attention list: name, reason in red, last end as an end strip, one outlined blue action. Then archers on track: name, last session line, arrow average with trend. Fixed black bottom bar with five stages; Video is the yellow centre button.
 
 FORM: Ranked attention list leading to a per-archer cycle screen; position 3 then 4 on the ordered list of seven. seed:29066dc706d74709
 
