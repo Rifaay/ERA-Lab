@@ -31,11 +31,11 @@ await db.exec(`
   create function net.http_post(url text, headers jsonb, body jsonb) returns bigint language sql as $$ insert into net.calls values (url, headers, body); select 1::bigint $$;
   create schema cron; create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ select 1::bigint $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql"])
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql"])
   await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8").replace(/^create extension .*$/gm, ""));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
-test.beforeEach(() => db.exec(`delete from net.calls; delete from push_subs; delete from shared_plans; delete from archer_sessions; delete from invites; delete from records; insert into auth.users values ('${A}', null), ('${B}', '{"role":"coach"}'), ('${R}', '{"role":"archer"}'), ('${R2}', '{"role":"archer"}') on conflict do nothing`));
+test.beforeEach(() => db.exec(`delete from coach_notes; delete from net.calls; delete from push_subs; delete from shared_plans; delete from archer_sessions; delete from invites; delete from records; insert into auth.users values ('${A}', null), ('${B}', '{"role":"coach"}'), ('${R}', '{"role":"archer"}'), ('${R2}', '{"role":"archer"}') on conflict do nothing`));
 
 // Each call runs as the given visitor and is rolled back, so tests can't leak into each other.
 const as = async (who, sql, params, aal = "aal2") => {
@@ -260,4 +260,28 @@ test("only the linked archer's own coach, with both steps, can show the 'coach i
   assert.equal(await sees(R2), false, "another archer doesn't");
   await db.exec("update invites set watched_at = now() - interval '2 minutes'");
   assert.equal(await sees(R), false, "an old stamp means nobody is watching");
+});
+
+test("only the linked archer's own coach sends quick notes, and only that archer reads them", async () => {
+  await invite(); await link();
+  const send = async (who, athlete = "a1", aal = "aal2") => { // kept, not rolled back, so the archer can read it after
+    try {
+      await db.exec("begin");
+      await db.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: who, aal })]);
+      await db.exec("set local role authenticated");
+      await db.query("select public.send_note($1, $2)", [athlete, "  Relax the bow hand  "]);
+      await db.exec("commit"); return true;
+    } catch { await db.exec("rollback"); return false; }
+  };
+  assert.equal(await send(A), true, "the coach sends to their linked archer");
+  assert.equal(await send(A, "a1", "aal1"), false, "not without the second step");
+  assert.equal(await send(B), false, "another coach can't");
+  assert.equal(await send(A, "nobody"), false, "nor to a profile with no linked archer");
+  assert.equal(await send(R, "a1", "aal1"), false, "an archer can't");
+  const read = (who) => as(who, "select body from coach_notes", [], "aal1").then((r) => r.rows.map((x) => x.body));
+  assert.deepEqual(await read(R), ["Relax the bow hand"], "trimmed, and the archer reads it");
+  assert.deepEqual(await read(R2), [], "another archer doesn't");
+  await assert.rejects(as(R, "insert into coach_notes (coach_id, archer_id, body) values ($1, $2, 'x')", [A, R], "aal1"), "nobody writes the table directly");
+  await db.exec("delete from invites");
+  assert.deepEqual(await read(R), [], "after leaving the coach, their notes are out of view");
 });

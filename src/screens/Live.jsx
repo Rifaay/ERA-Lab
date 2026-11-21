@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAthletes } from "../storage";
 import { signedIn, configured } from "../sync";
-import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, finishedOf, pullArchers, inviteUrl, watching } from "../archer";
+import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, finishedOf, pullArchers, inviteUrl, watching, sendNote } from "../archer";
 import { qrImage } from "../qr";
 import { RING_FILL, rings, summary, scoreValue } from "../range";
 import EndStrip from "../EndStrip";
@@ -95,6 +95,7 @@ function LiveDetail({ tr, item: { athlete, session: s, updated }, live, onBack }
           </div>
         </div>
       </article>
+      {live && <NoteBox tr={tr} athlete={athlete} />}
       {ends.map((e, i) => (
         <div key={e.end} className="card live-end-card">
           <div className={`live-end ${i ? "past" : ""}`}><span>{l.end.replace("{n}", e.end)}</span><EndStrip scores={e.arrows.map((a) => a.score)} /><b dir="ltr">{endTotal(e)}</b></div>
@@ -102,6 +103,33 @@ function LiveDetail({ tr, item: { athlete, session: s, updated }, live, onBack }
         </div>
       ))}
     </div>
+  );
+}
+
+// Coach → archer, while they shoot: a short note that shows as a label on the archer's screen. One tap for the usual ones.
+function NoteBox({ tr, athlete }) {
+  const l = tr.live;
+  const [text, setText] = useState("");
+  const [state, setState] = useState(""); // "" | busy | sent | error text
+  const send = async (note) => {
+    note = note.trim();
+    if (!note) return;
+    setState("busy");
+    try { await sendNote(athlete.id, note); setText(""); setState("sent"); }
+    catch (e) { setState(navigator.onLine === false || e instanceof TypeError ? tr.sync.offline : /not linked/.test(e.message) ? l.noteNotLinked : e.message); }
+  };
+  return (
+    <form className="card note-box" onSubmit={(e) => { e.preventDefault(); send(text); }}>
+      <div className="card-title">{l.noteTitle.replace("{name}", athlete.name)}</div>
+      <div className="chip-list">
+        {l.notePresets.map((p) => <button key={p} type="button" className="chip" disabled={state === "busy"} onClick={() => send(p)}>{p}</button>)}
+      </div>
+      <div className="note-row">
+        <input value={text} maxLength={200} placeholder={l.notePlaceholder} aria-label={l.notePlaceholder} onChange={(e) => { setText(e.target.value); if (state === "sent") setState(""); }} />
+        <button className="btn-primary small" disabled={state === "busy" || !text.trim()}>{l.noteSend}</button>
+      </div>
+      {state === "sent" ? <p className="success-msg" role="status">✓ {l.noteSent}</p> : state && state !== "busy" ? <p className="error-msg" role="alert">{state}</p> : null}
+    </form>
   );
 }
 
