@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { getAthletes } from "../storage";
 import { signedIn, configured } from "../sync";
-import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, pullArchers, inviteUrl } from "../archer";
+import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, finishedOf, pullArchers, inviteUrl, watching } from "../archer";
 import { qrImage } from "../qr";
 import { RING_FILL, rings, summary, scoreValue } from "../range";
 import EndStrip from "../EndStrip";
+import EndVideo from "../EndVideo";
+import Icon from "../icons";
 
 function Face({ s }) {
   const n = rings(s.context.face), ends = s.ends, last = ends.length - 1;
@@ -20,20 +22,25 @@ function Face({ s }) {
 
 const ago = (ms, l) => { const sec = Math.max(0, Math.round((Date.now() - ms) / 1000)); return sec < 60 ? l.secAgo.replace("{n}", sec) : l.minAgo.replace("{n}", Math.round(sec / 60)); };
 
-// Coach → Range → Live: every linked archer who is shooting right now, refreshed every few seconds.
+const endTotal = (e) => e.arrows.reduce((t, a) => t + scoreValue(a.score), 0);
+
+// Coach → Range → Live: every linked archer who is shooting right now, refreshed every few seconds, as small cards
+// so many archers fit on one screen. Tapping a card opens that archer's target, every end, and the video links.
 export default function LiveBoard({ tr, onCopied }) {
   const l = tr.live;
   const [rows, setRows] = useState([]);
   const [state, setState] = useState("loading"); // loading | ok | offline
+  const [open, setOpen] = useState(null); // session_id of the card opened
   const [, setNow] = useState(0);
   const on = configured && signedIn();
 
   useEffect(() => {
     if (!on) return;
-    let live = true, busy = false;
+    let live = true, busy = false, told = 0;
     const pull = async () => {
       if (busy || document.visibilityState !== "visible") return;
       busy = true;
+      if (Date.now() - told > 15000) { told = Date.now(); watching().catch(() => {}); } // the archers' apps show "coach is watching"
       try { const r = await pullArchers(); if (live) { setRows(r.rows); setState("ok"); if (r.copied) onCopied?.(r.copied); } }
       catch { if (live) setState("offline"); }
       busy = false;
@@ -45,32 +52,55 @@ export default function LiveBoard({ tr, onCopied }) {
   }, [on]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!on) return <div className="screen"><h2>{l.title}</h2><div className="card"><p>{configured ? l.signIn : l.noCloud}</p></div></div>;
-  const athletes = getAthletes(), linked = athletes.filter((a) => isLinked(a.id)), shooting = liveOf(rows, athletes);
+  const athletes = getAthletes(), linked = athletes.filter((a) => isLinked(a.id)), shooting = liveOf(rows, athletes), finished = finishedOf(rows, athletes);
+  const opened = [...shooting, ...finished].find((x) => x.session.session_id === open);
+  if (opened) return <LiveDetail tr={tr} item={opened} live={!opened.session.end_ms} onBack={() => setOpen(null)} />;
+
+  const mini = ({ athlete, session: s, updated }) => {
+    const sum = summary(s), cur = s.ends[s.ends.length - 1], done = !!s.end_ms;
+    return (
+      <button key={s.session_id} type="button" className={`card live-mini ${done ? "done" : ""}`} onClick={() => setOpen(s.session_id)} aria-label={`${athlete.name}: ${sum.total} / ${sum.outOf}`}>
+        <span className="live-mini-head"><b>{athlete.name}</b>{!done && <span className="live-dot" />}</span>
+        <span className="live-mini-total" dir="ltr">{sum.total}<small> / {sum.outOf}</small></span>
+        <span className="muted">{done ? l.finishedAt.replace("{t}", new Date(s.end_ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })) : `${l.end.replace("{n}", cur.end)} · ${ago(updated, l)}`}</span>
+        {!done && <EndStrip scores={cur.arrows.map((a) => a.score)} />}
+      </button>
+    );
+  };
   return (
     <div className="screen">
       <h2>{l.title}</h2>
       {state === "offline" && <p className="error-msg" role="status">{l.offline}</p>}
       {!linked.length && <div className="card"><p>{l.none}</p><p className="muted">{l.how}</p></div>}
       {linked.length > 0 && !shooting.length && state !== "loading" && <div className="card"><p>{l.quiet.replace("{n}", linked.length)}</p><p className="muted">{l.quietSub}</p></div>}
-      {shooting.map(({ athlete, session: s, updated }) => {
-        const sum = summary(s), cur = s.ends[s.ends.length - 1], before = s.ends.slice(-4, -1);
-        return (
-          <article key={athlete.id} className="card live-card">
-            <header><b>{athlete.name}</b><span className="live-dot" />{ago(updated, l)}</header>
-            <div className="live-body">
-              <Face s={s} />
-              <div>
-                <div className="live-total" dir="ltr">{sum.total}<small> / {sum.outOf}</small></div>
-                <div className="muted">{l.line.replace("{avg}", sum.avg == null ? "–" : sum.avg.toFixed(2)).replace("{arrows}", sum.arrows).replace("{dist}", s.context.distance_m)}</div>
-                <div className="live-end"><span>{l.end.replace("{n}", cur.end)}</span><EndStrip scores={cur.arrows.map((a) => a.score)} /><b dir="ltr">{cur.arrows.reduce((t, a) => t + scoreValue(a.score), 0)}</b></div>
-                {before.reverse().map((e) => (
-                  <div key={e.end} className="live-end past"><span>{l.end.replace("{n}", e.end)}</span><EndStrip scores={e.arrows.map((a) => a.score)} /><b dir="ltr">{e.arrows.reduce((t, a) => t + scoreValue(a.score), 0)}</b></div>
-                ))}
-              </div>
-            </div>
-          </article>
-        );
-      })}
+      {shooting.length > 0 && <div className="live-grid">{shooting.map(mini)}</div>}
+      {finished.length > 0 && <><h3 className="live-sub">{l.finished}</h3><div className="live-grid">{finished.map(mini)}</div></>}
+    </div>
+  );
+}
+
+// One archer, opened from the board: the target with every arrow, each end, and a video link for each end.
+function LiveDetail({ tr, item: { athlete, session: s, updated }, live, onBack }) {
+  const l = tr.live, sum = summary(s), ends = s.ends.filter((e) => e.arrows.length).reverse(); // newest end first
+  return (
+    <div className="screen">
+      <div className="backbar"><button className="btn-ghost small" onClick={onBack}><Icon name="prev" size={16} />{l.back}</button></div>
+      <article className="card live-card">
+        <header><b>{athlete.name}</b>{live && <span className="live-dot" />}{live ? ago(updated, l) : l.finishedShort}</header>
+        <div className="live-body">
+          <Face s={s} />
+          <div>
+            <div className="live-total" dir="ltr">{sum.total}<small> / {sum.outOf}</small></div>
+            <div className="muted">{l.line.replace("{avg}", sum.avg == null ? "–" : sum.avg.toFixed(2)).replace("{arrows}", sum.arrows).replace("{dist}", s.context.distance_m)}</div>
+          </div>
+        </div>
+      </article>
+      {ends.map((e, i) => (
+        <div key={e.end} className="card live-end-card">
+          <div className={`live-end ${i ? "past" : ""}`}><span>{l.end.replace("{n}", e.end)}</span><EndStrip scores={e.arrows.map((a) => a.score)} /><b dir="ltr">{endTotal(e)}</b></div>
+          <EndVideo tr={tr} athlete={athlete} sessionId={s.session_id} end={e.end} />
+        </div>
+      ))}
     </div>
   );
 }

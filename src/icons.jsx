@@ -24,6 +24,7 @@ const PATHS = {
   fall: "<path d=\"M12 5v14m6-6l-6 6m-6-6l6 6\"/>", // tabler:arrow-down
   flat: "<path d=\"M5 12h14m-6 6l6-6m-6-6l6 6\"/>", // tabler:arrow-right
   download: "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 11l5 5l5-5m-5-7v12\"/>", // tabler:download
+  eye: "<path d=\"M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0\"/><path d=\"M21 12q-3.6 6-9 6t-9-6q3.6-6 9-6t9 6\"/>", // tabler:eye
   moon: "<path d=\"M12 3h.393a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 2.992z\"/>", // tabler:moon
 };
 

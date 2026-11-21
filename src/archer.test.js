@@ -60,6 +60,8 @@ test("the coach's app shows unfinished sessions as live and copies each finished
   const rows = [row(live), row(done), row({ ...done, session_id: "done-2" }, "a2"), row({ ...done, session_id: "other" }, "zz")];
   assert.deepEqual(A.liveOf(rows, athletes).map((x) => x.athlete.name), ["Sam"]);
   assert.equal(A.liveOf([{ ...row(live), updated_at: new Date(Date.now() - 31 * 60_000).toISOString() }], athletes).length, 0, "stale");
+  assert.deepEqual(A.finishedOf(rows, athletes).map((x) => x.session.session_id), ["done-1"], "finished today, linked archers only");
+  assert.equal(A.finishedOf([{ ...row(done), updated_at: new Date(Date.now() - 13 * 3600_000).toISOString() }], athletes).length, 0, "yesterday's");
   const saved = [];
   const env = { athletes, sessions: saved, saveSession: (e) => saved.push(e), uid: () => "id" + saved.length };
   assert.equal(A.importFinished(rows, env), 1);

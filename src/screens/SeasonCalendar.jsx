@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { COLORS, monthGrid, dayFilled, phaseOfDay } from "../plan";
+import { COLORS, AREAS, monthGrid, dayFilled, phaseOfDay } from "../plan";
 import { planWeek } from "../stats";
 import Icon from "../icons";
 
@@ -52,7 +52,7 @@ export default function SeasonCalendar({ plan, year, lang, pl, comps, exercises,
             <button key={iso} type="button" role="gridcell" aria-selected={day === iso} className={`cal-day ${day === iso ? "sel" : ""} ${iso === today ? "now" : ""}`} style={tint(iso)} onClick={() => setDay(day === iso ? null : iso)}>
               <span className="n">{+iso.slice(8)}</span>
               {cs.map((x) => <span key={x.id} className={`wk-comp p${x.priority}`}>{x.priority}</span>)}
-              {d?.focus ? <span className="fx">{d.focus}</span> : dayFilled(d) ? <span className="dot" /> : null}
+              {d?.focus || d?.areas?.length ? <span className="fx">{d.focus || d.areas.map((a) => c.areas[a]).join(" · ")}</span> : dayFilled(d) ? <span className="dot" /> : null}
             </button>
           );
         })}
@@ -66,7 +66,7 @@ export default function SeasonCalendar({ plan, year, lang, pl, comps, exercises,
 function DayEditor({ iso, plan, lang, pl, exercises, comps, onChange, onWeek, onClose }) {
   const c = pl.cal, d = plan.days?.[iso] || {}, w = planWeek(iso), k = plan.weeks?.[w];
   const set = (patch) => onChange({ ...d, ...patch });
-  const pick = (id) => { const list = d.exercises || []; set({ exercises: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] }); };
+  const toggle = (field, id) => { const list = d[field] || []; set({ [field]: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] }); };
   const links = (d.materials || "").split(/\s+/).filter((x) => /^https?:\/\/\S+$/i.test(x)); // only web links become clickable
   const [y, mo, da] = iso.split("-").map(Number);
   return (
@@ -80,10 +80,15 @@ function DayEditor({ iso, plan, lang, pl, exercises, comps, onChange, onWeek, on
         {c.openWeek.replace("{w}", w).replace("{phase}", k ? pl.phases[k] : "—")}
       </button>
       <div className="form">
+        <div><label>{c.areasLabel}</label>
+          <div className="chip-list" role="group" aria-label={c.areasLabel}>
+            {AREAS.map((a) => <button key={a} type="button" className={`chip ${d.areas?.includes(a) ? "active" : ""}`} aria-pressed={!!d.areas?.includes(a)} onClick={() => toggle("areas", a)}>{c.areas[a]}</button>)}
+          </div>
+        </div>
         <label>{c.focus}<input value={d.focus || ""} placeholder={c.focusHint} onChange={(e) => set({ focus: e.target.value })} /></label>
         <label>{c.arrows}<input type="number" min="0" step="6" value={d.arrows ?? ""} onChange={(e) => set({ arrows: e.target.value === "" ? "" : Math.max(0, +e.target.value) })} /></label>
         {exercises.length > 0 && <fieldset className="pz-pick"><legend>{pl.exercises}</legend>
-          {exercises.map((x) => <label key={x.id} className="pz-check"><input type="checkbox" checked={(d.exercises || []).includes(x.id)} onChange={() => pick(x.id)} />{x.name}</label>)}
+          {exercises.map((x) => <label key={x.id} className="pz-check"><input type="checkbox" checked={(d.exercises || []).includes(x.id)} onChange={() => toggle("exercises", x.id)} />{x.name}</label>)}
         </fieldset>}
         <label>{c.materials}<textarea rows={3} value={d.materials || ""} placeholder={c.materialsHint} onChange={(e) => set({ materials: e.target.value })} /></label>
         {links.length > 0 && <ul className="cal-links">{links.map((u, i) => <li key={i}><a href={u} target="_blank" rel="noopener noreferrer" dir="ltr">{u}</a></li>)}</ul>}

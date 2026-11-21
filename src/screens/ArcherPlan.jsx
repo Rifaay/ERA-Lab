@@ -36,6 +36,7 @@ export default function ArcherPlan({ tr, lang }) {
         <div className="card-title">{open ? p.today : date(iso)}</div>
         <p className="muted">{open ? `${date(iso)} · ` : ""}{ph.label}</p>
         {!dayFilled(x) ? <p>{p.nothingToday}</p> : <>
+          {x.areas?.length > 0 && <div className="chip-list">{x.areas.map((a) => <span key={a} className="chip active">{pl.cal.areas[a] || a}</span>)}</div>}
           {(x.focus || x.arrows) && <p><b>{x.focus}</b>{x.focus && x.arrows ? " · " : ""}{x.arrows ? fill(p.arrows, { n: x.arrows }) : ""}</p>}
           {x.exercises?.length > 0 && <p>{pl.exercises}: {x.exercises.join(", ")}</p>}
           {x.materials && <p style={{ whiteSpace: "pre-wrap" }}>{x.materials}</p>}

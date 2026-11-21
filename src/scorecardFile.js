@@ -57,3 +57,29 @@ export async function saveHtmlFile(name, html, type = "text/html") {
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+// The same scorecard straight to a PDF, in one tap: the page is laid out at A4 width in a hidden frame, photographed
+// (html2canvas) and placed on A4 pages (jsPDF), then shared or downloaded like any file. No web file in between.
+export async function scorecardPdf(sheetHtml, { lang, title }) {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]); // loaded only now
+  const frame = Object.assign(document.createElement("iframe"), { title, ariaHidden: "true" });
+  Object.assign(frame.style, { position: "fixed", left: "-10000px", top: "0", width: "794px", height: "1123px", border: "0" }); // A4 at 96 dpi
+  document.body.appendChild(frame);
+  try {
+    const d = frame.contentDocument;
+    d.open(); d.write(scorecardFile(sheetHtml, { lang, title }).replace(/<script>[\s\S]*?<\/script>/, "")); d.close();
+    await Promise.race([d.fonts?.ready, new Promise((r) => setTimeout(r, 2500))]); // fonts when online; never wait long
+    const sheet = d.querySelector(".sc-sheet");
+    const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: "#ffffff", ignoreElements: (el) => el.classList?.contains("sc-bar-top") || el.classList?.contains("sc-pdf") });
+    const pdf = new jsPDF({ unit: "pt", format: "a4" }), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 24;
+    const w = W - 2 * m, pageH = H - 2 * m, slice = Math.floor((pageH / w) * canvas.width); // canvas pixels per page
+    for (let y = 0, page = 0; y < canvas.height; y += slice, page++) {
+      const part = document.createElement("canvas");
+      part.width = canvas.width; part.height = Math.min(slice, canvas.height - y);
+      part.getContext("2d").drawImage(canvas, 0, -y);
+      if (page) pdf.addPage();
+      pdf.addImage(part.toDataURL("image/jpeg", 0.92), "JPEG", m, m, w, (part.height * w) / canvas.width);
+    }
+    await saveHtmlFile(`${title}.pdf`, pdf.output("blob"), "application/pdf");
+  } finally { frame.remove(); }
+}

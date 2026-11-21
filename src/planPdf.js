@@ -212,7 +212,8 @@ export function planPdf({ plan, year, first = 1, opt, pl, lang, athlete, goals, 
     for (const [iso, d] of days) {
       const ex = (d.exercises || []).map((id) => X[id]).filter(Boolean);
       const mat = (d.materials || "").split(/\n+/).map((s) => s.trim()).filter(Boolean);
-      const focusL = d.focus ? wrap(d.focus, W - 2 * M - 190) : [], noteL = d.note ? wrap(d.note, W - 2 * M - 40) : [];
+      const fx = [(d.areas || []).map((a) => pl.cal.areas[a] || a).join(" · "), d.focus].filter(Boolean).join(" — ");
+      const focusL = fx ? wrap(fx, W - 2 * M - 190) : [], noteL = d.note ? wrap(d.note, W - 2 * M - 40) : [];
       const h = 24 + Math.max(0, focusL.length - 1) * 13 + (ex.length + mat.length) * 14 + (noteL.length ? 6 + noteL.length * 13 : 0);
       room(h + 6);
       const top = y, k = plan.weeks?.[planWeek(iso)];

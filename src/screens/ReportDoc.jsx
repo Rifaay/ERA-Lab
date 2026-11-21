@@ -184,7 +184,7 @@ export default function ReportDoc({ d, athlete, tr, lang, show, coach, waCategor
               <p>{fill(rp.videoLead, { n: d.video.clips, good: d.video.good })}</p>
               {d.video.faults.length > 0 && <table className="rd-table"><thead><tr><th>{rp.fault}</th><th className="n">{rp.clips}</th></tr></thead>
                 <tbody>{d.video.faults.map(([f, n]) => <tr key={f}><td>{faultName(f)}</td><td className="n">{n}</td></tr>)}</tbody></table>}
-              {d.video.notes.length > 0 && <><h3>{rp.coachNotes}</h3><ul className="rd-notes">{d.video.notes.map((r) => <li key={r.id}><b>{short(r.date)}{r.shot ? ` · ${fill(tr.clips.endArrow, { end: r.shot.end, n: r.shot.arrow })}` : ""}</b> {r.notes}</li>)}</ul></>}
+              {d.video.notes.length > 0 && <><h3>{rp.coachNotes}</h3><ul className="rd-notes">{d.video.notes.map((r) => <li key={r.id}><b>{short(r.date)}{r.shot ? ` · ${r.shot.whole ? fill(tr.clips.wholeEnd, r.shot) : fill(tr.clips.endArrow, { end: r.shot.end, n: r.shot.arrow })}` : ""}</b> {r.notes}</li>)}</ul></>}
             </>
           )}
         </section>

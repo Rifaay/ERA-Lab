@@ -42,7 +42,7 @@ export const MARKUP = `<div class="lab">
       <button class="btn" id="analyseBtn" disabled title="A">Analyse motion</button>
       <div class="legend" id="legend"></div>
     </div>
-    <div class="tray" data-tray="points"><div class="tray-slot" id="slotPoints"></div><button class="btn" id="trackBtn" title="T">Track forward</button></div>
+    <div class="tray" data-tray="points"><div class="tray-slot" id="slotPoints"></div><button class="btn" id="aiBtn">AI track body</button><button class="btn" id="trackBtn" title="T">Track forward</button></div>
     <div class="tray" data-tray="draw"><div class="tray-slot" id="slotDraw"></div></div>
     <div class="tray" data-tray="more"><div class="tray-slot" id="slotMore"></div><button class="btn" type="button" id="moreDetails">Verdict, faults and notes</button><button class="btn" type="button" id="moreFiles">Add video files</button></div>
     <nav class="dock" id="dock" aria-label="Video tools">
@@ -63,7 +63,7 @@ export const MARKUP = `<div class="lab">
       <label class="keys" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="snapChk" checked> Snap taps to motion events</label>
     </div>
     <h3>Body points <span style="text-transform:none;letter-spacing:0">(manual + tracking)</span></h3>
-    <div class="row"><button class="btn" id="ptMode" title="P">Place points: off</button></div>
+    <div class="row"><button class="btn" id="ptMode" title="P">Place points: off</button><button class="btn" id="aiBtn2">AI track body</button></div>
     <div id="ptList" style="margin-top:8px"></div>
     <div class="keys">Pick a point, turn on <b>Place points</b>, click it on the video. <span class="kbd">Shift</span>+click removes it on this frame. <span class="kbd">T</span> tracks all points placed on this frame forward.</div>
     <h3>Arrow (from session sheet)</h3>

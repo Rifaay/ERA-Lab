@@ -403,6 +403,8 @@ button.row:hover .row-name { color: var(--blue); }
 .stage-nav.four { grid-template-columns: repeat(4, 1fr); }
 .send-state { font-size: 12px; font-weight: 600; color: var(--g300); white-space: nowrap; }
 .send-state.wait { color: var(--yellow); }
+.watching { display: inline-flex; color: var(--yellow); animation: live-pulse 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .watching, .live-dot { animation: none; } }
 
 /* Coach: invite code and live scores */
 .link-card { margin-top: 20px; display: grid; gap: 8px; justify-items: start; }
@@ -419,6 +421,21 @@ button.row:hover .row-name { color: var(--blue); }
 .live-end > span:first-child { min-width: 48px; color: var(--g600); }
 .live-end b { margin-inline-start: auto; font: 700 18px var(--font-head); }
 .live-end.past { opacity: .6; margin-top: 4px; }
+.live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.live-mini { display: grid; gap: 4px; justify-items: start; text-align: start; padding: 10px 2px 8px; margin: 0; cursor: pointer; font: inherit; color: inherit; min-width: 0; background: none; border: 0; border-top: 2px solid var(--black); }
+.live-mini:hover { border-top-color: var(--blue); }
+.live-mini.done { opacity: .75; }
+.live-mini-head { display: flex; align-items: center; gap: 6px; width: 100%; }
+.live-mini-head b { font: 800 16px var(--font-head); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-inline-end: auto; }
+.live-mini-total { font: 800 30px var(--font-head); line-height: 1; }
+.live-mini-total small { font-size: 15px; color: var(--g500); }
+.live-mini .muted { font-size: 12px; }
+.live-sub { margin: 6px 0 8px; color: var(--g600); }
+.live-end-card { display: grid; gap: 8px; padding: 10px 12px; }
+.live-end-card .live-end { margin-top: 0; }
+.end-video { display: grid; gap: 6px; justify-items: start; margin-top: 6px; }
+.end-video .btn-ghost.active { border-color: var(--black); font-weight: 600; }
+.end-video-list { display: grid; gap: 6px; width: 100%; }
 @media (min-width: 900px) {
   .subnav button { flex: none; }
 }

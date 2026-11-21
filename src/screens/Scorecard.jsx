@@ -122,7 +122,7 @@ export default function Scorecard({ s, tr, lang, clips = [] }) {
               <article key={rv.id} className={`sc-clip ${rv.verdict || ""}`}>
                 {still ? <img src={still} alt={rv.shot ? `${r.end} ${rv.shot.end}, ${sc.arrow} ${rv.shot.arrow}` : ""} /> : <div className="sc-nostill" />}
                 <div className="sc-clip-body">
-                  <b>{rv.shot ? `${r.end} ${rv.shot.end} · ${sc.arrow} ${rv.shot.arrow} · ${rv.shot.score ?? ""}` : sc.noArrow}</b>
+                  <b>{rv.shot?.whole ? `${r.end} ${rv.shot.end}` : rv.shot ? `${r.end} ${rv.shot.end} · ${sc.arrow} ${rv.shot.arrow} · ${rv.shot.score ?? ""}` : sc.noArrow}</b>
                   <span className="sc-verdict">{rv.verdict === "good" ? tr.quick.good : rv.verdict === "fault" ? tr.quick.fault : ""}</span>
                   {rv.faults?.length > 0 && <ul>{rv.faults.map((f) => <li key={f}>{tr.quick.faults[FAULTS.indexOf(f)] || f}</li>)}</ul>}
                   {rv.notes && <p>{rv.notes}</p>}

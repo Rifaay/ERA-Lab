@@ -200,7 +200,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
                 <button className="clip-row" onClick={() => setOpen(open === x.id ? null : x.id)} aria-expanded={open === x.id}>
                   <span className={`clip-badge ${rv?.verdict || "none"}`}>{rv?.shot?.score ?? "–"}</span>
                   <span className="clip-what">
-                    <b>{rv?.shot ? fill(c.endArrow, { end: rv.shot.end, n: rv.shot.arrow }) : c.noArrow}</b>
+                    <b>{rv?.shot?.whole ? fill(c.wholeEnd, rv.shot) : rv?.shot ? fill(c.endArrow, { end: rv.shot.end, n: rv.shot.arrow }) : c.noArrow}</b>
                     <small>{when(x.recordedAt)} · {Math.round(x.durationS)} s · {mb(x.size)} MB{!x.savedOut && ` · ${c.onlyHere}`}</small>
                     {tagged ? <small className="clip-tags">{rv.verdict === "good" ? c.good : rv.faults.map((f) => tr.quick.faults[FAULTS.indexOf(f)] || f).join(", ") || c.fault}</small> : <small className="clip-tags none">{c.untagged}</small>}
                   </span>
@@ -221,7 +221,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
                         <label className="clip-link">{c.linkTo}
                           <select value={rv.shot ? keyOf(rv.shot) : ""} onChange={(e) => link(x.id, choices.find((a) => keyOf(a) === e.target.value) || null)}>
                             <option value="">{c.noArrow}</option>
-                            {rv.shot && !choices.some((a) => keyOf(a) === keyOf(rv.shot)) && <option value={keyOf(rv.shot)}>{fill(c.endArrow, { end: rv.shot.end, n: rv.shot.arrow })}</option>}
+                            {rv.shot && !choices.some((a) => keyOf(a) === keyOf(rv.shot)) && <option value={keyOf(rv.shot)}>{rv.shot.whole ? fill(c.wholeEnd, rv.shot) : fill(c.endArrow, { end: rv.shot.end, n: rv.shot.arrow })}</option>}
                             {choices.map((a) => <option key={keyOf(a)} value={keyOf(a)}>{a.date} · {fill(c.endArrow, { end: a.end, n: a.arrow })} ({a.score})</option>)}
                           </select>
                         </label>

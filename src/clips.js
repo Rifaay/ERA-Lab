@@ -32,6 +32,10 @@ export const shotOf = (live, endIndex, arrowIndex) => {
   return a ? { session_id: live.session_id, end: e.end, arrow: a.arrow, score: a.score } : null;
 };
 
+// A clip of a whole end. shortcut: it keeps arrow 1 so code keyed by session/end/arrow still reads it (a whole-end
+// clip's faults count on arrow 1 in the statistics); give links an arrow-less shape if that ever matters.
+export const endShot = (session_id, end) => ({ session_id, end, arrow: 1, score: null, whole: true });
+
 // ── Clips from another camera ────────────────────────────────────────────────────────────
 // Which arrow a clip filmed from `start` to `end` (ms, the camera's clock) most likely shows, among an archer's range
 // sessions. Plotted arrow by arrow: the arrow plotted within two minutes after the clip ended, when the arrow before it
@@ -77,7 +81,7 @@ export const setVerdict = (r, verdict) => ({ ...r, verdict: r.verdict === verdic
 
 // When a session is saved, each linked clip takes its arrow's final score (the arrow may have been re-scored).
 export const refreshShots = (reviews, session) => reviews.map((r) => {
-  if (r.shot?.session_id !== session.session_id) return r;
+  if (r.shot?.session_id !== session.session_id || r.shot.whole) return r;
   const a = session.ends.find((e) => e.end === r.shot.end)?.arrows.find((x) => x.arrow === r.shot.arrow);
   return a && a.score !== r.shot.score ? { ...r, shot: { ...r.shot, score: a.score } } : r;
 });
