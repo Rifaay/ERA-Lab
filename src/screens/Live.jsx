@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { getAthletes } from "../storage";
+import { getAthletes, getSessions, deleteSession } from "../storage";
 import { signedIn, configured } from "../sync";
-import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, finishedOf, pullArchers, inviteUrl, watching, sendNote } from "../archer";
+import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, finishedOf, pullArchers, inviteUrl, watching, sendNote, endArcherSession, removeArcherSession } from "../archer";
 import { qrImage } from "../qr";
 import { RING_FILL, rings, summary, scoreValue } from "../range";
 import EndStrip from "../EndStrip";
@@ -54,7 +54,8 @@ export default function LiveBoard({ tr, onCopied }) {
   if (!on) return <div className="screen"><h2>{l.title}</h2><div className="card"><p>{configured ? l.signIn : l.noCloud}</p></div></div>;
   const athletes = getAthletes(), linked = athletes.filter((a) => isLinked(a.id)), shooting = liveOf(rows, athletes), finished = finishedOf(rows, athletes);
   const opened = [...shooting, ...finished].find((x) => x.session.session_id === open);
-  if (opened) return <LiveDetail tr={tr} item={opened} live={!opened.session.end_ms} onBack={() => setOpen(null)} />;
+  const gone = (id) => { setRows((rs) => rs.filter((r) => r.session_id !== id)); setOpen(null); };
+  if (opened) return <LiveDetail tr={tr} item={opened} live={!opened.session.end_ms} onBack={() => setOpen(null)} onGone={gone} />;
 
   const mini = ({ athlete, session: s, updated }) => {
     const sum = summary(s), cur = s.ends[s.ends.length - 1], done = !!s.end_ms;
@@ -80,8 +81,24 @@ export default function LiveBoard({ tr, onCopied }) {
 }
 
 // One archer, opened from the board: the target with every arrow, each end, and a video link for each end.
-function LiveDetail({ tr, item: { athlete, session: s, updated }, live, onBack }) {
+function LiveDetail({ tr, item: { athlete, archer, session: s, updated }, live, onBack, onGone }) {
   const l = tr.live, sum = summary(s), ends = s.ends.filter((e) => e.arrows.length).reverse(); // newest end first
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  // Live: ended on the archer's phone too. Finished: removed from the board and from the coach's records.
+  const stop = async () => {
+    if (!window.confirm((live ? l.confirmEnd : l.confirmRemove).replace("{name}", athlete.name))) return;
+    setBusy(true); setErr("");
+    try {
+      if (live) await endArcherSession(archer, s.session_id);
+      else {
+        await removeArcherSession(archer, s.session_id);
+        const copy = getSessions().find((x) => x.range?.session_id === s.session_id);
+        if (copy) deleteSession(copy.id);
+      }
+      onGone(s.session_id);
+    } catch (e) { setErr(navigator.onLine === false || e instanceof TypeError ? tr.sync.offline : e.message); setBusy(false); }
+  };
   return (
     <div className="screen">
       <div className="backbar"><button className="btn-ghost small" onClick={onBack}><Icon name="prev" size={16} />{l.back}</button></div>
@@ -102,6 +119,8 @@ function LiveDetail({ tr, item: { athlete, session: s, updated }, live, onBack }
           <EndVideo tr={tr} athlete={athlete} sessionId={s.session_id} end={e.end} />
         </div>
       ))}
+      <button className="btn-ghost danger" disabled={busy} onClick={stop}>{live ? l.endSession : l.removeSession}</button>
+      {err && <p className="error-msg" role="alert">{err}</p>}
     </div>
   );
 }

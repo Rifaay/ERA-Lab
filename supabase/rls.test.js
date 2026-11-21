@@ -31,7 +31,7 @@ await db.exec(`
   create function net.http_post(url text, headers jsonb, body jsonb) returns bigint language sql as $$ insert into net.calls values (url, headers, body); select 1::bigint $$;
   create schema cron; create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ select 1::bigint $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql"])
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql", "0009_end_session.sql"])
   await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8").replace(/^create extension .*$/gm, ""));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
@@ -284,4 +284,27 @@ test("only the linked archer's own coach sends quick notes, and only that archer
   await assert.rejects(as(R, "insert into coach_notes (coach_id, archer_id, body) values ($1, $2, 'x')", [A, R], "aal1"), "nobody writes the table directly");
   await db.exec("delete from invites");
   assert.deepEqual(await read(R), [], "after leaving the coach, their notes are out of view");
+});
+
+test("only the archer's own coach ends a session; the archer's phone sees it ended and can delete it", async () => {
+  await invite(); await link();
+  await db.query(`insert into archer_sessions (archer_id, session_id, coach_id, athlete_id, data) values ($1, 's1', $2, 'a1', '{"ends":[]}')`, [R, A]);
+  const end = async (who, aal = "aal2") => { // kept, not rolled back
+    await db.exec("begin");
+    await db.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: who, aal })]);
+    await db.exec("set local role authenticated");
+    await db.query("select public.end_archer_session($1, 's1')", [R]);
+    await db.exec("commit");
+    return (await db.query("select ended_by_coach from archer_sessions")).rows[0].ended_by_coach;
+  };
+  assert.equal(await end(B), null, "another coach can't");
+  assert.equal(await end(A, "aal1"), null, "not without the second step");
+  assert.equal(await end(R, "aal1"), null, "the archer can't through this");
+  assert.ok(await end(A), "the archer's own coach ends it");
+  const seen = await as(R, "select session_id from archer_sessions where ended_by_coach is not null", [], "aal1");
+  assert.equal(seen.rows.length, 1, "the archer's phone sees it ended");
+  assert.equal((await as(R2, "select 1 from archer_sessions", [], "aal1")).rows.length, 0, "another archer sees nothing");
+  assert.equal((await as(R, "delete from archer_sessions where session_id = 's1'", [], "aal1")).affectedRows, 1, "the archer may delete it");
+  assert.equal((await as(A, "delete from archer_sessions where session_id = 's1'")).affectedRows, 1, "so may the coach");
+  assert.equal((await as(B, "delete from archer_sessions where session_id = 's1'")).affectedRows, 0, "another coach may not");
 });

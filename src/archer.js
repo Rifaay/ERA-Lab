@@ -145,15 +145,21 @@ export const cleanSession = (d, athlete) => {
 };
 
 // Rows from archer_sessions, newest first. A row counts as live while unfinished and touched in the last 30 minutes.
-export const fetchArcherRows = () => rest(`archer_sessions?select=archer_id,session_id,athlete_id,data,updated_at&coach_id=eq.${userId()}&order=updated_at.desc&limit=60`);
+export const fetchArcherRows = () => rest(`archer_sessions?select=archer_id,session_id,athlete_id,data,updated_at,ended_by_coach&coach_id=eq.${userId()}&order=updated_at.desc&limit=60`);
 const sessionsOf = (rows, athletes) =>
-  rows.map((r) => ({ row: r, athlete: athletes.find((a) => a.id === r.athlete_id) }))
+  rows.filter((r) => !r.ended_by_coach).map((r) => ({ row: r, athlete: athletes.find((a) => a.id === r.athlete_id) }))
     .filter((x) => x.athlete && isLinked(x.athlete.id))
-    .map((x) => ({ athlete: x.athlete, updated: Date.parse(x.row.updated_at), session: cleanSession(x.row.data, x.athlete) }))
+    .map((x) => ({ athlete: x.athlete, archer: x.row.archer_id, updated: Date.parse(x.row.updated_at), session: cleanSession(x.row.data, x.athlete) }))
     .filter((x) => x.session);
 export const liveOf = (rows, athletes, now = Date.now()) => sessionsOf(rows, athletes).filter((x) => !x.session.end_ms && now - x.updated < 30 * 60_000);
 // Sessions finished in the last 12 hours: the coach can still open them to link ends to video.
 export const finishedOf = (rows, athletes, now = Date.now()) => sessionsOf(rows, athletes).filter((x) => x.session.end_ms && now - x.updated < 12 * 3600_000);
+// Something wrong with a session (migrations/0009). Coach: end one still being shot (the archer's phone closes it), or
+// remove one for good. Archer: take one off the coach's board (discarded on the phone), and see if the coach ended it.
+export const endArcherSession = (archer, session) => rest("rpc/end_archer_session", { method: "POST", body: { archer, session } });
+export const removeArcherSession = (archer, session) => rest(`archer_sessions?archer_id=eq.${archer}&session_id=eq.${encodeURIComponent(session)}`, { method: "DELETE" });
+export const dropUpload = (session) => rest(`archer_sessions?archer_id=eq.${userId()}&session_id=eq.${encodeURIComponent(session)}`, { method: "DELETE" });
+export const endedByCoach = async (session) => Boolean((await rest(`archer_sessions?select=session_id&archer_id=eq.${userId()}&session_id=eq.${encodeURIComponent(session)}&ended_by_coach=not.is.null`))?.length);
 // Coach: tells the linked archers' apps that Live scores is open.
 export const watching = () => rest("rpc/watching", { method: "POST", body: {} });
 
@@ -163,7 +169,7 @@ export const importFinished = (rows, { athletes, sessions, saveSession, uid }) =
   const have = new Set(sessions.map((x) => x.range?.session_id).filter(Boolean));
   for (const r of rows) {
     const athlete = athletes.find((a) => a.id === r.athlete_id);
-    if (!athlete || !isLinked(athlete.id) || have.has(r.session_id)) continue;
+    if (!athlete || !isLinked(athlete.id) || have.has(r.session_id) || r.ended_by_coach) continue;
     const s = cleanSession(r.data, athlete);
     if (!s || !s.end_ms || s.session_id !== r.session_id || !s.ends.some((e) => e.arrows.length)) continue;
     saveSession({ ...finish(s, uid()), fromArcher: true });
