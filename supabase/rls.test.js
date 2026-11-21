@@ -21,10 +21,21 @@ await db.exec(`
   create function auth.jwt() returns jsonb language sql stable as
     $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql"]) await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8"));
+// …and for 0006: the Vault, pg_net (each call is recorded in net.calls instead of sent) and pg_cron.
+await db.exec(`
+  create role service_role nologin; grant usage on schema public to service_role;
+  create schema extensions; create function extensions.gen_random_bytes(int) returns bytea language sql as $$ select decode(repeat('ab', $1), 'hex') $$;
+  create schema vault; create table vault.decrypted_secrets (name text, decrypted_secret text);
+  create function vault.create_secret(s text, n text, d text) returns uuid language sql as $$ insert into vault.decrypted_secrets values (n, s); select gen_random_uuid() $$;
+  create schema net; create table net.calls (url text, headers jsonb, body jsonb);
+  create function net.http_post(url text, headers jsonb, body jsonb) returns bigint language sql as $$ insert into net.calls values (url, headers, body); select 1::bigint $$;
+  create schema cron; create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ select 1::bigint $$;
+`);
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql"])
+  await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8").replace(/^create extension .*$/gm, ""));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
-test.beforeEach(() => db.exec(`delete from archer_sessions; delete from invites; delete from records; insert into auth.users values ('${A}', null), ('${B}', '{"role":"coach"}'), ('${R}', '{"role":"archer"}'), ('${R2}', '{"role":"archer"}') on conflict do nothing`));
+test.beforeEach(() => db.exec(`delete from net.calls; delete from push_subs; delete from shared_plans; delete from archer_sessions; delete from invites; delete from records; insert into auth.users values ('${A}', null), ('${B}', '{"role":"coach"}'), ('${R}', '{"role":"archer"}'), ('${R2}', '{"role":"archer"}') on conflict do nothing`));
 
 // Each call runs as the given visitor and is rolled back, so tests can't leak into each other.
 const as = async (who, sql, params, aal = "aal2") => {
@@ -171,4 +182,57 @@ test("an archer's account can't act as a coach, even with both sign-in steps; a 
   assert.equal((await as(R, "select * from archer_sessions where session_id = 's9'")).rows.length, 0, "read another archer's sessions as their coach");
   await db.exec(`update invites set claimed_by = '${B}' where code = 'ABCDEFGH'`); // a coach account wrongly holding a link
   await assert.rejects(upload(B), /row-level security/);
+});
+
+// ── Notifications ───────────────────────────────────────────────────────────────────────────────────────
+const P256 = "B".repeat(87), AUTHK = "a".repeat(22);
+const phone = (who, prefs = "{}") => db.query(`insert into push_subs (user_id, endpoint, p256dh, auth, prefs) values ($1, $2, $3, $4, $5)`, [who, `https://push.example/${who}`, P256, AUTHK, prefs]);
+const calls = async () => (await db.query("select body from net.calls")).rows.map((r) => r.body);
+
+test("each account sees and changes only its own phones; push keys and the secret check are out of reach", async () => {
+  await phone(A);
+  const mine = `insert into push_subs (endpoint, p256dh, auth) values ('https://push.example/r', '${P256}', '${AUTHK}') returning user_id`;
+  assert.equal((await as(R, mine, [], "aal1")).rows[0].user_id, R, "an archer signs up a phone without the second step");
+  assert.equal((await as(B, "select * from push_subs")).rows.length, 0);
+  assert.equal((await as(B, "delete from push_subs")).affectedRows, 0);
+  await assert.rejects(as(B, `insert into push_subs (user_id, endpoint, p256dh, auth) values ('${A}', 'https://x', '${P256}', '${AUTHK}')`), /row-level security/);
+  await assert.rejects(as(null, "select * from push_subs"), /permission denied/);
+  await assert.rejects(as(A, "select * from push_keys"), /permission denied/);
+  await assert.rejects(as(A, "select public.notify_secret_ok('x')"), /permission denied/);
+  await assert.rejects(as(A, "select public.push_notify('joined', null, '{}')"), /permission denied/);
+});
+
+test("the coach hears when an archer joins, starts and finishes; nothing is sent to an account with no phone", async () => {
+  await invite(); await link();
+  assert.deepEqual(await calls(), [], "no phone signed up: no call");
+  await db.exec(`update invites set claimed_by = null`); await phone(A); await link();
+  const send = (sql) => db.query(sql, [R, A]);
+  await send(`insert into archer_sessions (archer_id, session_id, coach_id, athlete_id, data) values ($1, 's1', $2, 'a1', '{"context":{"distance_m":70},"ends":[]}')`);
+  await send(`update archer_sessions set data = '{"context":{"distance_m":70},"ends":[{"arrows":[{"score":"X"},{"score":"9"}]}]}' where archer_id = $1 and coach_id = $2`);
+  await send(`update archer_sessions set data = '{"end_ms":5,"context":{"distance_m":70},"ends":[{"arrows":[{"score":"X"},{"score":"9"},{"score":"M"},{"score":"bad"},{"score":null}]},{"arrows":"oops"}]}' where archer_id = $1 and coach_id = $2`);
+  await send(`update archer_sessions set data = data || '{"coach_notes":"x"}' where archer_id = $1 and coach_id = $2`);
+  assert.deepEqual((await calls()).map((b) => [b.kind, b.to, b.args]), [
+    ["joined", A, { name: "Sam" }],
+    ["started", A, { name: "Sam", dist: 70 }],
+    ["finished", A, { name: "Sam", dist: 70, arrows: 4, total: 19 }],
+  ], "one call each, a strange score counts as a miss and never stops the upload");
+  const h = (await db.query("select headers from net.calls limit 1")).rows[0].headers;
+  assert.equal((await db.query("select public.notify_secret_ok($1) as ok", [h["x-notify-secret"]])).rows[0].ok, true, "the call carries the secret");
+  assert.equal((await db.query("select public.notify_secret_ok('nope') as ok")).rows[0].ok, false);
+});
+
+test("a coach sends a season plan only to the archer linked to that profile; only that archer reads it", async () => {
+  await invite(); await link(); await phone(R, '{"plan":true}');
+  const sendPlan = (who, archer, athlete = "a1", aal = "aal2") => as(who, `insert into shared_plans (athlete_id, archer_id, year, data) values ($1, $2, 2027, '{"days":{}}')`, [athlete, archer], aal);
+  await assert.rejects(sendPlan(A, R2), /row-level security/, "an archer who isn't linked");
+  await assert.rejects(sendPlan(A, R, "a2"), /row-level security/, "another profile");
+  await assert.rejects(sendPlan(B, R), /row-level security/, "another coach");
+  await assert.rejects(sendPlan(A, R, "a1", "aal1"), /row-level security/, "without the second step");
+  await assert.rejects(sendPlan(R, R), /row-level security/, "an archer's own account");
+  await db.query(`insert into shared_plans (coach_id, athlete_id, archer_id, year, data) values ($1, 'a1', $2, 2027, '{"days":{}}')`, [A, R]);
+  assert.equal((await as(R, "select year from shared_plans", [], "aal1")).rows.length, 1);
+  assert.equal((await as(R2, "select year from shared_plans", [], "aal1")).rows.length, 0);
+  assert.deepEqual((await calls()).at(-1), { kind: "plan", to: R, args: { year: 2027 } });
+  await db.exec("delete from invites");
+  assert.equal((await as(R, "select year from shared_plans", [], "aal1")).rows.length, 0, "unlinked: the plan is gone from the archer's view");
 });

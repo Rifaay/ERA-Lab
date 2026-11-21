@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Account from "./Account";
+import Notifications from "./Notifications";
 import { LockSettings } from "../DeviceLock";
 import { hasPin } from "../lock";
 import { configured, signedIn } from "../sync";
@@ -88,6 +89,7 @@ export default function Settings({ tr, onDataCleared, onGo }) {
         {configured && <>
           <h3 className="settings-sub">{tr.sync.title}</h3>
           <Account tr={tr} as="coach" onChange={changed} />
+          {signedIn() && <><h3 className="settings-sub">{tr.push.title}</h3><Notifications tr={tr} /></>}
         </>}
       </div>
 

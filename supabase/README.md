@@ -80,3 +80,19 @@ If it leaks, rotate it in Project Settings → API Keys.
 
 `rls.test.js` proves the permission rules on a local Postgres; `src/sync.test.js` runs two devices against a stand-in
 for the table. Both run with `npm test`.
+
+## Notifications (migration 0006, function `notify`)
+
+- Phones turn them on in Settings → Notifications (coach) or Me → Notifications (archer). Each phone leaves a push
+  subscription in `push_subs`; turning off or signing out removes it. The 45-minute sign-out keeps it, so the coach still
+  hears about archers while the app is closed.
+- Coach: an archer joined, started shooting, finished (score and arrows). Archer: a season plan sent from the planner's
+  Send tab, and a reminder at 07:00 local time on days with training planned.
+- Database triggers call the `notify` Edge Function through pg_net with a secret the migration made in the Vault; pg_cron
+  calls it every hour for the reminders. The function makes its own VAPID key on first use (`push_keys`, readable only
+  by the service role), so no key is copied by hand. Message texts are encrypted for each phone (RFC 8291) before they
+  reach Apple's or Google's push service.
+- Set up once: `npx supabase login`, then from `racm-app`:
+  `npx supabase db query --remote=snljkhitklnfezxbhirv -f supabase/migrations/0006_push.sql` and
+  `npx supabase functions deploy notify --project-ref snljkhitklnfezxbhirv --no-verify-jwt --use-api`.
+- iPhone: only the app added to the Home Screen (iOS 16.4 or later) can receive them.

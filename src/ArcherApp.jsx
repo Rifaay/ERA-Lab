@@ -5,13 +5,15 @@ import { account } from "./sync";
 import { myLink, uploadSessions, waiting, leaveCoach } from "./archer";
 import Range from "./screens/Range";
 import Stats from "./screens/Stats";
+import ArcherPlan from "./screens/ArcherPlan";
+import Notifications from "./screens/Notifications";
 import Legal from "./screens/Legal";
 import Account from "./screens/Account";
 import { LockSettings } from "./DeviceLock";
 import Logo from "./Logo";
 import Icon from "./icons";
 
-const TABS = [["range", "target"], ["results", "chart"], ["me", "archer"]];
+const TABS = [["range", "target"], ["plan", "calendar"], ["results", "chart"], ["me", "archer"]];
 
 // The archer's own app: plot arrows, see your own results. Every arrow is sent to the coach as it is plotted;
 // with no signal it waits on the phone and goes when the connection is back.
@@ -62,6 +64,7 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
         <div className="app-body">
           <div className="main-area">
             {tab === "range" && <Range tr={tr} lang={lang} selectedId={link.athlete_id} />}
+            {tab === "plan" && <ArcherPlan tr={tr} lang={lang} />}
             {tab === "results" && <Stats tr={tr} lang={lang} selectedId={link.athlete_id} onGo={() => {}} />}
             {tab === "me" && !legal && (
               <div className="screen">
@@ -71,6 +74,10 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
                   <p>{w.linked}</p>
                   <p className="muted">{left ? w.waitingLong.replace("{n}", left) : w.sentLong}</p>
                   <button className="btn-ghost small danger" style={{ alignSelf: "flex-start", marginTop: 8 }} onClick={leave}>{w.leave}</button>
+                </div>
+                <div className="card settings-section">
+                  <div className="settings-label">{tr.push.title}</div>
+                  <Notifications tr={tr} />
                 </div>
                 <div className="card settings-section">
                   <div className="settings-label">{tr.settings.security}</div>
@@ -90,7 +97,7 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
               <Legal lang={lang} />
             </>}
           </div>
-          <nav className="stage-nav three" aria-label="ERA Lab">
+          <nav className="stage-nav four" aria-label="ERA Lab">
             {TABS.map(([k, icon]) => (
               <button key={k} className={`stage-btn ${k === "range" ? "go" : ""} ${tab === k ? "active" : ""}`} aria-current={tab === k ? "page" : undefined} onClick={() => { setTab(k); setLegal(false); }}>
                 {k === "range" ? <span className="disc"><Icon name={icon} size={26} /></span> : <Icon name={icon} size={24} />}

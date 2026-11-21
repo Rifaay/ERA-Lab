@@ -4,6 +4,7 @@ import {
   factors, enrollApp, verifyApp, verifyAny, signOut, syncNow, deleteCloudCopy, lastSync, conflicts,
 } from "../sync";
 import { digits } from "../lock";
+import { turnOff } from "../push";
 
 // The sign-in form. Inside the coach's or the archer's app it is fixed to that role (`as`). On the welcome page `as` is
 // left out: signing in needs no role (the account knows it), and creating an account asks coach or archer.
@@ -64,7 +65,7 @@ export default function Account({ tr, as, onChange, invited = false }) {
     return () => { live = false; };
   }, [stage, app]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const out = async (everywhere) => { await signOut(everywhere); setApp(null); setBackup(null); setCode(""); setPw(""); setChanging(false); refresh(); };
+  const out = async (everywhere) => { await turnOff(); await signOut(everywhere); setApp(null); setBackup(null); setCode(""); setPw(""); setChanging(false); refresh(); };
   const msgs = <>
     {msg && <p className="success-msg" role="status">{msg}</p>}
     {err && <p className="error-msg" role="alert">{err}</p>}

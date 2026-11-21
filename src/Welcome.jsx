@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Account from "./screens/Account";
 import Logo from "./Logo";
 import { configured, account, signedIn, signOut, role, resetting } from "./sync";
+import { turnOff } from "./push";
 import { claim, loadLink, myLink, INVITE_RE } from "./archer";
 import { getUi, setUi } from "./ui";
 
@@ -65,7 +66,7 @@ export default function Welcome({ tr, lang, setLang, onDone }) {
             {err && <p className="error-msg" role="alert">{err}</p>}
           </form>
           <p className="muted">{tr.sync.signedIn.replace("{email}", account())}</p>
-          <button className="link-btn" onClick={() => signOut().then(() => setTick((n) => n + 1))}>{w.otherAccount}</button>
+          <button className="link-btn" onClick={() => turnOff().then(signOut).then(() => setTick((n) => n + 1))}>{w.otherAccount}</button>
         </>}
       </div>
     </main>

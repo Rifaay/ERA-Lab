@@ -9,6 +9,8 @@ import { useApp } from "../context";
 import ArcherSelect from "../ArcherSelect";
 import Icon from "../icons";
 import SeasonCalendar from "./SeasonCalendar";
+import { configured, signedIn } from "../sync";
+import { isLinked, sharePlan } from "../archer";
 
 const TABS = ["season", "load", "rules", "send"];
 const fill = (t, v) => t.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
@@ -349,7 +351,7 @@ function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramad
     }
     setBusy(false);
   };
-  return (
+  return (<>
     <div className="card form">
       <div className="card-header"><div className="card-title">{pl.sendTitle}</div><Help text={pl.help.send} /></div>
       <p className="muted">{pl.sendIntro}</p>
@@ -363,6 +365,27 @@ function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramad
       ))}
       <button className="btn-primary" style={{ alignSelf: "flex-start" }} onClick={send} disabled={busy}><Icon name="download" size={18} />{busy ? pl.making : pl.send}</button>
       {msg && <p className="success-msg" role="status">{msg}</p>}
+    </div>
+    {configured && signedIn() && isLinked(athlete.id) && <ToArcherApp {...{ plan, pl, athlete, exercises }} />}
+  </>);
+}
+
+// A linked archer has their own ERA Lab: the plan goes straight there, and their phone is told.
+function ToArcherApp({ plan, pl, athlete, exercises }) {
+  const a = pl.app, name = { name: athlete.name };
+  const [state, setState] = useState(""); // "" | busy | sent | error text
+  const go = async () => {
+    setState("busy");
+    try { await sharePlan(plan, athlete, exercises); setState("sent"); }
+    catch (e) { setState(navigator.onLine === false || e instanceof TypeError ? a.offline : e.message); }
+  };
+  return (
+    <div className="card form">
+      <div className="card-title">{fill(a.title, name)}</div>
+      <p className="muted">{fill(a.intro, name)}</p>
+      <button className="btn-primary" style={{ alignSelf: "flex-start" }} onClick={go} disabled={state === "busy"}>{fill(state === "sent" ? a.again : a.send, name)}</button>
+      {state === "sent" && <p className="success-msg" role="status">{fill(a.sent, name)}</p>}
+      {state && state !== "busy" && state !== "sent" && <p className="error-msg" role="alert">{state}</p>}
     </div>
   );
 }

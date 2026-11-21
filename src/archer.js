@@ -5,7 +5,7 @@ import { api, token, userId, hash, isAdult } from "./sync.js";
 import { finish } from "./range.js";
 import { getAthletes, getSessions, saveSession, uid } from "./storage.js";
 
-const LINK = "racm_link", SENT = "racm_uploaded", INVITES = "racm_invites";
+const LINK = "racm_link", SENT = "racm_uploaded", INVITES = "racm_invites", PLANS = "racm_shared_plans";
 const get = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 const rest = async (path, opt = {}) => api("/rest/v1/" + path, { ...opt, token: await token() });
@@ -29,7 +29,15 @@ export const loadLink = async () => {
   if (rows[0]) put(LINK, rows[0]); else localStorage.removeItem(LINK);
   return rows[0] || null;
 };
-export const leaveCoach = async () => { await rest(`invites?claimed_by=eq.${userId()}`, { method: "DELETE" }); localStorage.removeItem(LINK); };
+export const leaveCoach = async () => { await rest(`invites?claimed_by=eq.${userId()}`, { method: "DELETE" }); localStorage.removeItem(LINK); localStorage.removeItem(PLANS); };
+
+// Season plans the coach sent this archer, newest year first. Kept on the phone for the range with no signal.
+export const sharedPlans = () => get(PLANS, []);
+export const loadSharedPlans = async () => {
+  const rows = await rest(`shared_plans?select=year,data,updated_at&archer_id=eq.${userId()}&order=year.desc`);
+  put(PLANS, rows);
+  return rows;
+};
 
 // Sends the session being shot and any finished one that changed since it was last sent. Returns how many went.
 export const uploadSessions = async (live, sessions) => {
@@ -67,6 +75,21 @@ export const refreshInvites = async () => {
   put(INVITES, rows);
   return rows;
 };
+// What the archer's app gets of a season plan: each week's phase, the days (exercises by name, since the archer
+// doesn't have the coach's exercise list) and the competitions. Rules, targets and notes on load stay with the coach.
+export const planForArcher = (plan, exercises = []) => {
+  const name = new Map(exercises.map((x) => [x.id, x.name]));
+  const days = Object.fromEntries(Object.entries(plan.days || {}).filter(([, d]) => d).map(([iso, d]) => [iso, { ...d, exercises: (d.exercises || []).map((id) => name.get(id)).filter(Boolean) }]));
+  return { weeks: plan.weeks || {}, days, comps: (plan.comps || []).map(({ name, date, priority }) => ({ name, date, priority })) };
+};
+export const sharePlan = async (plan, athlete, exercises) => {
+  const link = linkOf(athlete.id);
+  if (!link?.claimed_by) throw Object.assign(new Error("Not linked"), { code: "unlinked" });
+  await rest("shared_plans?on_conflict=coach_id,athlete_id,year", {
+    method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
+    body: { athlete_id: athlete.id, archer_id: link.claimed_by, year: plan.year, data: planForArcher(plan, exercises) },
+  });
+};
 export const createInvite = async (athlete) => {
   if (!canInvite(athlete)) throw Object.assign(new Error("Only archers aged 18 or over"), { code: "minor" });
   await rest(`invites?athlete_id=eq.${encodeURIComponent(athlete.id)}&coach_id=eq.${userId()}&claimed_by=is.null`, { method: "DELETE" }); // an old, unused code
@@ -78,6 +101,7 @@ export const createInvite = async (athlete) => {
 export const unlink = async (athleteId) => {
   await rest(`invites?athlete_id=eq.${encodeURIComponent(athleteId)}&coach_id=eq.${userId()}`, { method: "DELETE" });
   await rest(`archer_sessions?athlete_id=eq.${encodeURIComponent(athleteId)}&coach_id=eq.${userId()}`, { method: "DELETE" });
+  await rest(`shared_plans?athlete_id=eq.${encodeURIComponent(athleteId)}&coach_id=eq.${userId()}`, { method: "DELETE" });
   await refreshInvites();
 };
 

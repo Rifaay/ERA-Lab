@@ -400,6 +400,7 @@ button.row:hover .row-name { color: var(--blue); }
 
 /* Archer's own app */
 .stage-nav.three { grid-template-columns: repeat(3, 1fr); }
+.stage-nav.four { grid-template-columns: repeat(4, 1fr); }
 .send-state { font-size: 12px; font-weight: 600; color: var(--g300); white-space: nowrap; }
 .send-state.wait { color: var(--yellow); }
 
