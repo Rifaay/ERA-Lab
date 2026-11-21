@@ -4,14 +4,15 @@
 import { planWeek, planWeekStart, addDays, isoDay } from "./stats.js";
 
 // The calendar view: the year in months, a month in days. Each day sits in its plan week (phase, targets) and may
-// carry the coach's own plan for that day: plan.days["2026-03-14"] = { focus, arrows, exercises: [ids], materials, note }.
+// carry the coach's own plan for that day: plan.days["2026-03-14"] = { focus, areas: [AREAS], arrows, exercises: [ids], materials, note }.
 export const monthGrid = (year, month) => { // month 0-11; rows of 7 starting Monday, null outside the month
   const lead = (new Date(year, month, 1).getDay() + 6) % 7, n = new Date(year, month + 1, 0).getDate();
   const cells = [...Array(lead).fill(null), ...Array.from({ length: n }, (_, i) => isoDay(new Date(year, month, i + 1)))];
   while (cells.length % 7) cells.push(null);
   return cells;
 };
-export const dayFilled = (d) => Boolean(d && (d.focus || d.arrows || d.note || d.materials || d.exercises?.length));
+export const AREAS = ["technical", "mental", "physical", "competition"]; // a day may work on several at once
+export const dayFilled = (d) => Boolean(d && (d.focus || d.areas?.length || d.arrows || d.note || d.materials || d.exercises?.length));
 export const phaseOfDay = (plan, iso) => plan.weeks?.[planWeek(iso)] || null;
 
 export const PHASES = ["gpp", "spp", "precomp", "taper", "comp", "transition", "accum", "intens", "realiz"];

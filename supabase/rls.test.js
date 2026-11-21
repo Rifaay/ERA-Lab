@@ -31,7 +31,7 @@ await db.exec(`
   create function net.http_post(url text, headers jsonb, body jsonb) returns bigint language sql as $$ insert into net.calls values (url, headers, body); select 1::bigint $$;
   create schema cron; create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ select 1::bigint $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql"])
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql"])
   await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8").replace(/^create extension .*$/gm, ""));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
@@ -235,4 +235,29 @@ test("a coach sends a season plan only to the archer linked to that profile; onl
   assert.deepEqual((await calls()).at(-1), { kind: "plan", to: R, args: { year: 2027 } });
   await db.exec("delete from invites");
   assert.equal((await as(R, "select year from shared_plans", [], "aal1")).rows.length, 0, "unlinked: the plan is gone from the archer's view");
+});
+
+test("only the linked archer's own coach, with both steps, can show the 'coach is watching' sign", async () => {
+  await invite(); await link();
+  const stamp = async (who, aal = "aal2") => { // runs watching() as `who`, then reads the stamp as the database owner
+    try {
+      await db.exec("begin");
+      await db.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: who, aal })]);
+      await db.exec("set local role authenticated");
+      await db.query("select public.watching()");
+      await db.exec("reset role");
+      return (await db.query("select watched_at from invites")).rows[0].watched_at;
+    } finally { await db.exec("rollback"); }
+  };
+  assert.ok(await stamp(A), "the coach stamps their linked archer");
+  assert.equal(await stamp(A, "aal1"), null, "not without the second step");
+  assert.equal(await stamp(B), null, "another coach can't");
+  assert.equal(await stamp(R, "aal1"), null, "the archer can't fake it");
+  const sees = (who) => as(who, "select public.coach_watching() as w", [], "aal1").then((r) => r.rows[0].w);
+  assert.equal(await sees(R), false);
+  await db.exec("update invites set watched_at = now()");
+  assert.equal(await sees(R), true, "the linked archer sees a fresh stamp");
+  assert.equal(await sees(R2), false, "another archer doesn't");
+  await db.exec("update invites set watched_at = now() - interval '2 minutes'");
+  assert.equal(await sees(R), false, "an old stamp means nobody is watching");
 });

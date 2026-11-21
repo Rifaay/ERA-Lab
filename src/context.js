@@ -5,6 +5,7 @@ export const AppContext = createContext({
   setSelectedId: () => {},
   lang: "en",
   setLang: () => {},
+  archer: false, // true in the archer's own app
 });
 
 export const useApp = () => useContext(AppContext);

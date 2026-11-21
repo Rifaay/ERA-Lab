@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getAthletes, saveAthlete, deleteAthlete, calcAgeBand, calcWACategory, uid } from "../storage";
 
-const BLANK = { id: "", name: "", dob: "", gender: "male", discipline: "recurve", stage: "0", startDate: "", focusArea: "technical", coachNotes: "", notes: "" };
+const BLANK = { id: "", name: "", dob: "", gender: "male", discipline: "recurve", stage: "0", startDate: "", focusArea: ["technical"], coachNotes: "", notes: "" };
 
 export default function AthleteProfile({ tr, selectedId, onSelect, onSaved }) {
   const p = tr.profile;
@@ -108,11 +108,15 @@ export default function AthleteProfile({ tr, selectedId, onSelect, onSaved }) {
           </label>
         </div>
 
-        <label>{p.focusArea}
-          <select value={form.focusArea || "technical"} onChange={(e) => set("focusArea", e.target.value)}>
-            {Object.entries(p.focusAreas).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </label>
+        <div><label>{p.focusArea}</label>
+          <div className="chip-list" role="group" aria-label={p.focusArea}>
+            {Object.entries(p.focusAreas).map(([k, v]) => {
+              const on = [].concat(form.focusArea || []).includes(k); // older profiles keep one area as a string
+              return <button key={k} type="button" className={`chip ${on ? "active" : ""}`} aria-pressed={on}
+                onClick={() => { const list = [].concat(form.focusArea || []); set("focusArea", on ? list.filter((x) => x !== k) : [...list, k]); }}>{v}</button>;
+            })}
+          </div>
+        </div>
 
         <label>{p.coachNotes}
           <textarea rows={2} value={form.coachNotes || ""} onChange={(e) => set("coachNotes", e.target.value)} />

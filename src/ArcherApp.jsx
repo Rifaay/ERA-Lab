@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AppContext } from "./context";
 import { getAthletes, saveAthlete, getRange, getSessions } from "./storage";
 import { account } from "./sync";
-import { myLink, uploadSessions, waiting, leaveCoach } from "./archer";
+import { myLink, uploadSessions, waiting, leaveCoach, coachWatching } from "./archer";
 import Range from "./screens/Range";
 import Stats from "./screens/Stats";
 import ArcherPlan from "./screens/ArcherPlan";
@@ -23,6 +23,16 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
   const [legal, setLegal] = useState(false);
   const [left, setLeft] = useState(0); // sessions still to send
   const [, setTick] = useState(0);
+  const [watched, setWatched] = useState(false); // the coach has Live scores open
+
+  useEffect(() => {
+    let live = true;
+    const ask = () => document.visibilityState === "visible" && navigator.onLine !== false &&
+      coachWatching().then((w) => live && setWatched(w)).catch(() => live && setWatched(false));
+    ask();
+    const t = setInterval(ask, 20000);
+    return () => { live = false; clearInterval(t); };
+  }, []);
 
   // Range and Stats read the archer from storage like the coach's app does: keep one profile, the archer's own.
   useState(() => { if (!getAthletes().some((a) => a.id === link.athlete_id)) saveAthlete({ id: link.athlete_id, name: link.name }); });
@@ -46,7 +56,7 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
     return () => { clearTimeout(timer); window.removeEventListener("racm-change", soon); window.removeEventListener("online", send); document.removeEventListener("visibilitychange", seen); };
   }, []);
 
-  const ctx = { selectedId: link.athlete_id, setSelectedId: () => {}, lang, setLang };
+  const ctx = { selectedId: link.athlete_id, setSelectedId: () => {}, lang, setLang, archer: true };
   const leave = async () => {
     if (!window.confirm(w.confirmLeave)) return;
     try { await leaveCoach(); onLeft(); } catch { window.alert(tr.sync.offline); }
@@ -58,6 +68,7 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
         <header className="topbar">
           <span className="brand"><span className="logo-tile"><Logo size={36} /></span><span className="wordmark">ERA LAB</span></span>
           <span className="topbar-spacer" />
+          {watched && <span className="watching" role="status" title={tr.live.watchingNow}><Icon name="eye" size={18} label={tr.live.watchingNow} /></span>}
           <span className={`send-state ${left ? "wait" : ""}`} role="status">{left ? w.waiting.replace("{n}", left) : w.sent}</span>
           <button className="lang-toggle" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={tr.shell.language}>{tr.langToggle}</button>
         </header>

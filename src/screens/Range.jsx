@@ -9,7 +9,8 @@ import { ringOf } from "../insights";
 import Icon from "../icons";
 import { FACES, RING_FILL, rings, spotsOf, scoreOf, loupeAt, scoreKeys, scoreValue, newSession, record, undoLast, summary, finish } from "../range";
 import Scorecard from "./Scorecard";
-import { scorecardFile } from "../scorecardFile";
+import { scorecardFile, scorecardPdf } from "../scorecardFile";
+import EndVideo from "../EndVideo";
 import { localize } from "../digits";
 
 // Stored values stay in English whatever the screen language; labels come from the translations by position.
@@ -23,6 +24,7 @@ const BLANK = { distance: "70", face: "122", perEnd: "6", type: "Technical", pla
   bow: "", drawWeight: "", arrows: "", drawLength: "", eqNotes: "", readiness: null, confidence: null, focus: null, energy: null, sleep: "", goal: "" };
 
 // Saves the scorecard rendered (hidden) on the done screen as one standalone, interactive web file.
+const copyOf = (host, lang) => { host = host.cloneNode(true); localize(host, lang); return host.innerHTML; }; // the hidden original stays as React drew it
 const downloadScorecard = (host, s, lang) => {
   const title = `Scorecard ${s.session_id}`;
   host = host.cloneNode(true); localize(host, lang); // a copy: the hidden original stays as React drew it
@@ -142,7 +144,7 @@ function Target({ face, label, arrows, pick, onHit }) {
 
 export default function Range({ tr, lang, selectedId }) {
   const r = tr.range;
-  const { setSelectedId } = useApp();
+  const { setSelectedId, archer } = useApp(); // archer: this is the archer's own app
   const athlete = getAthletes().find((a) => a.id === selectedId) || null;
 
   const [live, setLive] = useState(() => getRange().live || null);
@@ -157,6 +159,13 @@ export default function Range({ tr, lang, selectedId }) {
   const cardRef = useRef(null);
   const [filming, setFilming] = useState(false);
   const [tagId, setTagId] = useState(null); // the clip just linked, offered for a quick tag
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const savePdf = async () => {
+    setPdfBusy(true);
+    try { await scorecardPdf(copyOf(cardRef.current, lang), { lang, title: `Scorecard ${savedEntry.range.session_id}` }); }
+    catch (e) { console.warn("PDF failed", e); window.alert(r.pdfFailed); }
+    setPdfBusy(false);
+  };
 
   const say = (text) => { setNote(text); clearTimeout(noteTimer.current); noteTimer.current = setTimeout(() => setNote(""), 1800); };
   const set = (k, v) => setSetup((f) => ({ ...f, [k]: v }));
@@ -315,9 +324,10 @@ export default function Range({ tr, lang, selectedId }) {
       {header}
       <div className="card">
         <p className="success-msg">{r.saved}</p>
-        <p style={{ margin: "10px 0" }}>{r.fileNote}</p>
+        <p style={{ margin: "10px 0" }}>{archer ? r.pdfNote : r.fileNote}</p>
         <div className="btn-row">
-          <button className="btn-ghost" onClick={() => downloadScorecard(cardRef.current, savedEntry.range, lang)}>{r.file}</button>
+          <button className="btn-ghost" onClick={savePdf} disabled={pdfBusy}><Icon name="download" size={18} />{pdfBusy ? r.pdfMaking : r.pdf}</button>
+          {!archer && <button className="btn-ghost" onClick={() => downloadScorecard(cardRef.current, savedEntry.range, lang)}>{r.file}</button>}
           <button className="btn-primary" onClick={() => setStep("setup")}>{r.newSession}</button>
         </div>
       </div>
@@ -418,6 +428,7 @@ export default function Range({ tr, lang, selectedId }) {
           <div><label>{r.endFocus}</label><Scale n={5} value={e.focus} onChange={(v) => change((s) => { s.ends[view].focus = v; })} /></div>
           <div><label>{r.routine}</label><Choice values={ROUTINES} labels={r.routines} value={e.routine || ""} onChange={(v) => change((s) => { s.ends[view].routine = v || null; })} /></div>
           <label>{r.endNote}<input value={e.notes} onChange={(ev) => change((s) => { s.ends[view].notes = ev.target.value; })} /></label>
+          {!archer && <EndVideo tr={tr} athlete={athlete} sessionId={live.session_id} end={e.end} />}
         </div>
       </div>
       <button className="btn-primary rg-wide" onClick={() => setStep("review")}>{r.finish}</button>

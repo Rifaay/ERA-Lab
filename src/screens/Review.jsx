@@ -4,6 +4,7 @@ import { adjust, timing, getStart } from "../review/learn";
 import { getAthletes, getSessions, getReviews, saveReview, getRange } from "../storage";
 import { reviewFromLabels, mergeReview } from "../review";
 import { mountLabeller } from "../review/engine";
+import { trackPose } from "../review/pose";
 import { MARKUP } from "../review/markup";
 import { translateMarkup, reviewText, faultText } from "../review/i18n";
 import "../review/review.css";
@@ -33,7 +34,7 @@ export default function Review({ selectedId, guardRef, lang, tr }) {
         const next = reviewFromLabels(labels, { sessions: getSessions(), athletes: getAthletes(), selectedId: archerRef.current, clipStart: getStart(labels.clip) });
         saveReview(mergeReview(getReviews().find((r) => r.id === next.id), next));
       },
-      t: reviewText(lang), fault: faultText(lang, faultNames), lang,
+      t: reviewText(lang), fault: faultText(lang, faultNames), lang, pose: trackPose,
       adjust: (sugg, conf, f, n) => adjust(sugg, conf, f, n, getStart(clipRef.current), timing(getReviews(), archerRef.current)),
       phases: (list, name) => {
         if (name && name !== clipRef.current) { clipRef.current = name; setClip(name); }

@@ -55,6 +55,8 @@ export const uploadSessions = async (live, sessions) => {
   put(SENT, sent);
   return rows.length;
 };
+// Whether the coach has Live scores open right now (the server decides, by its own clock).
+export const coachWatching = async () => Boolean(await rest("rpc/coach_watching", { method: "POST", body: {} }));
 export const waiting = (live, sessions) => {
   const link = myLink(), sent = get(SENT, {});
   if (!link) return 0;
@@ -141,11 +143,16 @@ export const cleanSession = (d, athlete) => {
 
 // Rows from archer_sessions, newest first. A row counts as live while unfinished and touched in the last 30 minutes.
 export const fetchArcherRows = () => rest(`archer_sessions?select=archer_id,session_id,athlete_id,data,updated_at&coach_id=eq.${userId()}&order=updated_at.desc&limit=60`);
-export const liveOf = (rows, athletes, now = Date.now()) =>
+const sessionsOf = (rows, athletes) =>
   rows.map((r) => ({ row: r, athlete: athletes.find((a) => a.id === r.athlete_id) }))
     .filter((x) => x.athlete && isLinked(x.athlete.id))
     .map((x) => ({ athlete: x.athlete, updated: Date.parse(x.row.updated_at), session: cleanSession(x.row.data, x.athlete) }))
-    .filter((x) => x.session && !x.session.end_ms && now - x.updated < 30 * 60_000);
+    .filter((x) => x.session);
+export const liveOf = (rows, athletes, now = Date.now()) => sessionsOf(rows, athletes).filter((x) => !x.session.end_ms && now - x.updated < 30 * 60_000);
+// Sessions finished in the last 12 hours: the coach can still open them to link ends to video.
+export const finishedOf = (rows, athletes, now = Date.now()) => sessionsOf(rows, athletes).filter((x) => x.session.end_ms && now - x.updated < 12 * 3600_000);
+// Coach: tells the linked archers' apps that Live scores is open.
+export const watching = () => rest("rpc/watching", { method: "POST", body: {} });
 
 // Copies each finished session the coach doesn't have yet into the coach's own sessions. Returns how many.
 export const importFinished = (rows, { athletes, sessions, saveSession, uid }) => {

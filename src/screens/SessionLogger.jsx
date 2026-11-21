@@ -4,7 +4,8 @@ import Icon from "../icons";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import Scorecard from "./Scorecard";
-import { scorecardFile, saveHtmlFile } from "../scorecardFile";
+import { scorecardFile, scorecardPdf, saveHtmlFile } from "../scorecardFile";
+import EndVideo from "../EndVideo";
 import { localize } from "../digits";
 
 const TYPES = ["Technical", "Physical", "Mental", "Competition", "Mixed"];
@@ -50,14 +51,17 @@ export default function SessionLogger({ lang, tr, selectedId }) {
   };
 
   // Sessions recorded on the Range screen: the same scorecard web file the Range screen saves when the session ends.
-  const downloadScorecard = (r) => {
+  const sheetOf = (r) => {
     const host = document.createElement("div"), root = createRoot(host);
     flushSync(() => root.render(<Scorecard s={r} tr={tr} lang={lang} />));
     localize(host, lang);
     const html = host.innerHTML;
     root.unmount();
-    saveHtmlFile(`Scorecard ${r.session_id}.html`, scorecardFile(html, { lang, title: `Scorecard ${r.session_id}` }));
+    return html;
   };
+  const downloadScorecard = (r) => saveHtmlFile(`Scorecard ${r.session_id}.html`, scorecardFile(sheetOf(r), { lang, title: `Scorecard ${r.session_id}` }));
+  const downloadPdf = (r) => scorecardPdf(sheetOf(r), { lang, title: `Scorecard ${r.session_id}` }).catch((e) => { console.warn("PDF failed", e); window.alert(tr.range.pdfFailed); });
+  const [videos, setVideos] = useState(null); // the session whose ends are being linked to clips
 
   const handleDelete = (id) => {
     deleteSession(id);
@@ -169,11 +173,14 @@ export default function SessionLogger({ lang, tr, selectedId }) {
                   {sess.ramadan && <span className="badge amber"><Icon name="moon" size={13} label={tr.session.ramadan} /></span>}
                 </div>
                 <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {sess.range && <button className="btn-ghost small" aria-expanded={videos === sess.id} onClick={() => setVideos(videos === sess.id ? null : sess.id)}><Icon name="clip" size={14} />{tr.clips.endVideo}</button>}
+                  {sess.range && <button className="btn-ghost small" onClick={() => downloadPdf(sess.range)}>{tr.range.pdf}</button>}
                   {sess.range && <button className="btn-ghost small" onClick={() => downloadScorecard(sess.range)}>{tr.range.file}</button>}
                   <button className="del-btn" onClick={() => handleDelete(sess.id)}><Icon name="x" size={16} /></button>
                 </span>
               </div>
               {sess.notes && <p style={{ fontSize: 11, color: "var(--txm)", marginTop: 4 }}>{sess.notes}</p>}
+              {videos === sess.id && sess.range.ends.filter((e) => e.arrows.length).map((e) => <EndVideo key={e.end} tr={tr} athlete={athlete} sessionId={sess.range.session_id} end={e.end} />)}
             </div>
           ))}
         </>

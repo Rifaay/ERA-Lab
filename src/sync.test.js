@@ -181,3 +181,20 @@ test("authenticator setup: the QR code is drawn from the setup link as an image 
   const img = qrImage("otpauth://totp/ERA%20Lab:a@x?secret=JBSWY3DPEHPK3PXP&issuer=ERA%20Lab");
   assert.match(img, /^data:image\/gif;base64,[A-Za-z0-9+/=]+$/);
 });
+
+test("a password typed with the other keyboard's digits still signs in", async () => {
+  const { signIn, digitForms } = await import("./sync.js");
+  assert.deepEqual(digitForms("bow٢٠٢٦"), ["bow٢٠٢٦", "bow2026"]);
+  assert.deepEqual(digitForms("nodigits"), ["nodigits"]);
+  const sent = [];
+  const f = async (url, { body }) => {
+    const pw = JSON.parse(body).password; sent.push(pw);
+    if (pw !== "bow٢٠٢٦") return { ok: false, status: 400, text: async () => JSON.stringify({ error_code: "invalid_credentials", msg: "Invalid login credentials" }) };
+    return { ok: true, status: 200, text: async () => JSON.stringify({ access_token: "a.e30.s", refresh_token: "r", expires_in: 3600, user: { id: "u9", email: "s@x", user_metadata: { role: "archer" } } }) };
+  };
+  await signIn("s@x", "bow2026", f);
+  assert.deepEqual(sent, ["bow2026", "bow٢٠٢٦"], "tried as typed, then with Arabic digits");
+  await assert.rejects(signIn("s@x", "wrong1", f), (e) => e.code === "invalid_credentials");
+  await assert.rejects(signIn("s@x", "nodigits", f), (e) => e.code === "invalid_credentials");
+  assert.equal(sent.filter((p) => p === "nodigits").length, 1, "no retry without digits");
+});

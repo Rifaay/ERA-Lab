@@ -538,6 +538,12 @@ const POINTS=[
   {k:'draw_elbow',en:'Draw elbow',c:'#2bb3a3'},
   {k:'draw_wrist',en:'Draw wrist',c:'#7fb85b'},
   {k:'draw_hand',en:'Draw hand (string-finger knuckles)',c:'#f2c40c'},
+  {k:'bow_hip',en:'Bow-side hip',c:'#8a7fb5'},
+  {k:'draw_hip',en:'Draw-side hip',c:'#4aa0c0'},
+  {k:'bow_knee',en:'Bow-side knee',c:'#a99fd8'},
+  {k:'draw_knee',en:'Draw-side knee',c:'#5fc4b5'},
+  {k:'bow_ankle',en:'Bow-side ankle',c:'#c4bce8'},
+  {k:'draw_ankle',en:'Draw-side ankle',c:'#8fd6cb'},
 ];
 let selPt=0, ptMode=false;
 const ov=$('ov');
@@ -591,6 +597,8 @@ function drawOverlay(){
   const line=(a,b,col)=>{ if(P[a]&&P[b]){c.strokeStyle=col;c.lineWidth=2.5;c.beginPath();c.moveTo(P[a][0]*R.w,P[a][1]*R.h);c.lineTo(P[b][0]*R.w,P[b][1]*R.h);c.stroke()} };
   line('bow_shoulder','bow_elbow','#9b8fd0'); line('bow_elbow','bow_wrist','#9b8fd0'); line('bow_shoulder','draw_shoulder','#888');
   line('draw_shoulder','draw_elbow','#2bb3a3'); line('draw_elbow','draw_wrist','#2bb3a3'); line('draw_wrist','draw_hand','#f2c40c');
+  line('bow_shoulder','bow_hip','#888'); line('draw_shoulder','draw_hip','#888'); line('bow_hip','draw_hip','#888');
+  line('bow_hip','bow_knee','#a99fd8'); line('bow_knee','bow_ankle','#a99fd8'); line('draw_hip','draw_knee','#5fc4b5'); line('draw_knee','draw_ankle','#5fc4b5');
   for(const p of POINTS){const q=P[p.k]; if(!q) continue; const x=q[0]*R.w,y=q[1]*R.h;
     c.beginPath(); c.arc(x,y,(q[2]==='m'?6:4.5)*s,0,7); c.fillStyle=p.c; c.globalAlpha=q[2]==='i'?.55:1; c.fill(); c.globalAlpha=1;
     c.lineWidth=1.5; c.strokeStyle='#000'; c.stroke(); if(q[2]==='m'){c.strokeStyle='#fff';c.beginPath();c.arc(x,y,9*s,0,7);c.stroke()} }
@@ -648,6 +656,20 @@ async function trackForward(){
 }
 let tracking=false;
 $('trackBtn').onclick=()=>tracking?(tracking=false):trackForward();
+// ERA Lab: AI body tracking (src/review/pose.js) fills every point on every frame; the coach's own clicks are kept.
+let aiRun=null; const aiBtns=[$('aiBtn'),$('aiBtn2')];
+async function aiTrack(){
+  if(aiRun){aiRun.stop();return} if(!L||tracking||!env.pose||!vid.duration) return;
+  const L0=L, n=frameOf(vid.duration); vid.pause(); aiBtns.forEach(b=>b.textContent=env.t('Stop AI tracking'));
+  status('Getting the AI body tracker ready…');
+  aiRun=env.pose({vid,fps,frames:n,onProgress:(d,t)=>status(`AI tracking… ${d} / ${t} frames`)});
+  try{ const out=await aiRun.done; if(L===L0){ const pts=ensurePts(); let k=0;
+      for(const key in out){ const m=(pts[key] ||= {}); k++; for(const f in out[key]) if(!(m[f]&&m[f][2]==='m')) m[f]=out[key][f] }
+      dirty=true; status(`AI tracked ${k} body points. Step through the frames to check; click a point to correct it.`) } }
+  catch(e){ console.warn(e); status('AI tracking could not start. The first time it needs the internet to fetch the model.') }
+  aiRun=null; aiBtns.forEach(b=>b.textContent=env.t('AI track body')); renderPoints(); drawOverlay();
+}
+aiBtns.forEach(b=>b.onclick=aiTrack);
 
 /* ---------- keys ---------- */
 addEventListener('keydown',e=>{
@@ -665,7 +687,7 @@ addEventListener('keydown',e=>{
   else if(k==='s'||k==='S') suggest();
   else if(k==='p'||k==='P'){ptMode=!ptMode; if(ptMode) vid.pause(); renderPoints(); drawOverlay()}
   else if(k==='t'||k==='T') trackForward();
-  else if(k==='Escape') tracking=false;
+  else if(k==='Escape'){tracking=false; aiRun?.stop()}
   else if(k==='n'||k==='N'){const i=clips.indexOf(cur); if(i>=0&&i<clips.length-1) openClip(clips[i+1])}
 });
 addEventListener('beforeunload',e=>{ if(dirty){e.preventDefault();e.returnValue=''} });
@@ -673,7 +695,7 @@ addEventListener('beforeunload',e=>{ if(dirty){e.preventDefault();e.returnValue=
   return {
     isDirty: () => dirty,
     destroy() {
-      ac.abort(); _ro.disconnect(); tracking = false;
+      ac.abort(); _ro.disconnect(); tracking = false; aiRun?.stop();
       vid.pause(); if (vidURL) URL.revokeObjectURL(vidURL);
       delete document.body.dataset.pane; delete document.body.dataset.clip;
     },

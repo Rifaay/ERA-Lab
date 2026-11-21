@@ -19,7 +19,7 @@ export default function QuickTag({ id, tr, onClose }) {
   return (
     <div className="quick" role="group" aria-label={q.title}>
       <div className="quick-head">
-        <b>{rv.shot ? fill(q.forArrow, { end: rv.shot.end, n: rv.shot.arrow, score: rv.shot.score ?? "" }) : q.unlinked}</b>
+        <b>{rv.shot?.whole ? fill(tr.clips.wholeEnd, rv.shot) : rv.shot ? fill(q.forArrow, { end: rv.shot.end, n: rv.shot.arrow, score: rv.shot.score ?? "" }) : q.unlinked}</b>
         {onClose && <button className="icon-btn" onClick={onClose} aria-label={q.done}><Icon name="x" size={18} /></button>}
       </div>
       <div className="quick-verdict">

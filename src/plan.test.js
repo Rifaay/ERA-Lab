@@ -84,4 +84,5 @@ test("calendar: a month as Monday-first rows; days know their plan week; empty d
   assert.equal(phaseOfDay({ weeks: { 1: "gpp" } }, "2026-01-08"), null);
   assert.equal(dayFilled({ focus: "", exercises: [] }), false);
   assert.equal(dayFilled({ note: "rest" }), true);
+  assert.equal(dayFilled({ areas: ["mental"] }), true);
 });
