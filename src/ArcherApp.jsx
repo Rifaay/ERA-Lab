@@ -26,20 +26,22 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
   const [watched, setWatched] = useState(false); // the coach has Live scores open
   const [note, setNote] = useState(null); // the coach's newest quick note, until tapped away or 20 s have passed
 
-  // Asks every 20 s; every 5 s while the coach is watching, when a note is likely. A note older than 10 minutes when it
-  // arrives (the app was closed) is skipped; the last one shown is remembered so it doesn't come back.
+  // Asks every 20 s; every 5 s while the coach is watching, when a note is likely. A note that arrives while the app is
+  // open always shows. One already waiting when it opens shows only if under 10 minutes old by this phone's clock: the
+  // only place the phone's clock counts, so a phone set to the wrong time still gets every new note.
   useEffect(() => {
-    let live = true, timer, on = false;
+    let live = true, timer, on = false, first = true;
     const seen = () => Number(localStorage.getItem("racm_note_seen")) || 0;
     const ask = async () => {
       if (document.visibilityState === "visible" && navigator.onLine !== false) {
         on = await coachWatching().catch(() => false);
-        const n = await latestNote(seen()).catch(() => null);
+        const n = await latestNote(seen()).catch(() => undefined); // undefined: no answer (offline)
         if (live) setWatched(on);
         if (live && n) {
           localStorage.setItem("racm_note_seen", String(n.id));
-          if (Date.now() - Date.parse(n.created_at) < 10 * 60_000) setNote(n);
+          if (!first || Date.now() - Date.parse(n.created_at) < 10 * 60_000) setNote(n);
         }
+        if (n !== undefined) first = false;
       }
       if (live) timer = setTimeout(ask, on ? 5000 : 20000);
     };
