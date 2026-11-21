@@ -7,27 +7,21 @@
   --ease-out: cubic-bezier(.16, 1, .3, 1);   /* arriving: quick start, soft landing */
   --ease-in-out: cubic-bezier(.65, 0, .35, 1); /* changing in place */
   --t-xs: 120ms;  /* presses, colour */
+  --t-screen: 140ms; /* switching stage or screen: frequent, so barely there */
   --t-s: 280ms;   /* screens, small panels */
   --t-m: 340ms;   /* overlays, toasts */
   --t-l: 650ms;   /* data landing: bars, the group ring */
 }
 
-@keyframes rise { from { opacity: 0; transform: translateY(14px); filter: blur(4px); } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 @keyframes rise-small { from { opacity: 0; transform: translateY(10px); } }
 @keyframes pop { from { opacity: 0; transform: scale(.92); } }
 @keyframes drop { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes fade { from { opacity: 0; } }
 @keyframes grow-x { from { transform: scaleX(0); } }
 
-/* Screens: a rise when a stage or step opens. Each Range step is its own screen.
-   Its first blocks follow one after another, so the eye reads the page top-down. */
-.screen { animation: fade var(--t-s) var(--ease-out) both; }
-.screen > *, .list > .row { animation: rise-small var(--t-s) var(--ease-out) both; }
-.screen > :nth-child(2), .list > .row:nth-child(2) { animation-delay: 50ms; }
-.screen > :nth-child(3), .list > .row:nth-child(3) { animation-delay: 100ms; }
-.screen > :nth-child(4), .list > .row:nth-child(4) { animation-delay: 150ms; }
-.screen > :nth-child(5), .list > .row:nth-child(5) { animation-delay: 200ms; }
-.screen > :nth-child(n+6), .list > .row:nth-child(n+6) { animation-delay: 240ms; }
+/* Screens: a coach switches stages dozens of times a session, so a screen only fades in, quickly and all at once. */
+.screen { animation: fade var(--t-screen) var(--ease-out) both; }
 .coach-avatar { animation: pop var(--t-m) var(--ease-out) 80ms both; }
 .lock-card { animation: pop var(--t-m) var(--ease-out) both; }
 
@@ -51,11 +45,11 @@
 .btn-primary, .btn-ghost, .chip, .stage-btn, .subnav button, .st-kinds button, .clip-row, .cycle-row, .picker-row {
   transition: background-color var(--t-xs) var(--ease-out), color var(--t-xs) var(--ease-out), border-color var(--t-xs) var(--ease-out), transform var(--t-xs) var(--ease-out);
 }
-.chip:active, .st-kinds button:active, .subnav button:active, .btn-primary:active, .btn-ghost:active, .row:active { transform: scale(.96); }
-.row { transition: transform var(--t-xs) var(--ease-out), background-color var(--t-xs) var(--ease-out); }
+.chip:active, .st-kinds button:active, .subnav button:active, .btn-primary:active, .btn-ghost:active { transform: scale(.98); }
+.row { transition: background-color var(--t-xs) var(--ease-out); }
+.row:active { background-color: var(--g50); } /* a full-width row only darkens: scaling it would move its edges under the thumb */
 .stage-btn .icon, .stage-btn.go .disc { transition: transform var(--t-xs) var(--ease-out); }
 .stage-btn:active .icon { transform: scale(.88); }
-.stage-btn.active .icon { animation: pop var(--t-s) var(--ease-out) both; }
 
 /* Results landing: bars grow from their start edge (the right in Arabic) when a period opens */
 .st-stack i, .rd-stack i, .st-bar em, .st-weeks .d i, .rp-paper .rd-bar em {

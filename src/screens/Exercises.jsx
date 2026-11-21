@@ -88,7 +88,7 @@ export default function Exercises({ tr, selectedId }) {
   return (
     <div className="screen">
       <div className="card-header" style={{ marginBottom: 12 }}>
-        <h2>{e.title} — {athlete.name}</h2>
+        <h2>{e.title}</h2>
         <button className="btn-primary small" onClick={() => setEditing({})}>{e.add}</button>
       </div>
 

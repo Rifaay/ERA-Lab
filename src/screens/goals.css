@@ -1,7 +1,7 @@
 /* "Suggested by ERA Lab" on the Goals screen */
 .goal-sug ul { list-style: none; display: grid; gap: 10px; margin-top: 10px; }
-.goal-sug li { display: grid; gap: 4px; padding: 12px; border: 1.5px solid var(--g200); border-inline-start: 4px solid var(--blue); border-radius: var(--r-md); animation: rise var(--t-m) var(--ease-out) both; }
+.goal-sug li { display: grid; gap: 4px; padding: 12px; border: 1.5px solid var(--g200); border-radius: var(--r-md); animation: rise var(--t-m) var(--ease-out) both; }
 .goal-sug li b { font-size: 16px; }
 .goal-sug li .badge { justify-self: start; }
-.goal-sug-line { font-weight: 600; color: var(--blue); }
+.goal-sug-line { font-weight: 600; color: var(--black); } /* figures, not links: blue is only for what can be tapped */
 .goal-sug .btn-row { margin-top: 4px; }

@@ -74,18 +74,12 @@ export default function RubricAssessment({ tr, selectedId }) {
 
   return (
     <div className="screen">
-      <h2>{r.title} — {athlete.name}</h2>
+      <h2>{r.title}</h2>
 
       <div className="card">
-        <label style={{ marginBottom: 12 }}>{r.archer}
-          <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-            {athletes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-        </label>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-          <label style={{ flexDirection: "row", alignItems: "center", gap: 8, margin: 0, textTransform: "none", letterSpacing: 0 }}>
-            <span style={{ fontSize: 12, color: "var(--txm)", fontWeight: 600 }}>{r.date}</span>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "auto", marginTop: 0 }} />
+          <label style={{ margin: 0 }}>{r.date}
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "auto" }} />
           </label>
           {overallAvg() && <span className="badge lime">Avg: {overallAvg()}</span>}
         </div>

@@ -101,7 +101,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
   return (
     <div className="screen pz">
       <div className="card-header">
-        <h2>{pl.title} — {athlete.name}</h2>
+        <h2>{pl.title}</h2>
         <div className="pz-year">
           <button className="icon-btn" onClick={() => loadYear(year - 1)} aria-label={pl.prevYear}><Icon name="prev" size={18} /></button>
           <input type="number" inputMode="numeric" min="1990" max="2100" defaultValue={year} key={year} aria-label={pl.year}
@@ -141,7 +141,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
         <div className="btn-row pz-actions">
           <button className="btn-primary small" onClick={build}>{pl.build}</button>
           <button className="btn-ghost small" onClick={rebuild}>{pl.rebuild}</button>
-          <button className="btn-ghost small" onClick={clear}>{pl.clear}</button>
+          <button className="btn-ghost small danger" onClick={clear}>{pl.clear}</button>
           <Help text={pl.help.build} />
         </div>
         <p className="muted">{edited.size ? fill(pl.editedNote, { n: edited.size }) : pl.buildNote}</p>

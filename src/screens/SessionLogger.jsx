@@ -79,7 +79,7 @@ export default function SessionLogger({ lang, tr, selectedId }) {
 
   return (
     <div className="screen">
-      <h2>{s.title} — {athlete.name}</h2>
+      <h2>{s.title}</h2>
 
       <div className="card">
         <div className="form">

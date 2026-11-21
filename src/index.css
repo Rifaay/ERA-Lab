@@ -148,9 +148,6 @@ textarea { resize: vertical; min-height: 88px; }
 .chip:hover { border-color: var(--black); }
 .chip.active { background: var(--black); border-color: var(--black); color: var(--white); font-weight: 600; }
 .chip-stage { color: var(--g500); font-size: 12px; }
-.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--g200); }
-.tab { min-height: var(--tap); padding: 0 14px; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--g600); font: 700 15px var(--font-head); text-transform: uppercase; letter-spacing: .05em; cursor: pointer; }
-.tab.active { color: var(--black); border-bottom-color: var(--black); }
 
 /* ── Small labels ─────────────────────────────────────────────── */
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--g100); color: var(--black); font-size: 12.5px; font-weight: 600; }
@@ -171,7 +168,8 @@ textarea { resize: vertical; min-height: 88px; }
 .stat-label { font-size: 13px; color: var(--g500); margin-top: 2px; }
 .progress-wrap { display: flex; align-items: center; gap: 10px; }
 .progress-track { flex: 1; height: 8px; background: var(--g200); border-radius: 4px; overflow: hidden; }
-.progress-fill { height: 100%; background: var(--blue); border-radius: 4px; transition: width .4s var(--ease); }
+.progress-fill { height: 100%; background: var(--blue); border-radius: 4px; transform-origin: left center; transition: transform var(--t-l) var(--ease-out); }
+[dir="rtl"] .progress-fill { transform-origin: right center; }
 .progress-pct { font: 800 16px var(--font-head); min-width: 40px; font-variant-numeric: tabular-nums; }
 
 /* ── End strip: arrow values in target colours on a black bar ── */
@@ -263,6 +261,7 @@ button.row:hover .row-name { color: var(--blue); }
 /* ── Settings, report ─────────────────────────────────────────── */
 .settings-section { margin-bottom: 28px; }
 .settings-label { font: 700 17px var(--font-head); text-transform: uppercase; letter-spacing: .04em; padding-top: 14px; margin-bottom: 12px; border-top: 2px solid var(--black); }
+.card > .settings-label { border-top: 0; padding-top: 0; } /* the card already draws the section's rule: one line, not two */
 .storage-bar-wrap { margin-top: 8px; }
 .storage-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--g500); margin-bottom: 4px; }
 
@@ -386,9 +385,14 @@ button.row:hover .row-name { color: var(--blue); }
 .code-input { text-align: center; font: 700 26px monospace; letter-spacing: .25em; text-transform: uppercase; }
 
 /* Sign-in form */
-.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--g100); border-radius: var(--r-md); }
-.seg button { min-height: 40px; border: 0; border-radius: var(--r-sm); background: none; font: 600 15px var(--font-body); color: var(--g600); cursor: pointer; }
-.seg button.active { background: var(--white); color: var(--black); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+/* One segmented control for every view switch inside a screen (stage screens use the .subnav pills).
+   A grey track; the chosen view is black with white text, as every selected choice in ERA Lab. */
+.seg, .st-kinds, .tabs { gap: 4px; padding: 4px; background: var(--g100); border-radius: var(--r-md); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; }
+.tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-bottom: 16px; }
+.seg button, .st-kinds button, .tabs .tab { min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--r-sm); background: none; color: var(--g600); font: 600 14px var(--font-body); cursor: pointer; }
+.seg button:hover, .st-kinds button:hover, .tabs .tab:hover { color: var(--black); }
+.seg button.active, .st-kinds button.on, .tabs .tab.active { background: var(--black); color: var(--white); }
 .acct-steps { list-style: none; display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--g500); }
 .acct-steps li { display: flex; gap: 6px; align-items: center; }
 .acct-steps li + li::before { content: ""; width: 24px; height: 2px; background: var(--g300); }

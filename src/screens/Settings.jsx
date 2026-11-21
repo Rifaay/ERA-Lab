@@ -135,7 +135,7 @@ export default function Settings({ tr, onDataCleared, onGo }) {
             <span>{s.storageOf.replace("{pct}", pct)}</span>
           </div>
           <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${pct}%`, background: pct > 80 ? "var(--r)" : "var(--p)" }} />
+            <div className="progress-fill" style={{ transform: `scaleX(${Math.min(100, pct) / 100})`, background: pct > 80 ? "var(--r)" : "var(--p)" }} />
           </div>
         </div>
       </div>

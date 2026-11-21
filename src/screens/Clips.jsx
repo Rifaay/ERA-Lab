@@ -173,7 +173,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
 
   return (
     <div className="screen clips">
-      <h2>{c.title} — {athlete.name}</h2>
+      <h2>{c.title}</h2>
       <p className="muted">{c.lead}</p>
       <div className="clips-actions">
         <button className="btn-ghost" disabled={busy} onClick={() => fileRef.current.click()}><Icon name="import" size={18} />{busy ? c.importing : c.import}</button>

@@ -1,4 +1,5 @@
-// Choose the archer first: with none chosen, everyone with a profile is listed; with one chosen, a switch at the top.
+// Choose the archer first: with none chosen, everyone with a profile is listed. With one chosen there is nothing here:
+// the header's archer picker is the one place to switch.
 export default function ArcherSelect({ tr, athletes, selectedId, onPick, prompt }) {
   if (!selectedId || !athletes.some((a) => a.id === selectedId)) return (
     <div className="card">
@@ -12,11 +13,5 @@ export default function ArcherSelect({ tr, athletes, selectedId, onPick, prompt 
       {!athletes.length && <p>{tr.shell.noArchers}</p>}
     </div>
   );
-  return (
-    <label className="archer-select">{tr.rubric.archer}
-      <select value={selectedId} onChange={(e) => onPick(e.target.value)}>
-        {athletes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-      </select>
-    </label>
-  );
+  return null;
 }

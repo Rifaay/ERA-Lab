@@ -141,7 +141,7 @@ function ProgressPanel({ goal, tr, onUpdate }) {
       {pct != null && (
         <div className="progress-wrap" style={{ marginBottom: 8 }}>
           <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${pct}%` }} />
+            <div className="progress-fill" style={{ transform: `scaleX(${Math.min(100, Math.max(0, pct)) / 100})` }} />
           </div>
           <span className="progress-pct">{pct}%</span>
         </div>
@@ -296,7 +296,7 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
   return (
     <div className="screen">
       <div className="card-header" style={{ marginBottom: 12 }}>
-        <h2>{g.title} — {athlete.name}</h2>
+        <h2>{g.title}</h2>
         <div style={{ display: "flex", gap: 6 }}>
           <button className="btn-ghost small" onClick={exportBackup}>{g.backup}</button>
           <label className="btn-ghost small" style={{ cursor: "pointer" }}>

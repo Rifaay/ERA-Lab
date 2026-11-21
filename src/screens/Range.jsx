@@ -256,7 +256,7 @@ export default function Range({ tr, lang, selectedId }) {
   const stepIndex = { setup: 0, range: 1, review: 2, done: 2 }[step];
   const header = (
     <>
-      <h2>{r.title} — {athlete.name}</h2>
+      <h2>{r.title}</h2>
       <ol className="rg-steps">
         {r.steps.map((label, i) => <li key={label} className={i === stepIndex ? "on" : i < stepIndex ? "done" : ""} aria-current={i === stepIndex ? "step" : undefined}>{i + 1} · {label}</li>)}
       </ol>
