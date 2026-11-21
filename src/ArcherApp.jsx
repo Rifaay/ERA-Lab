@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { AppContext } from "./context";
-import { getAthletes, saveAthlete, getRange, getSessions } from "./storage";
+import { getAthletes, saveAthlete, getRange, saveRange, getSessions } from "./storage";
 import { account } from "./sync";
-import { myLink, uploadSessions, waiting, leaveCoach, coachWatching, latestNote } from "./archer";
+import { myLink, uploadSessions, waiting, leaveCoach, coachWatching, latestNote, endedByCoach, dropUpload } from "./archer";
 import Range from "./screens/Range";
 import Stats from "./screens/Stats";
 import ArcherPlan from "./screens/ArcherPlan";
@@ -25,6 +25,7 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
   const [, setTick] = useState(0);
   const [watched, setWatched] = useState(false); // the coach has Live scores open
   const [note, setNote] = useState(null); // the coach's newest quick note, until tapped away or 20 s have passed
+  const [rangeKey, setRangeKey] = useState(0); // a new key reopens Range after the coach ended its session
 
   // Asks every 20 s; every 5 s while the coach is watching, when a note is likely. A note that arrives while the app is
   // open always shows. One already waiting when it opens shows only if under 10 minutes old by this phone's clock: the
@@ -42,6 +43,13 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
           if (!first || Date.now() - Date.parse(n.created_at) < 10 * 60_000) setNote(n);
         }
         if (n !== undefined) first = false;
+        const cur = getRange().live; // the coach ended this session from Live scores: close it here too
+        if (cur && live && await endedByCoach(cur.session_id).catch(() => false) && getRange().live?.session_id === cur.session_id) {
+          saveRange({ ...getRange(), live: null });
+          dropUpload(cur.session_id).catch(() => {});
+          setRangeKey((k) => k + 1);
+          setNote({ id: `end-${cur.session_id}`, ended: true });
+        }
       }
       if (live) timer = setTimeout(ask, on ? 5000 : 20000);
     };
@@ -89,13 +97,13 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
           <button className="lang-toggle" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={tr.shell.language}>{tr.langToggle}</button>
         </header>
         {note && (
-          <button key={note.id} className="coach-note" role="status" aria-label={`${tr.live.fromCoach}: ${note.body}`} onClick={() => setNote(null)}>
-            <small>{tr.live.fromCoach}</small>{note.body}
+          <button key={note.id} className="coach-note" role="status" aria-label={`${tr.live.fromCoach}: ${note.ended ? tr.live.endedByCoach : note.body}`} onClick={() => setNote(null)}>
+            <small>{tr.live.fromCoach}</small>{note.ended ? tr.live.endedByCoach : note.body}
           </button>
         )}
         <div className="app-body">
           <div className="main-area">
-            {tab === "range" && <Range tr={tr} lang={lang} selectedId={link.athlete_id} />}
+            {tab === "range" && <Range key={rangeKey} tr={tr} lang={lang} selectedId={link.athlete_id} />}
             {tab === "plan" && <ArcherPlan tr={tr} lang={lang} />}
             {tab === "results" && <Stats tr={tr} lang={lang} selectedId={link.athlete_id} onGo={() => {}} />}
             {tab === "me" && !legal && (

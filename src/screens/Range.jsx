@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { getAthletes, getRange, saveRange, saveSession, getReviews, saveReview, uid } from "../storage";
+import { dropUpload } from "../archer";
 import { putClip } from "../clipStore";
 import { clipName, quickReview, shotOf, refreshShots } from "../clips";
 import Recorder from "../Recorder";
@@ -232,6 +233,7 @@ export default function Range({ tr, lang, selectedId }) {
   };
   const discard = () => {
     if (!window.confirm(r.confirmDiscard)) return;
+    if (archer && live) dropUpload(live.session_id).catch(() => {}); // off the coach's board too; offline, it drops off in 30 minutes
     saveRange({ ...getRange(), live: null }); setLive(null); setStep("setup");
   };
 
@@ -436,6 +438,7 @@ export default function Range({ tr, lang, selectedId }) {
         </div>
       </div>
       <button className="btn-primary rg-wide" onClick={() => setStep("review")}>{r.finish}</button>
+      <button className="btn-ghost danger rg-wide" onClick={discard}>{r.discard}</button>
       {note && <div className="rg-toast" role="status">{note}</div>}
     </div>
   );
