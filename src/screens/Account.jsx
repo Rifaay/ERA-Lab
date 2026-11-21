@@ -5,6 +5,7 @@ import {
 } from "../sync";
 import { digits } from "../lock";
 import { turnOff } from "../push";
+import { setUi } from "../ui";
 
 // The sign-in form. Inside the coach's or the archer's app it is fixed to that role (`as`). On the welcome page `as` is
 // left out: signing in needs no role (the account knows it), and creating an account asks coach or archer.
@@ -52,8 +53,16 @@ export default function Account({ tr, as, onChange, invited = false }) {
   };
   const weak = (p) => ({ short: s.short, email: s.emailInPw, common: s.common })[passwordProblem(p, email)] || "";
   const report = (r) => setMsg(s.done.replace("{sent}", r.sent).replace("{received}", r.received));
-  // An archer's account can't be used as a coach's, or the other way round: the two apps keep different data.
-  const sameRole = async () => { const r = await loadRole(); if (as && r !== as) { await signOut(); throw Object.assign(new Error("role"), { shown: coach ? s.isArcher : s.isCoach }); } };
+  // An archer's account can't be used as a coach's, or the other way round: the two apps keep different data. Signed in
+  // from the wrong app (an archer who tapped "continue without an account" lands in the coach's), this device switches
+  // to the account's own app, still signed in; it used to sign out and leave the archer stuck in the coach's app.
+  const sameRole = async () => {
+    const r = await loadRole();
+    if (!as || r === as) return;
+    setUi({ role: r, local: false });
+    location.reload();
+    throw Object.assign(new Error("role"), { shown: coach ? s.isArcher : s.isCoach }); // stops here while the page reloads
+  };
 
   // Step 2: find the coach's authenticator, or start setting one up.
   useEffect(() => {

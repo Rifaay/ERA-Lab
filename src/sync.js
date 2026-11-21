@@ -133,7 +133,17 @@ export const signUp = async (email, password, as = "coach", f = fetch) => {
   return true;
 };
 export const resendSignup = (email) => call(`/auth/v1/resend?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { type: "signup", email } });
-export const signIn = async (email, password) => keep(await call("/auth/v1/token?grant_type=password", { method: "POST", body: { email, password } }));
+// A password with digits may have been made on an Arabic keyboard (١٢٣) and typed now on an English one (123), or the
+// other way round: the server sees different passwords. Refused, the other digit forms are tried once each.
+const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+export const digitForms = (pw) => [...new Set([pw, pw.replace(/[٠-٩]/g, (d) => AR_DIGITS.indexOf(d)), pw.replace(/\d/g, (d) => AR_DIGITS[d])])];
+export const signIn = async (email, password, f = fetch) => {
+  const forms = digitForms(password);
+  for (const [i, pw] of forms.entries()) {
+    try { return keep(await call("/auth/v1/token?grant_type=password", { method: "POST", body: { email, password: pw } }, f)); }
+    catch (e) { if (e.code !== "invalid_credentials" || i === forms.length - 1) throw e; }
+  }
+};
 export const sendReset = (email) => call(`/auth/v1/recover?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email } });
 export const setPassword = async (password) => {
   await call("/auth/v1/user", { method: "PUT", body: { password }, token: await token() });
