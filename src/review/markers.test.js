@@ -26,6 +26,9 @@ test("one fix by the coach carries to the tracked frames on either side", () => 
   assert.ok(Math.abs(m[1][1] - (.1 + .1 / 3)) < 1e-4 && Math.abs(m[2][1] - (.1 + .2 / 3)) < 1e-4, "frames before lean in");
   assert.ok(Math.abs(m[4][1] - (.1 + .1 * 2 / 3)) < 1e-4 && Math.abs(m[5][1] - (.1 + .1 / 3)) < 1e-4, "frames after lean out");
   assert.deepEqual(m[6], [.9, .9, "m"], "the later mark stays");
+  const ai = { 0: [.1, .1, "t"], 1: [.2, .1, "t"], 2: [.3, .1, "t"] }; // AI points: found frame by frame, no coach marks
+  blendCorrection(ai, 1, .2, .3);
+  assert.deepEqual([ai[0], ai[2]], [[.1, .1, "t"], [.3, .1, "t"]], "with no mark on a side, that side is left alone");
   const fresh = {}; blendCorrection(fresh, 4, .5, .5);
   assert.deepEqual(fresh, { 4: [.5, .5, "m"] }, "a new point is just placed");
 });

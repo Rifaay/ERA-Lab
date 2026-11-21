@@ -290,7 +290,6 @@ export const t = {
       library: "Goal library", addTemplate: "+ Save as Template",
       templateName: "Template name", applyTemplate: "Use template",
       noTemplates: "No templates yet.",
-      backup: "Backup", restore: "Restore", restoreSuccess: "Data restored.", restoreError: "Could not read file.",
     },
     planner: {
       title: "Season plan", noAthlete: "Select an athlete first.", year: "Year", prevYear: "Previous year", nextYear: "Next year",
@@ -793,7 +792,6 @@ export const t = {
       library: "مكتبة الأهداف", addTemplate: "+ حفظ كقالب",
       templateName: "اسم القالب", applyTemplate: "استخدم القالب",
       noTemplates: "لا قوالب بعد.",
-      backup: "نسخة احتياطية", restore: "استعادة", restoreSuccess: "تمت الاستعادة.", restoreError: "تعذّر قراءة الملف.",
     },
     planner: {
       title: "خطة الموسم", noAthlete: "اختر رياضياً أولاً.", year: "السنة", prevYear: "السنة السابقة", nextYear: "السنة التالية",

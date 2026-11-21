@@ -659,7 +659,7 @@ async function trackForward(){
     if(!Object.keys(st).length){ctl.stopped=true}
   }
   tracking=false; $('trackBtn').textContent=env.t('Track forward'); dirty=true; renderPoints(); drawOverlay();
-  status(`Tracked ${keys.length} point(s) over ${done} frames. Check them by stepping frames; fix a wrong one by clicking where it should be: the frames around it follow.`);
+  status(`Tracked ${keys.length} point(s) over ${done} frames. Check them by stepping frames. To fix one, click where it should be: the frames back to your last mark follow; then press Track forward again from there.`);
 }
 let tracking=false;
 $('trackBtn').onclick=()=>tracking?(tracking=false):trackForward();

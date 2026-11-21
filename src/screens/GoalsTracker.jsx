@@ -11,7 +11,7 @@ import {
   getProgressLogs, saveProgressLog, deleteProgressLog,
   getCheckIns, saveCheckIn, deleteCheckIn,
   getGoalTemplates, saveGoalTemplate,
-  exportBackup, importBackup, uid,
+  uid,
 } from "../storage";
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
@@ -262,7 +262,6 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
   const [goals, setGoals] = useState(() => getGoals().filter((x) => x.athleteId === selectedId));
   const [templates, setTemplates] = useState(() => getGoalTemplates());
   const [editing, setEditing] = useState(null);
-  const [restoreMsg, setRestoreMsg] = useState("");
   const { setSelectedId } = useApp();
 
   const refresh = () => {
@@ -276,36 +275,13 @@ export default function GoalsTracker({ lang, tr, selectedId }) {
     refresh();
   };
 
-  const handleRestore = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try { importBackup(ev.target.result); window.location.reload(); } // reload: the sidebar's athlete list lives in App
-      catch { setRestoreMsg(g.restoreError); }
-      setTimeout(() => setRestoreMsg(""), 3000);
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
   if (!athlete) return (
     <div className="screen"><h2>{g.title}</h2><ArcherSelect tr={tr} athletes={athletes} selectedId={selectedId} onPick={setSelectedId} prompt={g.sug.pick} /></div>
   );
 
   return (
     <div className="screen">
-      <div className="card-header" style={{ marginBottom: 12 }}>
-        <h2>{g.title}</h2>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button className="btn-ghost small" onClick={exportBackup}>{g.backup}</button>
-          <label className="btn-ghost small" style={{ cursor: "pointer" }}>
-            {g.restore}
-            <input type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
-          </label>
-        </div>
-      </div>
-      {restoreMsg && <p className="success-msg">{restoreMsg}</p>}
+      <h2>{g.title}</h2> {/* backup and restore live in Settings only */}
 
       {!editing && <GoalSuggestions athlete={athlete} goals={goals} tr={tr} lang={lang} onUse={setEditing} />}
 

@@ -63,10 +63,13 @@ test("the coach's app shows unfinished sessions as live and copies each finished
   assert.deepEqual(A.finishedOf(rows, athletes).map((x) => x.session.session_id), ["done-1"], "finished today, linked archers only");
   assert.equal(A.finishedOf([{ ...row(done), updated_at: new Date(Date.now() - 13 * 3600_000).toISOString() }], athletes).length, 0, "yesterday's");
   const saved = [];
-  const env = { athletes, sessions: saved, saveSession: (e) => saved.push(e), uid: () => "id" + saved.length };
+  const env = { athletes, sessions: saved, saveSession: (e) => saved.push(e) };
   assert.equal(A.importFinished(rows, env), 1);
   assert.deepEqual([saved[0].athleteId, saved[0].range.session_id, saved[0].score, saved[0].fromArcher], ["a1", "done-1", "9", true]);
   assert.equal(A.importFinished(rows, env), 0, "already there");
+  const other = []; // the coach's second device copies the same session before the two have synced
+  A.importFinished(rows, { ...env, sessions: other, saveSession: (e) => other.push(e) });
+  assert.equal(other[0].id, saved[0].id, "the same id on both devices, so the sync keeps one record");
 });
 
 test("invite link: carries the code, and only a well-formed code is read back", () => {

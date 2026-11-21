@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { getAthletes, saveAthlete, deleteAthlete, calcAgeBand, calcWACategory, uid } from "../storage";
+import { configured, signedIn } from "../sync";
+import { linkOf, unlink } from "../archer";
 
 const BLANK = { id: "", name: "", dob: "", gender: "male", discipline: "recurve", stage: "0", startDate: "", focusArea: ["technical"], coachNotes: "", notes: "" };
 
@@ -43,9 +45,12 @@ export default function AthleteProfile({ tr, selectedId, onSelect, onSaved }) {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!form.id) return;
     if (!window.confirm(p.confirmDelete)) return;
+    if (linkOf(form.id) && configured && signedIn()) { // their own app's sessions, invite and plans are in the cloud too
+      try { await unlink(form.id); } catch { window.alert(tr.sync.offline); return; }
+    }
     deleteAthlete(form.id);
     refresh();
     setForm({ ...BLANK });

@@ -2,6 +2,7 @@
 // picture around it. Plain functions on grey pixel arrays, tested in Node (markers.test.js).
 
 // Zero-mean normalised cross-correlation of a (2r+1)² patch: 1 is the same picture, whatever the light did.
+// The template is kept zero-mean with its norm; candidates are scored in place, with no array per try.
 const patch = (g, W, H, x, y, r) => {
   const n = (2 * r + 1) ** 2, out = new Float32Array(n);
   let k = 0, sum = 0;
@@ -19,10 +20,15 @@ export const template = (g, W, H, x, y, r) => patch(g, W, H, Math.round(x), Math
 // Returns { x, y, score }.
 export function search(g, W, H, tpl, px, py, r, S) {
   let best = -2, bx = Math.round(px), by = Math.round(py);
+  const n = tpl.v.length;
   const at = (x, y) => {
-    const p = patch(g, W, H, x, y, r);
-    let dot = 0; for (let i = 0; i < p.v.length; i++) dot += p.v[i] * tpl.v[i];
-    const sc = dot / (p.norm * tpl.norm);
+    // Σ(c−c̄)·t = Σc·t because the template sums to zero; Σ(c−c̄)² = Σc² − (Σc)²/n.
+    let k = 0, sum = 0, sq = 0, dot = 0;
+    for (let j = -r; j <= r; j++) {
+      const row = Math.min(H - 1, Math.max(0, y + j)) * W;
+      for (let i = -r; i <= r; i++) { const v = g[row + Math.min(W - 1, Math.max(0, x + i))]; sum += v; sq += v * v; dot += v * tpl.v[k++]; }
+    }
+    const sc = dot / ((Math.sqrt(Math.max(0, sq - sum * sum / n)) || 1) * tpl.norm);
     if (sc > best) { best = sc; bx = x; by = y; }
   };
   const cx = bx, cy = by;
@@ -46,7 +52,9 @@ export function blendCorrection(m, f, x, y) {
   const near = (from, to, step) => { const out = []; for (let g = from; g !== to && run(g); g += step) out.push(g); return out; }; // tracked frames touching f
   const before = near(f - 1, prev ?? -1, -1), after = near(f + 1, next ?? Infinity, 1);
   const shift = (g, w) => { m[g] = [+(m[g][0] + ex * w).toFixed(5), +(m[g][1] + ey * w).toFixed(5), m[g][2]]; };
-  before.forEach((g) => shift(g, prev != null ? (g - prev) / (f - prev) : 1));
-  after.forEach((g) => shift(g, next != null ? (next - g) / (next - f) : 1)); // no later mark: the rest of the run moves with it
+  // Only towards a side that has a mark of the coach's: with none (AI tracking finds each frame on its own), the
+  // other frames were found independently and stay as they are.
+  if (prev != null) before.forEach((g) => shift(g, (g - prev) / (f - prev)));
+  if (next != null) after.forEach((g) => shift(g, (next - g) / (next - f)));
   return m;
 }

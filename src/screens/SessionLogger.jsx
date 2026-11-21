@@ -7,6 +7,8 @@ import Scorecard from "./Scorecard";
 import { scorecardFile, scorecardPdf, saveHtmlFile } from "../scorecardFile";
 import EndVideo from "../EndVideo";
 import { localize } from "../digits";
+import { configured, signedIn } from "../sync";
+import { forgetArcherSession } from "../archer";
 
 const TYPES = ["Technical", "Physical", "Mental", "Competition", "Mixed"];
 const DOMAINS = ["Technical", "Physical", "Mental", "Competition"];
@@ -63,7 +65,11 @@ export default function SessionLogger({ lang, tr, selectedId }) {
   const downloadPdf = (r) => scorecardPdf(sheetOf(r), { lang, title: `Scorecard ${r.session_id}` }).catch((e) => { console.warn("PDF failed", e); window.alert(tr.range.pdfFailed); });
   const [videos, setVideos] = useState(null); // the session whose ends are being linked to clips
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    const x = getSessions().find((q) => q.id === id);
+    if (x?.fromArcher && x.range?.session_id && configured && signedIn()) {
+      try { await forgetArcherSession(x.range.session_id); } catch { window.alert(tr.sync.offline); return; } // kept here, or it would come back
+    }
     deleteSession(id);
     setSessions(getSessions().filter((x) => x.athleteId === selectedId).reverse().slice(0, 12));
   };

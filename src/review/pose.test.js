@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bowSide, smooth, toPoints, fillGaps } from "./pose.js";
+import { bowSide, smooth, toPoints } from "./pose.js";
 
 // A fake MediaPipe frame: 33 points at the centre, then the ones a test cares about.
 const frame = (set = {}) => {
@@ -39,13 +39,10 @@ test("frames become the Labeller's points, bow and draw sides right, unseen poin
   assert.equal(toPoints(frames, 30, false).bow_hip, undefined, "upper body only when asked");
 });
 
-test("unsure points are kept faded, short holes are filled, long ones left", () => {
+test("unsure points are kept faded instead of dropped", () => {
   const frames = Array.from({ length: 12 }, () => rightHanded());
-  frames[1][16] = { x: 0.9, y: 0.4, visibility: 0.3 }; // the bow wrist half hidden (right-handed: the left wrist is the bow one)
+  frames[1][16] = { x: 0.9, y: 0.4, visibility: 0.3 };
+  frames[2][16] = { x: 0.9, y: 0.4, visibility: 0.1 };
   const pts = toPoints(frames, 30);
-  assert.equal(Object.values(pts.bow_wrist).some((q) => q[2] === "i") || Object.values(pts.draw_wrist).some((q) => q[2] === "i"), true, "a faded point, not a hole");
-  const list = [{ x: 0, y: 0 }, null, null, { x: 0.3, y: 0.3 }, ...Array(8).fill(null), { x: 1, y: 1 }];
-  const out = fillGaps(list, 6);
-  assert.ok(out[1].filled && Math.abs(out[1].x - 0.1) < 1e-9 && Math.abs(out[2].x - 0.2) < 1e-9, "two missing frames filled on the line");
-  assert.equal(out[6], null, "eight missing frames stay missing");
+  assert.ok(Object.values(pts.bow_wrist).some((q) => q[2] === "i") || Object.values(pts.draw_wrist).some((q) => q[2] === "i"), "a faded point, not a hole");
 });

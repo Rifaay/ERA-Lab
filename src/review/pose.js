@@ -6,7 +6,7 @@
 import { frames as readFrames } from "./frames.js";
 
 const SURE = 0.5, UNSURE = 0.2; // sure points are drawn solid; unsure ones are kept but faded; below that, left out
-const GAP = 6; // a point missing for up to this many frames is filled in between its neighbours (faded)
+// (short holes are drawn in between their neighbours by the Labeller's ptAt, so they aren't filled here)
 
 // MediaPipe's numbers for the person's left side; the right side is the next number.
 const LEFT = { shoulder: 11, elbow: 13, wrist: 15, hand: 19, hip: 23, knee: 25, ankle: 27 };
@@ -63,24 +63,9 @@ export function toPoints(frames, rate, full = true) {
   for (const [k, i] of Object.entries(map)) series[k] = frames.map((p) => (p && (p[i].visibility ?? 1) >= UNSURE ? p[i] : null));
   const out = {};
   for (const [k, raw] of Object.entries(series)) {
-    const list = fillGaps(raw), xs = smooth(list.map((q) => q?.x ?? null), rate), ys = smooth(list.map((q) => q?.y ?? null), rate), m = {};
-    list.forEach((q, f) => { if (q) m[f] = [+xs[f].toFixed(5), +ys[f].toFixed(5), q.filled || (q.visibility ?? 1) < SURE ? "i" : "t"]; });
+    const list = raw, xs = smooth(list.map((q) => q?.x ?? null), rate), ys = smooth(list.map((q) => q?.y ?? null), rate), m = {};
+    list.forEach((q, f) => { if (q) m[f] = [+xs[f].toFixed(5), +ys[f].toFixed(5), (q.visibility ?? 1) < SURE ? "i" : "t"]; });
     if (Object.keys(m).length) out[k] = m;
-  }
-  return out;
-}
-
-// Short holes (a point hidden behind the bow for a few frames) are filled on the line between their neighbours.
-export function fillGaps(list, max = GAP) {
-  const out = [...list];
-  let last = -1;
-  for (let i = 0; i < list.length; i++) {
-    if (!list[i]) continue;
-    if (last >= 0 && i - last > 1 && i - last - 1 <= max) {
-      const a = list[last], b = list[i];
-      for (let g = last + 1; g < i; g++) { const t = (g - last) / (i - last); out[g] = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, filled: true }; }
-    }
-    last = i;
   }
   return out;
 }
@@ -91,6 +76,10 @@ export function trackPose({ vid, fps, frames, full = true, engine = "mediapipe",
   const ctl = { stopped: false };
   let worker = null;
   const done = (async () => {
+    // A hidden copy of the clip: the coach can play, step and scrub the one on screen while this reads frames.
+    const copy = document.createElement("video");
+    copy.muted = true; copy.preload = "auto"; copy.src = vid.currentSrc || vid.src;
+    await new Promise((res, rej) => { copy.addEventListener("loadeddata", res, { once: true }); copy.addEventListener("error", () => rej(new Error("The clip could not be read for tracking")), { once: true }); });
     worker = new Worker(new URL("./pose.worker.js", import.meta.url), { type: "module" });
     const waiting = new Map(), seen = Array(frames).fill(null);
     let ready, failed;
@@ -104,8 +93,10 @@ export function trackPose({ vid, fps, frames, full = true, engine = "mediapipe",
     await started;
     onReady?.();
     const pending = [];
-    for await (const { f, bmp } of readFrames(vid, fps, 0, frames, ctl)) {
-      pending.push(new Promise((res, rej) => waiting.set(f, { res, rej })));
+    for await (const { f, bmp } of readFrames(copy, fps, 0, frames, ctl)) {
+      const p = new Promise((res, rej) => waiting.set(f, { res, rej }));
+      p.catch(() => {}); // a failure is reported once, by the frame awaited first; the others mustn't surface as unhandled
+      pending.push(p);
       worker.postMessage({ type: "frame", f, bmp }, [bmp]);
       if (pending.length >= 2) await pending.shift();
       if (f % 5 === 0) onProgress?.(f, frames);

@@ -6,7 +6,7 @@ let mem = new Map();
 globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
 globalThis.window = { alert: () => {} };
 
-const { plan, isAdult, shareable, syncNow, awayTooLong, markSeen, AWAY_MS, signUp } = await import("./sync.js");
+const { plan, isAdult, shareable, syncNow, awayTooLong, markSeen, AWAY_MS, signUp, forgetBase } = await import("./sync.js");
 const st = await import("./storage.js");
 
 // The cloud: rows keyed "kind/id", answering the three requests sync.js makes.
@@ -116,6 +116,20 @@ test("two devices: adds, deletions and conflicts carry over; children never reac
   await sync();
   assert.deepEqual(st.getAthletes().map((a) => a.id).sort(), ["a1", "c1"], "the phone keeps its copy");
   assert.deepEqual(cloud.get("athletes/a1").data, { id: "a1", private: true }, "and never uploads it again");});
+
+test("a restore on one device merges with the cloud instead of deleting the other device's records", async () => {
+  on("phone");
+  st.saveSession({ id: "new-on-phone", athleteId: "a1", score: 70 });
+  await sync();
+  on("desktop");
+  await sync();
+  assert.ok(st.getSessions().some((s) => s.id === "new-on-phone"));
+  st.writeKind("sessions", []); // an older backup restored: the new session isn't in it
+  forgetBase();
+  await sync();
+  assert.ok(cloud.has("sessions/new-on-phone"), "still in the cloud");
+  assert.ok(st.getSessions().some((s) => s.id === "new-on-phone"), "and back on this device");
+});
 
 test("password rules: long enough, not the email, not a common word", async () => {
   const { passwordProblem } = await import("./sync.js");

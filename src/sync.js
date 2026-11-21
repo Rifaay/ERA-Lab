@@ -216,11 +216,17 @@ export const awayTooLong = (now = Date.now()) => {
   return Boolean(account()) && seen > 0 && now - seen > AWAY_MS; // no time noted yet (first open after this update): stay in
 };
 
-// Erases this coach's whole cloud copy. The device keeps its data.
+// Erases this coach's whole cloud copy: their records, their archers' uploaded sessions, invites and shared plans, and
+// this account's phone subscriptions. The device keeps its data. (Quick notes clear themselves after two days.)
 export const deleteCloudCopy = async () => {
-  await call(`/rest/v1/records?coach_id=eq.${get(STATE, {}).user}`, { method: "DELETE", token: await token() });
-  put(STATE, { ...get(STATE, {}), base: {} });
+  const t = await token(), me = get(STATE, {}).user || userId();
+  for (const path of [`records?coach_id=eq.${me}`, `archer_sessions?coach_id=eq.${me}`, `shared_plans?coach_id=eq.${me}`, `invites?coach_id=eq.${me}`, `push_subs?user_id=eq.${me}`])
+    await call(`/rest/v1/${path}`, { method: "DELETE", token: t });
+  forgetBase();
 };
+// The next sync compares from scratch: nothing missing here is taken as deleted here. After a restore, records on the
+// coach's other devices are merged back instead of deleted everywhere.
+export const forgetBase = () => { const s = get(STATE, null); if (s) put(STATE, { ...s, base: {} }); };
 
 const pullAll = async (t, f) => {
   const rows = [];
@@ -270,7 +276,7 @@ const runSync = async (f, today) => {
       if (kind === "settings") writeKind(kind, (({ id, ...s }) => s)(remote.settings.main)); // eslint-disable-line no-unused-vars
       else {
         const gone = new Set([...p.take, ...p.remove]);
-        writeKind(kind, [...lists[kind].filter((x) => !gone.has(x.id)), ...p.take.map((id) => remote[kind][id])]);
+        writeKind(kind, [...readKind(kind).filter((x) => !gone.has(x.id)), ...p.take.map((id) => remote[kind][id])]); // read again: the coach may have saved something while the network was busy
       }
     }
     base[kind] = p.next;

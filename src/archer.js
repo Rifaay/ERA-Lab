@@ -3,7 +3,7 @@
 // Only archers aged 18 or over can be invited: the owner's rule is no children's data on a server.
 import { api, token, userId, hash, isAdult } from "./sync.js";
 import { finish } from "./range.js";
-import { getAthletes, getSessions, saveSession, uid } from "./storage.js";
+import { getAthletes, getSessions, saveSession } from "./storage.js";
 
 const LINK = "racm_link", SENT = "racm_uploaded", INVITES = "racm_invites", PLANS = "racm_shared_plans";
 const get = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
@@ -103,6 +103,8 @@ export const createInvite = async (athlete) => {
   await refreshInvites();
   return code;
 };
+// Coach: a copied archer session deleted from the records goes from the cloud too, or the next check copies it back.
+export const forgetArcherSession = (session) => rest(`archer_sessions?coach_id=eq.${userId()}&session_id=eq.${encodeURIComponent(session)}`, { method: "DELETE" });
 export const unlink = async (athleteId) => {
   await rest(`invites?athlete_id=eq.${encodeURIComponent(athleteId)}&coach_id=eq.${userId()}`, { method: "DELETE" });
   await rest(`archer_sessions?athlete_id=eq.${encodeURIComponent(athleteId)}&coach_id=eq.${userId()}`, { method: "DELETE" });
@@ -164,7 +166,7 @@ export const endedByCoach = async (session) => Boolean((await rest(`archer_sessi
 export const watching = () => rest("rpc/watching", { method: "POST", body: {} });
 
 // Copies each finished session the coach doesn't have yet into the coach's own sessions. Returns how many.
-export const importFinished = (rows, { athletes, sessions, saveSession, uid }) => {
+export const importFinished = (rows, { athletes, sessions, saveSession }) => {
   let n = 0;
   const have = new Set(sessions.map((x) => x.range?.session_id).filter(Boolean));
   for (const r of rows) {
@@ -172,7 +174,7 @@ export const importFinished = (rows, { athletes, sessions, saveSession, uid }) =
     if (!athlete || !isLinked(athlete.id) || have.has(r.session_id) || r.ended_by_coach) continue;
     const s = cleanSession(r.data, athlete);
     if (!s || !s.end_ms || s.session_id !== r.session_id || !s.ends.some((e) => e.arrows.length)) continue;
-    saveSession({ ...finish(s, uid()), fromArcher: true });
+    saveSession({ ...finish(s, `archer-${s.session_id}`), fromArcher: true }); // the same id on every device of the coach's, so two devices copying it make one record
     have.add(r.session_id); n++;
   }
   return n;
@@ -184,5 +186,5 @@ export const pullArchers = async () => {
   await refreshInvites();
   if (!invites().some((i) => i.claimed_by)) return { rows: [], copied: 0 };
   const rows = await fetchArcherRows();
-  return { rows, copied: importFinished(rows, { athletes: getAthletes(), sessions: getSessions(), saveSession, uid }) };
+  return { rows, copied: importFinished(rows, { athletes: getAthletes(), sessions: getSessions(), saveSession }) };
 };

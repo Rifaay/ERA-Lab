@@ -3,7 +3,7 @@ import Account from "./Account";
 import Notifications from "./Notifications";
 import { LockSettings } from "../DeviceLock";
 import { hasPin } from "../lock";
-import { configured, signedIn } from "../sync";
+import { configured, signedIn, forgetBase } from "../sync";
 import { getErrors, clearErrors, downloadErrors } from "../errors";
 import { getSettings, saveSettings, exportBackup, importBackup, storageUsageKB, clearAllData } from "../storage";
 
@@ -34,7 +34,7 @@ export default function Settings({ tr, onDataCleared, onGo }) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      try { importBackup(ev.target.result); setSettings(getSettings()); setRestoreMsg(s.restoreSuccess); setUsageKB(storageUsageKB()); onDataCleared && onDataCleared(); }
+      try { importBackup(ev.target.result); forgetBase(); setSettings(getSettings()); setRestoreMsg(s.restoreSuccess); setUsageKB(storageUsageKB()); onDataCleared && onDataCleared(); }
       catch { setRestoreMsg(s.restoreError); }
       setTimeout(() => setRestoreMsg(""), 3000);
     };
