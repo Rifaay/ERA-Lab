@@ -7,6 +7,8 @@ import react from '@vitejs/plugin-react'
 // code cannot send athlete data anywhere else.
 // style-src-attr allows style attributes only (the Review stage's layout uses them); style sheets stay restricted,
 // and a style attribute cannot fetch anything because img-src and connect-src block outside addresses.
+// The body tracker runs in a worker script of its own, which this page policy doesn't cover: it fetches its model
+// (from Google, or the app's own models/ folder) and runs WebAssembly there, and nothing else can reach that worker.
 const csp = (supabase) => ({
   name: 'racm-csp',
   apply: 'build',
@@ -25,6 +27,7 @@ export default defineConfig(({ mode }) => {
   const supabase = loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL;
   return {
     base: './', // relative paths: the same build works at a site root, in a sub-folder and from a file
+    worker: { format: 'es' }, // the body tracker's worker loads its engines on demand
     plugins: [react(), csp(supabase && new URL(supabase).origin)],
   };
 })

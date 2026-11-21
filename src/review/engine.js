@@ -5,6 +5,8 @@
 // host: the element holding the Review markup. env.sessions(): range sessions recorded in the app.
 // env.onSaved(labels): called after labels are saved. env.review(clipName): the app's record of that clip (phone tags).
 // env.t(text), env.fault(tag), env.lang: the coach's language. Returns { isDirty, destroy }.
+import { frames as readFrames } from "./frames.js";
+import { template, search, blendCorrection } from "./markers.js";
 export function mountLabeller(host, env) {
   const ac = new AbortController();
   // Page-level listeners end with this screen.
@@ -621,38 +623,43 @@ $('ptMode').onclick=()=>{ptMode=!ptMode; if(ptMode) vid.pause(); renderPoints();
 ov.addEventListener('click',e=>{
   if(!ptMode||!L) return; const R=videoRect(), [vx,vy]=inViewer(e), x=(vx-R.x)/R.w, y=(vy-R.y)/R.h, f=frameOf(vid.currentTime), pts=ensurePts();
   if(e.shiftKey){ let best=null,bd=.04/Z.k; for(const p of POINTS){const q=pts[p.k]?.[f]; if(q){const d=Math.hypot(q[0]-x,q[1]-y); if(d<bd){bd=d;best=p.k}}} if(best) delete pts[best][f]; }
-  else { (pts[POINTS[selPt].k] ||= {})[f]=[+x.toFixed(5),+y.toFixed(5),'m']; selPt=Math.min(POINTS.length-1,selPt+1) }
+  else { blendCorrection(pts[POINTS[selPt].k] ||= {},f,+x.toFixed(5),+y.toFixed(5)); selPt=Math.min(POINTS.length-1,selPt+1) } // a fix on a tracked point carries to the frames around it
   dirty=true; renderPoints(); drawOverlay();
 });
+// ERA Lab: the marker tracker reads exact frames (frames.js) and matches the patch round each point with normalised
+// cross-correlation (markers.js), guessing ahead from the point's own speed. A point hidden for a moment keeps its
+// guess, faded, for up to 5 frames. Passing one of the coach's own marks, the drift since the last mark is spread back
+// over the frames in between, and tracking carries on from the mark.
 async function trackForward(){
   if(!L||tracking) return; const f0=frameOf(vid.currentTime), pts=ensurePts();
   const keys=POINTS.map(p=>p.k).filter(k=>pts[k]&&pts[k][f0]);
   if(!keys.length){status('Place at least one point on this frame first, then press T.');return}
-  const W=480, H=Math.round(W*vid.videoHeight/vid.videoWidth), cv=new OffscreenCanvas(W,H), cx=cv.getContext('2d',{willReadFrequently:true});
-  const gray=()=>{cx.drawImage(vid,0,0,W,H);const d=cx.getImageData(0,0,W,H).data,g=new Float32Array(W*H);for(let i=0,j=0;i<d.length;i+=4,j++)g[j]=d[i]*.3+d[i+1]*.59+d[i+2]*.11;return g};
-  const seek=t=>new Promise(r=>{vid.addEventListener('seeked',r,{once:true});vid.currentTime=t});
-  const R=8, S=12, tpl=(g,x,y)=>{const t=new Float32Array((2*R+1)**2);let k=0;for(let j=-R;j<=R;j++)for(let i=-R;i<=R;i++){const xx=Math.min(W-1,Math.max(0,x+i)),yy=Math.min(H-1,Math.max(0,y+j));t[k++]=g[yy*W+xx]}return t};
-  tracking=true; vid.pause(); await seek((f0+.5)/fps); let g=gray();
-  const st={}; for(const k of keys){const q=pts[k][f0]; const x=Math.round(q[0]*W),y=Math.round(q[1]*H); st[k]={x,y,t0:tpl(g,x,y),t:tpl(g,x,y)}}
-  const last=Math.min(frameOf(vid.duration)-1,f0+Math.round(fps*8)); let done=0;
+  const W=Math.min(960,vid.videoWidth||960), H=Math.round(W*vid.videoHeight/vid.videoWidth), cv=new OffscreenCanvas(W,H), cx=cv.getContext('2d',{willReadFrequently:true});
+  const gray=b=>{cx.drawImage(b,0,0,W,H);b.close();const d=cx.getImageData(0,0,W,H).data,g=new Float32Array(W*H);for(let i=0,j=0;i<d.length;i+=4,j++)g[j]=d[i]*.3+d[i+1]*.59+d[i+2]*.11;return g};
+  const R=Math.max(8,Math.round(W/64)), S=Math.max(12,Math.round(W/40)); // patch and search area grow with the picture
+  const ctl={}, st={}, end=frameOf(vid.duration); let done=0;
+  tracking=true; vid.pause();
   status(touch?'Tracking points… tap Stop tracking to stop.':'Tracking points… (Esc stops)'); $('trackBtn').textContent=env.t('Stop tracking');
-  for(let f=f0+1; f<=last && tracking; f++){
-    await seek((f+.5)/fps); g=gray();
+  for await (const {f,bmp} of readFrames(vid,fps,f0,end,ctl)){
+    if(!tracking){bmp.close();ctl.stopped=true;break}
+    const g=gray(bmp);
+    if(f===f0){ for(const k of keys){const q=pts[k][f0], x=q[0]*W, y=q[1]*H, tp=template(g,W,H,x,y,R); st[k]={x,y,vx:0,vy:0,t:tp,t0:tp,miss:0}} continue }
     for(const k of keys){ const s=st[k]; if(!s) continue;
-      if(pts[k][f]&&pts[k][f][2]==='m'){ const q=pts[k][f]; s.x=Math.round(q[0]*W); s.y=Math.round(q[1]*H); s.t=tpl(g,s.x,s.y); s.t0=s.t; continue } // stop drift at next manual mark
-      let best=Infinity,bx=s.x,by=s.y;
-      for(let dy=-S;dy<=S;dy++)for(let dx=-S;dx<=S;dx++){ let sad=0,k2=0; const cx0=s.x+dx,cy0=s.y+dy;
-        for(let j=-R;j<=R;j++){const yy=Math.min(H-1,Math.max(0,cy0+j))*W; for(let i=-R;i<=R;i++){const v=g[yy+Math.min(W-1,Math.max(0,cx0+i))]; sad+=Math.abs(v-s.t[k2])*.6+Math.abs(v-s.t0[k2])*.4; k2++}}
-        if(sad<best){best=sad;bx=cx0;by=cy0} }
-      s.x=bx; s.y=by; s.t=tpl(g,bx,by);
-      if(best/((2*R+1)**2)>40){ delete st[k]; continue } // lost
-      pts[k][f]=[+(bx/W).toFixed(5),+(by/H).toFixed(5),'t'];
+      const px=s.x+s.vx, py=s.y+s.vy;
+      let a=search(g,W,H,s.t,px,py,R,S); if(a.score<.7){const b=search(g,W,H,s.t0,px,py,R,S); if(b.score>a.score) a=b}
+      const mk=pts[k][f];
+      if(mk&&mk[2]==='m'){ pts[k][f]=[+(a.x/W).toFixed(5),+(a.y/H).toFixed(5),'t']; blendCorrection(pts[k],f,mk[0],mk[1]);
+        s.x=mk[0]*W; s.y=mk[1]*H; s.vx=s.vy=0; s.t=s.t0=template(g,W,H,s.x,s.y,R); s.miss=0; continue }
+      if(a.score<.5){ if(++s.miss>5){delete st[k];continue} s.x=px; s.y=py; pts[k][f]=[+(px/W).toFixed(5),+(py/H).toFixed(5),'i']; continue }
+      s.miss=0; s.vx=(a.x-s.x)*.7+s.vx*.3; s.vy=(a.y-s.y)*.7+s.vy*.3; s.x=a.x; s.y=a.y;
+      if(a.score>.85) s.t=template(g,W,H,a.x,a.y,R); // only a sure match renews the patch, so drift can't creep in
+      pts[k][f]=[+(a.x/W).toFixed(5),+(a.y/H).toFixed(5),'t'];
     }
     done=f-f0; if(done%10===0){drawOverlay();status(`Tracking… ${done} frames`)}
-    if(!Object.keys(st).length) break;
+    if(!Object.keys(st).length){ctl.stopped=true}
   }
   tracking=false; $('trackBtn').textContent=env.t('Track forward'); dirty=true; renderPoints(); drawOverlay();
-  status(`Tracked ${keys.length} point(s) over ${done} frames. Check them by stepping frames; fix any drift with a new click (it becomes a new anchor).`);
+  status(`Tracked ${keys.length} point(s) over ${done} frames. Check them by stepping frames; fix a wrong one by clicking where it should be: the frames around it follow.`);
 }
 let tracking=false;
 $('trackBtn').onclick=()=>tracking?(tracking=false):trackForward();
@@ -662,14 +669,18 @@ async function aiTrack(){
   if(aiRun){aiRun.stop();return} if(!L||tracking||!env.pose||!vid.duration) return;
   const L0=L, n=frameOf(vid.duration); vid.pause(); aiBtns.forEach(b=>b.textContent=env.t('Stop AI tracking'));
   status('Getting the AI body tracker ready…');
-  aiRun=env.pose({vid,fps,frames:n,onProgress:(d,t)=>status(`AI tracking… ${d} / ${t} frames`)});
+  const engine=$('aiEngine').value; try{localStorage.setItem('racm_ai_engine',engine)}catch{}
+  aiRun=env.pose({vid,fps,frames:n,engine,onReady:()=>status('AI tracking in the background: the screen stays usable.'),onProgress:(d,t)=>status(`AI tracking… ${d} / ${t} frames`)});
   try{ const out=await aiRun.done; if(L===L0){ const pts=ensurePts(); let k=0;
       for(const key in out){ const m=(pts[key] ||= {}); k++; for(const f in out[key]) if(!(m[f]&&m[f][2]==='m')) m[f]=out[key][f] }
       dirty=true; status(`AI tracked ${k} body points. Step through the frames to check; click a point to correct it.`) } }
-  catch(e){ console.warn(e); status('AI tracking could not start. The first time it needs the internet to fetch the model.') }
+  catch(e){ console.warn(e); status(location.protocol==='file:'?'AI tracking needs the installed app or the website, not this offline copy.':'AI tracking could not start. The first time it needs the internet to fetch the model.') }
   aiRun=null; aiBtns.forEach(b=>b.textContent=env.t('AI track body')); renderPoints(); drawOverlay();
 }
 aiBtns.forEach(b=>b.onclick=aiTrack);
+// Which body tracker: one choice, shown in the points tray (phone) and the side panel; remembered on this device.
+const aiEngines=[$('aiEngine'),$('aiEngine2')]; let savedEngine='mediapipe'; try{savedEngine=localStorage.getItem('racm_ai_engine')||savedEngine}catch{}
+aiEngines.forEach(s=>{ s.value=savedEngine; s.onchange=()=>aiEngines.forEach(o=>o.value=s.value) });
 
 /* ---------- keys ---------- */
 addEventListener('keydown',e=>{

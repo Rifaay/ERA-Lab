@@ -38,3 +38,6 @@ racm-backup-*.json
 .env.*
 !.env.example
 supabase/.temp/
+
+# Tracking engines copied from node_modules by scripts/copy-vendor.mjs
+public/vendor/

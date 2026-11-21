@@ -1,11 +1,12 @@
-// AI body tracking for the Labeller. Google's MediaPipe Pose Landmarker (free, Apache-2.0) finds 33 body points on
-// every frame, on this device: the video never leaves it. Only the model is downloaded, once (about 9 MB), then the
-// browser keeps it. The points come back in the Labeller's own form, so placing, correcting and saving work as before.
+// AI body tracking for the Labeller, on this device: the video never leaves it. The work runs in a background thread
+// (pose.worker.js) on exact frames read one after another, so the screen stays smooth. Two free engines:
+// "mediapipe", Google's Pose Landmarker heavy model (Apache-2.0, about 30 MB, fetched from Google once), and "rtm",
+// OpenMMLab's RTMPose-m (Apache-2.0, 54 MB, served with the app), sharper on elbows and wrists but without a hand point.
+// The points come back in the Labeller's own form, so placing, correcting and saving work as before.
+import { frames as readFrames } from "./frames.js";
 
-const VER = "0.10.14";
-const CDN = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}`;
-const MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
-const MIN_VIS = 0.5; // a point the model can't see well is left out; the Labeller fills short gaps between frames
+const SURE = 0.5, UNSURE = 0.2; // sure points are drawn solid; unsure ones are kept but faded; below that, left out
+const GAP = 6; // a point missing for up to this many frames is filled in between its neighbours (faded)
 
 // MediaPipe's numbers for the person's left side; the right side is the next number.
 const LEFT = { shoulder: 11, elbow: 13, wrist: 15, hand: 19, hip: 23, knee: 25, ankle: 27 };
@@ -57,44 +58,60 @@ export function toPoints(frames, rate, full = true) {
   const series = { head: frames.map((p) => { // the ear the camera sees best: the Labeller's head mark is the temple
     if (!p) return null;
     const e = EARS.map((i) => p[i]).sort((a, b) => (b.visibility ?? 1) - (a.visibility ?? 1))[0];
-    return (e.visibility ?? 1) >= MIN_VIS ? e : null;
+    return (e.visibility ?? 1) >= UNSURE ? e : null;
   }) };
-  for (const [k, i] of Object.entries(map)) series[k] = frames.map((p) => (p && (p[i].visibility ?? 1) >= MIN_VIS ? p[i] : null));
+  for (const [k, i] of Object.entries(map)) series[k] = frames.map((p) => (p && (p[i].visibility ?? 1) >= UNSURE ? p[i] : null));
   const out = {};
-  for (const [k, list] of Object.entries(series)) {
-    const xs = smooth(list.map((q) => q?.x ?? null), rate), ys = smooth(list.map((q) => q?.y ?? null), rate), m = {};
-    list.forEach((q, f) => { if (q) m[f] = [+xs[f].toFixed(5), +ys[f].toFixed(5), "t"]; });
+  for (const [k, raw] of Object.entries(series)) {
+    const list = fillGaps(raw), xs = smooth(list.map((q) => q?.x ?? null), rate), ys = smooth(list.map((q) => q?.y ?? null), rate), m = {};
+    list.forEach((q, f) => { if (q) m[f] = [+xs[f].toFixed(5), +ys[f].toFixed(5), q.filled || (q.visibility ?? 1) < SURE ? "i" : "t"]; });
     if (Object.keys(m).length) out[k] = m;
   }
   return out;
 }
 
-let model = null, clock = 0; // one model for the whole visit; VIDEO mode needs times that only go up
-const load = async () => {
-  if (model) return model;
-  const { FilesetResolver, PoseLandmarker } = await import(/* @vite-ignore */ `${CDN}/vision_bundle.mjs`);
-  const files = await FilesetResolver.forVisionTasks(`${CDN}/wasm`);
-  const make = (delegate) => PoseLandmarker.createFromOptions(files, {
-    baseOptions: { modelAssetPath: MODEL, delegate }, runningMode: "VIDEO", numPoses: 1,
-    minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
-  });
-  model = await make("GPU").catch(() => make("CPU")); // a phone or PC without WebGL falls back to the processor
-  return model;
-};
+// Short holes (a point hidden behind the bow for a few frames) are filled on the line between their neighbours.
+export function fillGaps(list, max = GAP) {
+  const out = [...list];
+  let last = -1;
+  for (let i = 0; i < list.length; i++) {
+    if (!list[i]) continue;
+    if (last >= 0 && i - last > 1 && i - last - 1 <= max) {
+      const a = list[last], b = list[i];
+      for (let g = last + 1; g < i; g++) { const t = (g - last) / (i - last); out[g] = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, filled: true }; }
+    }
+    last = i;
+  }
+  return out;
+}
 
-// Tracks the whole clip, frame by frame. Returns { stop(), done: Promise<points> }.
-export function trackPose({ vid, fps, frames, full = true, onProgress }) {
-  let stopped = false;
+// Tracks the whole clip. Returns { stop(), done: Promise<points> }. Two frames are in flight at once: the next one
+// is being read while the worker reads the body in this one.
+export function trackPose({ vid, fps, frames, full = true, engine = "mediapipe", onProgress, onReady }) {
+  const ctl = { stopped: false };
+  let worker = null;
   const done = (async () => {
-    const lm = await load(), seen = [];
-    const seek = (t) => new Promise((r) => { vid.addEventListener("seeked", r, { once: true }); vid.currentTime = t; });
-    for (let f = 0; f < frames && !stopped; f++) {
-      await seek((f + 0.5) / fps);
-      clock = Math.max(clock + 1, performance.now());
-      seen.push(lm.detectForVideo(vid, clock).landmarks?.[0] || null);
+    worker = new Worker(new URL("./pose.worker.js", import.meta.url), { type: "module" });
+    const waiting = new Map(), seen = Array(frames).fill(null);
+    let ready, failed;
+    const started = new Promise((res, rej) => { ready = res; failed = rej; });
+    worker.onmessage = ({ data: m }) => {
+      if (m.type === "ready") ready();
+      else if (m.type === "error") { failed(new Error(m.message)); for (const w of waiting.values()) w.rej(new Error(m.message)); }
+      else if (m.type === "pose") { seen[m.f] = m.pts && m.pts.map((p) => ({ x: p.x, y: p.y, visibility: p.s })); waiting.get(m.f)?.res(); waiting.delete(m.f); }
+    };
+    worker.postMessage({ type: "init", engine, base: new URL("./", document.baseURI).href });
+    await started;
+    onReady?.();
+    const pending = [];
+    for await (const { f, bmp } of readFrames(vid, fps, 0, frames, ctl)) {
+      pending.push(new Promise((res, rej) => waiting.set(f, { res, rej })));
+      worker.postMessage({ type: "frame", f, bmp }, [bmp]);
+      if (pending.length >= 2) await pending.shift();
       if (f % 5 === 0) onProgress?.(f, frames);
     }
+    await Promise.all(pending);
     return toPoints(seen, fps, full);
-  })();
-  return { stop: () => { stopped = true; }, done };
+  })().finally(() => worker?.terminate());
+  return { stop: () => { ctl.stopped = true; }, done };
 }
