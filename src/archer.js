@@ -57,6 +57,9 @@ export const uploadSessions = async (live, sessions) => {
 };
 // Whether the coach has Live scores open right now (the server decides, by its own clock).
 export const coachWatching = async () => Boolean(await rest("rpc/coach_watching", { method: "POST", body: {} }));
+// Quick notes (migrations/0008). Coach: send one to the archer linked to this profile. Archer: the newest one after `after`.
+export const sendNote = (athleteId, note) => rest("rpc/send_note", { method: "POST", body: { athlete: athleteId, note } });
+export const latestNote = async (after = 0) => (await rest(`coach_notes?select=id,body,created_at&id=gt.${Number(after) || 0}&order=id.desc&limit=1`))?.[0] || null;
 export const waiting = (live, sessions) => {
   const link = myLink(), sent = get(SENT, {});
   if (!link) return 0;

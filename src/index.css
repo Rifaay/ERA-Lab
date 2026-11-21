@@ -405,6 +405,11 @@ button.row:hover .row-name { color: var(--blue); }
 .send-state.wait { color: var(--yellow); }
 .watching { display: inline-flex; color: var(--yellow); animation: live-pulse 2.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .watching, .live-dot { animation: none; } }
+/* The coach's quick note on the archer's screen: top right in English, top left in Arabic (the reading end of the bar) */
+.coach-note { position: fixed; top: calc(env(safe-area-inset-top) + 64px); inset-inline-end: 12px; z-index: 60; max-width: min(300px, calc(100vw - 24px)); display: grid; gap: 2px; padding: 10px 14px; background: var(--yellow); color: var(--black); border: 0; border-radius: var(--r-md); box-shadow: 0 8px 24px rgba(0, 0, 0, .3); font: 700 15px/1.35 var(--font-body); text-align: start; cursor: pointer; animation: pop var(--t-s) var(--ease-out) both; }
+.coach-note small { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
+.note-box .note-row { display: flex; gap: 8px; }
+.note-box .note-row input { flex: 1; min-width: 0; }
 
 /* Coach: invite code and live scores */
 .link-card { margin-top: 20px; display: grid; gap: 8px; justify-items: start; }

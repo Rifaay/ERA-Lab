@@ -238,8 +238,12 @@ export default function Range({ tr, lang, selectedId }) {
   if (live && live.athlete_id !== selectedId) return (
     <div className="screen" key={step}>
       <div className="card">
-        <p style={{ marginBottom: 10 }}>{fill(r.otherAthlete, { name: live.athlete })}</p>
-        <button className="btn-primary" onClick={() => setSelectedId(live.athlete_id)}>{r.resume}</button>
+        <p style={{ marginBottom: 10 }}>{archer ? r.otherOnPhone : fill(r.otherAthlete, { name: live.athlete })}</p>
+        <div className="btn-row">
+          {/* The archer's app has one archer: an open session left on this phone (from before it was linked) becomes theirs */}
+          <button className="btn-primary" onClick={() => archer ? change((s) => { s.athlete_id = selectedId; s.athlete = athlete?.name || s.athlete; }) : setSelectedId(live.athlete_id)}>{archer ? r.keepMine : r.resume}</button>
+          <button className="btn-ghost danger" onClick={discard}>{r.discard}</button>
+        </div>
       </div>
     </div>
   );

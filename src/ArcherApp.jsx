@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AppContext } from "./context";
 import { getAthletes, saveAthlete, getRange, getSessions } from "./storage";
 import { account } from "./sync";
-import { myLink, uploadSessions, waiting, leaveCoach, coachWatching } from "./archer";
+import { myLink, uploadSessions, waiting, leaveCoach, coachWatching, latestNote } from "./archer";
 import Range from "./screens/Range";
 import Stats from "./screens/Stats";
 import ArcherPlan from "./screens/ArcherPlan";
@@ -24,15 +24,31 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
   const [left, setLeft] = useState(0); // sessions still to send
   const [, setTick] = useState(0);
   const [watched, setWatched] = useState(false); // the coach has Live scores open
+  const [note, setNote] = useState(null); // the coach's newest quick note, until tapped away or 20 s have passed
 
+  // Asks every 20 s; every 5 s while the coach is watching, when a note is likely. A note that arrives while the app is
+  // open always shows. One already waiting when it opens shows only if under 10 minutes old by this phone's clock: the
+  // only place the phone's clock counts, so a phone set to the wrong time still gets every new note.
   useEffect(() => {
-    let live = true;
-    const ask = () => document.visibilityState === "visible" && navigator.onLine !== false &&
-      coachWatching().then((w) => live && setWatched(w)).catch(() => live && setWatched(false));
+    let live = true, timer, on = false, first = true;
+    const seen = () => Number(localStorage.getItem("racm_note_seen")) || 0;
+    const ask = async () => {
+      if (document.visibilityState === "visible" && navigator.onLine !== false) {
+        on = await coachWatching().catch(() => false);
+        const n = await latestNote(seen()).catch(() => undefined); // undefined: no answer (offline)
+        if (live) setWatched(on);
+        if (live && n) {
+          localStorage.setItem("racm_note_seen", String(n.id));
+          if (!first || Date.now() - Date.parse(n.created_at) < 10 * 60_000) setNote(n);
+        }
+        if (n !== undefined) first = false;
+      }
+      if (live) timer = setTimeout(ask, on ? 5000 : 20000);
+    };
     ask();
-    const t = setInterval(ask, 20000);
-    return () => { live = false; clearInterval(t); };
+    return () => { live = false; clearTimeout(timer); };
   }, []);
+  useEffect(() => { if (!note) return; const t = setTimeout(() => setNote(null), 20000); return () => clearTimeout(t); }, [note]);
 
   // Range and Stats read the archer from storage like the coach's app does: keep one profile, the archer's own.
   useState(() => { if (!getAthletes().some((a) => a.id === link.athlete_id)) saveAthlete({ id: link.athlete_id, name: link.name }); });
@@ -72,6 +88,11 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
           <span className={`send-state ${left ? "wait" : ""}`} role="status">{left ? w.waiting.replace("{n}", left) : w.sent}</span>
           <button className="lang-toggle" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={tr.shell.language}>{tr.langToggle}</button>
         </header>
+        {note && (
+          <button key={note.id} className="coach-note" role="status" aria-label={`${tr.live.fromCoach}: ${note.body}`} onClick={() => setNote(null)}>
+            <small>{tr.live.fromCoach}</small>{note.body}
+          </button>
+        )}
         <div className="app-body">
           <div className="main-area">
             {tab === "range" && <Range tr={tr} lang={lang} selectedId={link.athlete_id} />}
