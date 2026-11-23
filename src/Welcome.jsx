@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import Account from "./screens/Account";
+import Legal from "./screens/Legal";
+import Icon from "./icons";
 import Logo from "./Logo";
 import { configured, account, signedIn, signOut, role, resetting } from "./sync";
 import { turnOff } from "./push";
@@ -16,6 +18,7 @@ export default function Welcome({ tr, lang, setLang, onDone }) {
   const [code, setCode] = useState(invited);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [legal, setLegal] = useState(false); // reading the policy from the sign-up form, which stays filled in underneath
   const finish = (r, local = false) => { setUi({ role: r, local, invite: "" }); onDone(); };
 
   // A signed-in archer still needs their coach's code, unless this account is linked already (a second phone).
@@ -41,12 +44,16 @@ export default function Welcome({ tr, lang, setLang, onDone }) {
         <span className="brand"><span className="logo-tile"><Logo size={36} /></span><span className="wordmark">ERA LAB</span></span>
         <button className="lang-toggle" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={tr.shell.language}>{tr.langToggle}</button>
       </header>
-      <div className="welcome-body">
+      {legal && <div className="welcome-body">
+        <div className="backbar"><button className="btn-ghost small" onClick={() => setLegal(false)}><Icon name="prev" size={16} />{tr.sync.back}</button></div>
+        <Legal lang={lang} />
+      </div>}
+      <div className="welcome-body" hidden={legal}>
         {!signedArcher && <>
           <h1>{w.title}</h1>
           {invited && <p className="acct-ok">✓ {w.invited}</p>}
           {configured
-            ? <div className="card"><Account tr={tr} onChange={changed} invited={Boolean(invited)} /></div>
+            ? <div className="card"><Account tr={tr} onChange={changed} invited={Boolean(invited)} onLegal={() => { setLegal(true); scrollTo(0, 0); }} /></div>
             : <p className="muted">{w.noCloud}</p>}
           {!account() && <div className="welcome-local">
             <button className="btn-ghost wide-btn" onClick={() => finish("coach", true)}>{configured ? w.skip : w.open}</button>

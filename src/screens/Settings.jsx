@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Icon from "../icons";
 import Account from "./Account";
 import Notifications from "./Notifications";
 import { LockSettings } from "../DeviceLock";
@@ -17,6 +18,7 @@ export default function Settings({ tr, onDataCleared, onGo }) {
   const [errorCount, setErrorCount] = useState(() => getErrors().length);
   const daysSinceBackup = () => { const t = localStorage.getItem("racm_last_backup"); return t ? Math.floor((Date.now() - new Date(t)) / 864e5) : null; };
   const [backupDays, setBackupDays] = useState(daysSinceBackup);
+  const [open, setOpen] = useState(null); // null: the list of settings; otherwise the one screen open
 
   const [, setTick] = useState(0); // the status chips re-read the lock and sign-in after a change below
   const changed = () => setTick((n) => n + 1);
@@ -54,8 +56,10 @@ export default function Settings({ tr, onDataCleared, onGo }) {
 
   return (
     <div className="screen">
-      <h2>{s.title}</h2>
+      {open && <button className="btn-ghost small pz-back" onClick={() => setOpen(null)}><Icon name="prev" size={16} />{s.title}</button>}
+      <h2>{open ? s[open] : s.title}</h2>
 
+      {!open && <>
       <div className="card coach-head">
         <span className="coach-avatar" aria-hidden="true">{initials || "?"}</span>
         <div>
@@ -67,9 +71,21 @@ export default function Settings({ tr, onDataCleared, onGo }) {
           </div>
         </div>
       </div>
+      <div className="list settings-list">
+        {[["profile", settings.coachName ? [settings.coachName, settings.club].filter(Boolean).join(" · ") : s.noName],
+          ["security", [hasPin() ? s.lockOn : s.lockOff, configured && (signedIn() ? s.cloudOn : s.cloudOff)].filter(Boolean).join(" · ")],
+          ["backup", backupDays == null ? s.noBackupShort : s.lastBackup.replace("{days}", backupDays)],
+          ["errors", errorCount ? s.errorsSome.replace("{n}", errorCount) : s.errorsNone],
+          ["legal", s.legalOpen], ["storage", `${usageKB} ${s.kb} ${s.storageUsed}`], ["danger", s.dangerSub]].map(([k, line]) => (
+          <button key={k} className="row" onClick={() => (k === "legal" ? onGo("legal") : setOpen(k))}>
+            <span><span className="row-name" style={{ display: "block" }}>{s[k]}</span><span className="row-line">{line}</span></span>
+            <Icon name="next" size={18} />
+          </button>
+        ))}
+      </div>
+      </>}
 
-      <div className="card settings-section">
-        <div className="settings-label">{s.profile}</div>
+      {open === "profile" && <div className="card settings-section">
         <div className="form">
           <label>{s.coachName}
             <input value={settings.coachName || ""} autoComplete="name" onChange={(e) => set("coachName", e.target.value)} />
@@ -80,10 +96,9 @@ export default function Settings({ tr, onDataCleared, onGo }) {
           <button className="btn-primary small" style={{ alignSelf: "flex-start" }} onClick={handleSave}>{s.save}</button>
           {saved && <p className="success-msg">{s.saved}</p>}
         </div>
-      </div>
+      </div>}
 
-      <div className="card settings-section">
-        <div className="settings-label">{s.security}</div>
+      {open === "security" && <div className="card settings-section">
         <h3 className="settings-sub">{tr.lock.title}</h3>
         <LockSettings tr={tr} onChange={changed} />
         {configured && <>
@@ -91,12 +106,9 @@ export default function Settings({ tr, onDataCleared, onGo }) {
           <Account tr={tr} as="coach" onChange={changed} />
           {signedIn() && <><h3 className="settings-sub">{tr.push.title}</h3><Notifications tr={tr} /></>}
         </>}
-      </div>
+      </div>}
 
-      <h3 className="settings-group">{s.data}</h3>
-      {/* Backup / Restore */}
-      <div className="card settings-section">
-        <div className="settings-label">{s.backup}</div>
+      {open === "backup" && <div className="card settings-section">
         <div className="btn-row">
           <button className="btn-ghost" onClick={() => { exportBackup(); setBackupDays(daysSinceBackup()); }}>{s.backupBtn}</button>
           <label className="btn-ghost" style={{ cursor: "pointer" }}>
@@ -109,26 +121,18 @@ export default function Settings({ tr, onDataCleared, onGo }) {
         <p className={backupDays == null || backupDays > 7 ? "error-msg" : "muted"} style={{ marginTop: 8 }}>
           {backupDays == null ? s.noBackup : s.lastBackup.replace("{days}", backupDays)}
         </p>
-      </div>
+      </div>}
 
       {/* Problems: the device's own error log, no outside service */}
-      <div className="card settings-section">
-        <div className="settings-label">{s.errors}</div>
+      {open === "errors" && <div className="card settings-section">
         <p className="muted" style={{ marginBottom: 10 }}>{errorCount ? s.errorsSome.replace("{n}", errorCount) : s.errorsNone}</p>
         {errorCount > 0 && <div className="btn-row">
           <button className="btn-ghost small" onClick={downloadErrors}>{s.errorsDownload}</button>
           <button className="btn-ghost small" onClick={() => { clearErrors(); setErrorCount(0); }}>{s.errorsClear}</button>
         </div>}
-      </div>
+      </div>}
 
-      <div className="card settings-section">
-        <div className="settings-label">{s.legal}</div>
-        <button className="btn-ghost small" onClick={() => onGo("legal")}>{s.legalOpen}</button>
-      </div>
-
-      {/* Storage */}
-      <div className="card settings-section">
-        <div className="settings-label">{s.storage}</div>
+      {open === "storage" && <div className="card settings-section">
         <div className="storage-bar-wrap">
           <div className="storage-info">
             <span>{usageKB} {s.kb} {s.storageUsed}</span>
@@ -138,11 +142,9 @@ export default function Settings({ tr, onDataCleared, onGo }) {
             <div className="progress-fill" style={{ transform: `scaleX(${Math.min(100, pct) / 100})`, background: pct > 80 ? "var(--r)" : "var(--p)" }} />
           </div>
         </div>
-      </div>
+      </div>}
 
-      {/* Danger zone */}
-      <div className="card settings-section" style={{ borderColor: "var(--rl)" }}>
-        <div className="settings-label" style={{ color: "var(--r)" }}>{s.danger}</div>
+      {open === "danger" && <div className="card settings-section" style={{ borderColor: "var(--rl)" }}>
         <p className="muted" style={{ marginBottom: 10 }}>{s.confirmClear}</p>
         <div className="form-row" style={{ alignItems: "flex-end" }}>
           <label style={{ flex: 2 }}>
@@ -160,7 +162,8 @@ export default function Settings({ tr, onDataCleared, onGo }) {
             onClick={handleClearAll}
           >{s.clearAll}</button>
         </div>
-      </div>
+        {configured && <p className="muted" style={{ marginTop: 10 }}>{s.deleteAccountWhere}</p>}
+      </div>}
     </div>
   );
 }

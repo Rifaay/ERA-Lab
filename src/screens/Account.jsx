@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  account, signedIn, resetting, role, loadRole, passwordProblem, signIn, signUp, resendSignup, sendReset, setPassword, verifyEmailCode,
+  deleteAccount, account, signedIn, resetting, role, loadRole, passwordProblem, signIn, signUp, resendSignup, sendReset, setPassword, verifyEmailCode,
   factors, enrollApp, verifyApp, verifyAny, signOut, syncNow, deleteCloudCopy, lastSync, conflicts,
 } from "../sync";
 import { digits } from "../lock";
@@ -12,7 +12,7 @@ import { setUi } from "../ui";
 // Coach: email + password, then a code from an authenticator app; until both are done the database answers nothing
 // (migrations/0003) and the app doesn't sync. Archer: email + password only; an archer's account can reach nothing
 // but the sessions their own phone uploads (migrations/0004).
-export default function Account({ tr, as, onChange, invited = false }) {
+export default function Account({ tr, as, onChange, invited = false, onLegal }) {
   const s = tr.sync;
   const [pick, setPick] = useState(invited ? "archer" : "coach"); // creating an account on the welcome page
   const coach = (as || (account() ? role() : pick)) === "coach";
@@ -31,6 +31,8 @@ export default function Account({ tr, as, onChange, invited = false }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [agree, setAgree] = useState(false); // sign-up: privacy policy and terms
+  const [adult, setAdult] = useState(false); // sign-up: 18 or older
   const [miss, setMiss] = useState(0); // wrong email codes: each one shakes the field
   useEffect(() => { // the session was ended from another device
     const gone = () => { setApp(null); setTick((n) => n + 1); onChange?.(); };
@@ -178,7 +180,11 @@ export default function Account({ tr, as, onChange, invited = false }) {
           <input type="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck="false" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         {mode !== "reset" && pwField(mode === "up" ? s.newPassword : s.password, mode === "up" ? "new-password" : "current-password")}
-        <button className="btn-primary wide-btn" disabled={busy || !email.includes("@") || (mode !== "reset" && !pw)}>
+        {mode === "up" && <>
+          <label className="check-row"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} required /><span>{s.agree}{onLegal && <> <button type="button" className="link-btn" onClick={onLegal}>{s.readPolicy}</button></>}</span></label>
+          <label className="check-row"><input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} required /><span>{s.adult}</span></label>
+        </>}
+        <button className="btn-primary wide-btn" disabled={busy || !email.includes("@") || (mode !== "reset" && !pw) || (mode === "up" && !(agree && adult))}>
           {mode === "in" ? s.signIn : mode === "up" ? s.signUp : s.sendReset}
         </button>
         {mode === "in" && <button type="button" className="link-btn" onClick={() => { setMode("reset"); setErr(""); }}>{s.forgot}</button>}
@@ -253,10 +259,12 @@ export default function Account({ tr, as, onChange, invited = false }) {
         </form>
       )}
       {msgs}
-      {coach && <div className="btn-row acct-danger">
+      <div className="btn-row acct-danger">
+        {coach && <button className="btn-ghost small danger" disabled={busy}
+          onClick={() => window.confirm(s.confirmDelete) && run(async () => { await deleteCloudCopy(); await out(false); setMsg(s.deleted); })}>{s.deleteCloud}</button>}
         <button className="btn-ghost small danger" disabled={busy}
-          onClick={() => window.confirm(s.confirmDelete) && run(async () => { await deleteCloudCopy(); await out(false); setMsg(s.deleted); })}>{s.deleteCloud}</button>
-      </div>}
+          onClick={() => window.confirm(coach ? s.confirmDeleteAccount : s.confirmDeleteAccountArcher) && run(async () => { await turnOff(); await deleteAccount(); setApp(null); setBackup(null); setCode(""); setPw(""); setChanging(false); refresh(); setMsg(s.accountDeleted); })}>{s.deleteAccount}</button>
+      </div>
     </div>
   );
 }

@@ -31,7 +31,7 @@ await db.exec(`
   create function net.http_post(url text, headers jsonb, body jsonb) returns bigint language sql as $$ insert into net.calls values (url, headers, body); select 1::bigint $$;
   create schema cron; create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ select 1::bigint $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql", "0009_end_session.sql", "0010_unlinked_sessions.sql"])
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql", "0009_end_session.sql", "0010_unlinked_sessions.sql", "0011_delete_account.sql"])
   await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8").replace(/^create extension .*$/gm, ""));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
@@ -316,4 +316,26 @@ test("only the archer's own coach ends a session; the archer's phone sees it end
   assert.equal((await as(R, "delete from archer_sessions where session_id = 's1'", [], "aal1")).affectedRows, 1, "the archer may delete it");
   assert.equal((await as(A, "delete from archer_sessions where session_id = 's1'")).affectedRows, 1, "so may the coach");
   assert.equal((await as(B, "delete from archer_sessions where session_id = 's1'")).affectedRows, 0, "another coach may not");
+});
+
+test("delete my account: a coach needs both steps, an archer one; the login and everything tied to it go", async () => {
+  await invite(); await link();
+  await db.query(`insert into archer_sessions (archer_id, session_id, coach_id, athlete_id, data) values ($1, 's1', $2, 'a1', '{"ends":[]}')`, [R, A]);
+  const del = async (who, aal) => { // kept, not rolled back
+    await db.exec("begin");
+    await db.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: who, aal })]);
+    await db.exec("set local role authenticated");
+    const r = await db.query("select public.delete_my_account() as ok");
+    await db.exec("commit");
+    return r.rows[0].ok;
+  };
+  assert.equal(await del(A, "aal1"), false, "a coach without the second step can't");
+  assert.equal(await del(R, "aal1"), true, "the archer deletes their own account");
+  const left = async (sql) => (await db.query(sql)).rows.length;
+  assert.equal(await left(`select 1 from auth.users where id = '${R}'`), 0, "the login is gone");
+  assert.equal(await left("select 1 from archer_sessions"), 0, "with their sessions");
+  assert.equal(await left(`select 1 from invites where claimed_by = '${R}'`), 0, "and the link to the coach");
+  assert.equal(await left(`select 1 from auth.users where id = '${A}'`), 1, "the coach is untouched");
+  await assert.rejects(as(null, "select public.delete_my_account()"), /permission denied/);
+  await db.query(`insert into auth.users values ($1, '{"role":"archer"}') on conflict do nothing`, [R]); // back for later tests
 });

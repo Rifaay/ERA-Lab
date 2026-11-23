@@ -6,6 +6,7 @@
 // children's data on a server until guardian consent is settled.
 import { readKind, writeKind } from "./storage.js";
 import { qrImage } from "./qr.js";
+import { UPDATED } from "./legal.js";
 
 const env = import.meta.env || {};
 const URL_ = (env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
@@ -127,7 +128,7 @@ export const passwordProblem = (pw, email = "") => {
 // "exists": the address already has an account. Supabase then answers as if it worked but sends nothing; the sign that
 // gives it away is a user with no identities.
 export const signUp = async (email, password, as = "coach", f = fetch) => {
-  const r = await call(`/auth/v1/signup?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, password, data: { role: as } } }, f);
+  const r = await call(`/auth/v1/signup?redirect_to=${encodeURIComponent(here())}`, { method: "POST", body: { email, password, data: { role: as, consent_at: new Date().toISOString(), policy: UPDATED } } }, f); // sent only once both sign-up boxes are ticked
   if (r?.access_token) { keep(r); return false; }
   if (Array.isArray(r?.identities) && r.identities.length === 0) return "exists";
   return true;
@@ -216,6 +217,13 @@ export const awayTooLong = (now = Date.now()) => {
   return Boolean(account()) && seen > 0 && now - seen > AWAY_MS; // no time noted yet (first open after this update): stay in
 };
 
+// Erases this login and, through the database's cascades (migrations/0011), everything the cloud keeps for it.
+// What is on this device stays: a coach's archers and sessions, an archer's own plotted ends.
+export const deleteAccount = async () => {
+  if (!(await call("/rest/v1/rpc/delete_my_account", { method: "POST", body: {}, token: await token() }))) throw Object.assign(new Error("not deleted"), { code: "not_deleted" });
+  localStorage.removeItem(AUTH); localStorage.removeItem(STATE);
+  globalThis.dispatchEvent?.(new Event("racm-signed-out"));
+};
 // Erases this coach's whole cloud copy: their records, their archers' uploaded sessions, invites and shared plans, and
 // this account's phone subscriptions. The device keeps its data. (Quick notes clear themselves after two days.)
 export const deleteCloudCopy = async () => {
