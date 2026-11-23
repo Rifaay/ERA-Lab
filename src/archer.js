@@ -29,7 +29,12 @@ export const loadLink = async () => {
   if (rows[0]) put(LINK, rows[0]); else localStorage.removeItem(LINK);
   return rows[0] || null;
 };
-export const leaveCoach = async () => { await rest(`invites?claimed_by=eq.${userId()}`, { method: "DELETE" }); localStorage.removeItem(LINK); localStorage.removeItem(PLANS); };
+// Leaving takes the archer's uploaded sessions with them: deleted first, while the link still says whose they are.
+export const leaveCoach = async () => {
+  await rest(`archer_sessions?archer_id=eq.${userId()}`, { method: "DELETE" });
+  await rest(`invites?claimed_by=eq.${userId()}`, { method: "DELETE" });
+  localStorage.removeItem(LINK); localStorage.removeItem(PLANS);
+};
 
 // Season plans the coach sent this archer, newest year first. Kept on the phone for the range with no signal.
 export const sharedPlans = () => get(PLANS, []);

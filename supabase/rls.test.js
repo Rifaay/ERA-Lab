@@ -31,7 +31,7 @@ await db.exec(`
   create function net.http_post(url text, headers jsonb, body jsonb) returns bigint language sql as $$ insert into net.calls values (url, headers, body); select 1::bigint $$;
   create schema cron; create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ select 1::bigint $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql", "0009_end_session.sql"])
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql", "0009_end_session.sql", "0010_unlinked_sessions.sql"])
   await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8").replace(/^create extension .*$/gm, ""));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
@@ -156,6 +156,15 @@ test("a linked archer uploads only for their own coach and profile; only that co
   assert.equal((await as(R2, "select * from archer_sessions", [], "aal1")).rows.length, 0);
   assert.equal((await as(A, `update archer_sessions set data = '{"x":1}'`)).affectedRows, 0, "the coach can't rewrite an archer's session");
   await assert.rejects(as(null, "select * from archer_sessions"), /permission denied/);
+});
+
+test("an archer who leaves takes their sessions: the coach can no longer read them", async () => {
+  await invite(); await link();
+  await db.query(`insert into archer_sessions (archer_id, session_id, coach_id, athlete_id, data) values ($1, 's1', $2, 'a1', '{"ends":[]}')`, [R, A]);
+  assert.equal((await as(A, "select * from archer_sessions")).rows.length, 1, "linked: the coach reads it");
+  await db.exec(`delete from invites where claimed_by = '${R}'`); // the archer leaves
+  assert.equal((await as(A, "select * from archer_sessions")).rows.length, 0, "left: gone from the coach's view");
+  assert.equal((await as(R, `delete from archer_sessions where archer_id = '${R}'`, [], "aal1")).affectedRows, 1, "and the archer can delete it");
 });
 
 test("when the coach removes the link, the archer can no longer upload", async () => {
