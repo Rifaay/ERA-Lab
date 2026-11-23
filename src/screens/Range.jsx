@@ -154,7 +154,7 @@ export default function Range({ tr, lang, selectedId }) {
   const [view, setView] = useState(() => Math.max(0, (getRange().live?.ends.length || 1) - 1));
   const [pick, setPick] = useState(null);
   const [pad, setPad] = useState(false);
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(null); // { text, at }: "at" gives each message its own key, so its fade-out restarts
   const [savedEntry, setSavedEntry] = useState(null);
   const noteTimer = useRef(0);
   const cardRef = useRef(null);
@@ -168,7 +168,7 @@ export default function Range({ tr, lang, selectedId }) {
     setPdfBusy(false);
   };
 
-  const say = (text) => { setNote(text); clearTimeout(noteTimer.current); noteTimer.current = setTimeout(() => setNote(""), 1800); };
+  const say = (text) => { setNote({ text, at: Date.now() }); clearTimeout(noteTimer.current); noteTimer.current = setTimeout(() => setNote(null), 1800); };
   const set = (k, v) => setSetup((f) => ({ ...f, [k]: v }));
   // Every change goes to storage at once: a refresh or a phone call must not cost the session.
   // Reads the stored session, not this render's copy: a clip can finish saving after newer arrows were plotted.
@@ -439,7 +439,7 @@ export default function Range({ tr, lang, selectedId }) {
       </div>
       <button className="btn-primary rg-wide" onClick={() => setStep("review")}>{r.finish}</button>
       <button className="btn-ghost danger rg-wide" onClick={discard}>{r.discard}</button>
-      {note && <div className="rg-toast" role="status">{note}</div>}
+      {note && <div key={note.at} className="rg-toast" role="status">{note.text}</div>}
     </div>
   );
 }

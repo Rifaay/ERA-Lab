@@ -6,6 +6,7 @@
 :root {
   --ease-out: cubic-bezier(.16, 1, .3, 1);   /* arriving: quick start, soft landing */
   --ease-in-out: cubic-bezier(.65, 0, .35, 1); /* changing in place */
+  --ease-in: cubic-bezier(.4, 0, 1, 1);      /* leaving: slow start, quick exit */
   --t-xs: 120ms;  /* presses, colour */
   --t-screen: 140ms; /* switching stage or screen: frequent, so barely there */
   --t-s: 280ms;   /* screens, small panels */
@@ -18,6 +19,7 @@
 @keyframes pop { from { opacity: 0; transform: scale(.92); } }
 @keyframes drop { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes fade { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
 @keyframes grow-x { from { transform: scaleX(0); } }
 
 /* Screens: a coach switches stages dozens of times a session, so a screen only fades in, quickly and all at once. */
@@ -32,9 +34,9 @@
 .clip-body > * { animation: rise-small var(--t-s) var(--ease-out) both; }
 .clip-body > :nth-child(2) { animation-delay: 30ms; }
 .clip-body > :nth-child(3) { animation-delay: 60ms; }
-.toast, .rg-toast { animation: rise var(--t-m) var(--ease-out) both; }
-
-.recorder, .quick, .picker, .clip-suggest, .rg-pending, .toast, .rg-toast { animation-delay: 0ms !important; }
+.toast { animation: rise var(--t-m) var(--ease-out) both; }
+/* The Range message lives 1.8 s (Range.jsx say): it rises in, then fades out over its last 200 ms instead of vanishing. */
+.rg-toast { animation: rise var(--t-m) var(--ease-out) both, fade-out 200ms var(--ease-in) 1600ms forwards; }
 
 /* A clip row's chevron turns instead of being swapped */
 .clip-row .icon-down { transition: transform var(--t-s) var(--ease-out); }
@@ -42,10 +44,12 @@
 [dir="rtl"] .clip-row[aria-expanded="false"] .icon-down { transform: rotate(90deg); }
 
 /* Presses: instant feedback under the finger */
-.btn-primary, .btn-ghost, .chip, .stage-btn, .subnav button, .st-kinds button, .clip-row, .cycle-row, .picker-row {
+.btn-primary, .btn-ghost, .chip, .stage-btn, .subnav button, .st-kinds button, .seg button, .tabs .tab, .clip-row, .cycle-row, .picker-row {
   transition: background-color var(--t-xs) var(--ease-out), color var(--t-xs) var(--ease-out), border-color var(--t-xs) var(--ease-out), transform var(--t-xs) var(--ease-out);
 }
-.chip:active, .st-kinds button:active, .subnav button:active, .btn-primary:active, .btn-ghost:active { transform: scale(.98); }
+.chip:active, .st-kinds button:active, .seg button:active, .tabs .tab:active, .subnav button:active, .btn-primary:active, .btn-ghost:active { transform: scale(.98); }
+/* A field's border turns blue on focus without a jump. */
+input, select, textarea { transition: border-color var(--t-xs) var(--ease-out); }
 .row { transition: background-color var(--t-xs) var(--ease-out); }
 .row:active { background-color: var(--g50); } /* a full-width row only darkens: scaling it would move its edges under the thumb */
 .stage-btn .icon, .stage-btn.go .disc { transition: transform var(--t-xs) var(--ease-out); }
@@ -78,5 +82,5 @@
   @keyframes pop { from { opacity: 0; } }
   @keyframes grow-x { from { opacity: 0; } }
   *, *::before, *::after { animation-delay: 0ms !important; scroll-behavior: auto !important; }
-  .st-move, .st-r, .clip-row .icon-down, .chip:active, .btn-primary:active, .btn-ghost:active, .row:active { transition-property: opacity, background-color, color, border-color !important; }
+  .st-move, .st-r, .clip-row .icon-down, .chip:active, .seg button:active, .tabs .tab:active, .btn-primary:active, .btn-ghost:active, .row:active { transition-property: opacity, background-color, color, border-color !important; }
 }
