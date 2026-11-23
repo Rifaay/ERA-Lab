@@ -1,5 +1,7 @@
 import { useMemo } from "react";
-import { getAthletes, getSessions, getAssessments, getGoals } from "../storage";
+import { getAthletes, getSessions, getAssessments, getGoals, getPlan } from "../storage";
+import { isoDay } from "../stats";
+import { dayFilled } from "../plan";
 import { roster } from "../insights";
 import Icon from "../icons";
 import EndStrip from "../EndStrip";
@@ -7,18 +9,21 @@ import EndStrip from "../EndStrip";
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 const one = (n) => n.toFixed(1), two = (n) => n.toFixed(2);
 
-// Home: who needs the coach this week, and why. Then everyone on track.
-export default function CoachDashboard({ tr, lang, tick, onOpen, onGo, onNew }) {
-  const h = tr.home;
-  const { need, onTrack, total } = useMemo(() => {
+// Today: who is shooting now, who needs the coach and why, and what is planned today. Everyone else is in Archers.
+export default function CoachDashboard({ tr, lang, tick, live = [], onOpen, onGo, onNew, onLive, onAll }) {
+  const h = tr.home, t = tr.today;
+  const { need, total } = useMemo(() => {
     const athletes = getAthletes();
     return { ...roster(athletes, { sessions: getSessions(), assessments: getAssessments(), goals: getGoals() }), total: athletes.length };
+  }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  const planned = useMemo(() => {
+    const iso = isoDay(new Date()), year = +iso.slice(0, 4);
+    return getAthletes().map((a) => ({ a, d: getPlan(a.id, year).days?.[iso] })).filter((x) => dayFilled(x.d));
   }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const today = new Date().toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
   const shortDate = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(locale, { day: "numeric", month: "short" }); };
-  const when = (days) => (days === 0 ? h.today : days === 1 ? h.yesterday : fill(h.daysAgo, { days }));
 
   if (!total) return (
     <div className="screen">
@@ -40,8 +45,6 @@ export default function CoachDashboard({ tr, lang, tick, onOpen, onGo, onNew }) 
     score:  [fill(h.whyScore, { from: two(r.from ?? 0), to: two(r.to ?? 0) }), "session"],
   })[r.kind];
 
-  const sessionLine = (f) => !f.last ? h.whyNone
-    : [when(f.lastDays), f.last.score ? `${f.last.score}${f.last.outOf ? ` / ${f.last.outOf}` : ""}` : null, +f.last.arrows ? fill(h.arrows, { n: f.last.arrows }) : null].filter(Boolean).join(" · ");
 
   return (
     <div className="screen flush">
@@ -51,6 +54,13 @@ export default function CoachDashboard({ tr, lang, tick, onOpen, onGo, onNew }) 
       </div>
 
       <div className="list">
+        {live.length > 0 && (
+          <button className="today-live" onClick={onLive}>
+            <span className="live-dot" />
+            <span className="grow"><b>{fill(t.shooting, { names: live.map((x) => x.athlete.name).join(", ") })}</b><small>{t.shootingSub}</small></span>
+            <Icon name="next" size={18} />
+          </button>
+        )}
         {need.length > 0 && <h3>{h.needs}</h3>}
         {need.map((f) => {
           const [text, to] = why(f.reasons[0]);
@@ -66,18 +76,18 @@ export default function CoachDashboard({ tr, lang, tick, onOpen, onGo, onNew }) 
           );
         })}
 
-        {onTrack.length > 0 && <h3>{h.onTrack}</h3>}
-        {onTrack.map((f) => (
-          <button key={f.athlete.id} className="row" onClick={() => onOpen(f.athlete.id)}>
+        <h3>{t.planned}</h3>
+        {planned.map(({ a, d }) => (
+          <button key={a.id} className="row" onClick={() => onGo(a.id, "planner")}>
             <span>
-              <span className="row-name" style={{ display: "block" }}>{f.athlete.name}</span>
-              <span className="row-line">{sessionLine(f)}</span>
+              <span className="row-name" style={{ display: "block" }}>{a.name}</span>
+              <span className="row-line">{[d.focus, +d.arrows ? fill(t.arrows, { n: d.arrows }) : ""].filter(Boolean).join(" · ") || d.note}</span>
             </span>
-            {f.avg != null
-              ? <span className={`row-fig ${f.trend === "down" ? "down" : ""}`}>{two(f.avg)}{f.trend && <Icon name={f.trend === "up" ? "up" : f.trend === "down" ? "fall" : "flat"} size={20} label={h[f.trend]} />}</span>
-              : <span className="row-line">{h.noScore}</span>}
+            <Icon name="next" size={18} />
           </button>
         ))}
+        {!planned.length && <p className="muted">{t.nothingPlanned}</p>}
+        <button className="btn-ghost" style={{ marginTop: 16 }} onClick={onAll}>{t.allArchers} · {total}</button>
       </div>
     </div>
   );

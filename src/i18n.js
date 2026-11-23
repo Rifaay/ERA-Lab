@@ -91,6 +91,7 @@ export const t = {
       range:     "Plot",
       live:      "Live scores",
       session:   "Sessions",
+      roster:    "Archers",
       rubric:    "Rubric",
       exercises: "Exercises",
       goals:     "Goals",
@@ -103,12 +104,20 @@ export const t = {
       settings:  "Settings",
       legal:     "Privacy and terms",
     },
-    stages: { home: "Home", plan: "Plan", review: "Video", range: "Range", progress: "Progress" },
+    stages: { today: "Today", archers: "Archers", range: "Range", plan: "Plan", review: "Video" },
     review: { leave: "This clip has labels you have not saved. Leave without saving?" },
     shell: {
       chooseArcher: "Choose archer", searchArchers: "Search archers", newArcher: "New archer", close: "Close",
       settings: "Coach profile", noArchers: "No archers yet.", pickFirst: "Choose an archer to continue",
-      backTo: { dashboard: "All archers", archer: "Back to archer", settings: "Coach profile" }, language: "Switch to Arabic",
+      backTo: { dashboard: "Today", roster: "All archers", archer: "Back to archer", settings: "Coach profile" }, hub: { archer: "Overview", session: "Sessions", rubric: "Assess", goals: "Goals" }, language: "Switch to Arabic",
+    },
+    roster: {
+      search: "Search archers", all: "All {n}", need: "Needs you {n}", linked: "Own app {n}", add: "Add an archer",
+      live: "shooting now", minor: "Under 18 · stays on this phone", none: "No archer matches.",
+    },
+    today: {
+      shooting: "Shooting now: {names}", shootingSub: "Live scores", planned: "Planned today", nothingPlanned: "Nothing planned for today.",
+      allArchers: "All archers", arrows: "{n} arrows",
     },
     home: {
       needOne: "1 archer needs you", needMany: "{n} archers need you", needNone: "Everyone is on track",
@@ -597,6 +606,7 @@ export const t = {
       range:     "التسجيل",
       live:      "النتائج المباشرة",
       session:   "الجلسات",
+      roster:    "الرماة",
       rubric:    "التقييم",
       exercises: "التمارين",
       goals:     "الأهداف",
@@ -609,12 +619,20 @@ export const t = {
       settings:  "الإعدادات",
       legal:     "الخصوصية والشروط",
     },
-    stages: { home: "الرئيسية", plan: "الخطة", review: "الفيديو", range: "الميدان", progress: "التقدّم" },
+    stages: { today: "اليوم", archers: "الرماة", range: "الميدان", plan: "الخطة", review: "الفيديو" },
     review: { leave: "لهذا المقطع علامات لم تُحفظ. هل تريد المغادرة دون حفظ؟" },
     shell: {
       chooseArcher: "اختر رامياً", searchArchers: "ابحث عن رامٍ", newArcher: "رامٍ جديد", close: "إغلاق",
       settings: "ملف المدرب", noArchers: "لا يوجد رماة بعد.", pickFirst: "اختر رامياً للمتابعة",
-      backTo: { dashboard: "كل الرماة", archer: "عودة إلى الرامي", settings: "ملف المدرب" }, language: "التحويل إلى الإنجليزية",
+      backTo: { dashboard: "اليوم", roster: "كل الرماة", archer: "عودة إلى الرامي", settings: "ملف المدرب" }, hub: { archer: "نظرة عامة", session: "الجلسات", rubric: "التقييم", goals: "الأهداف" }, language: "التحويل إلى الإنجليزية",
+    },
+    roster: {
+      search: "ابحث عن رامٍ", all: "الكل {n}", need: "يحتاجونك {n}", linked: "بتطبيقهم {n}", add: "أضف رامياً",
+      live: "يرمي الآن", minor: "أقل من ١٨ · يبقى على هذا الهاتف", none: "لا يوجد رامٍ مطابق.",
+    },
+    today: {
+      shooting: "يرمي الآن: {names}", shootingSub: "النتائج المباشرة", planned: "المخطط اليوم", nothingPlanned: "لا شيء مخطط لليوم.",
+      allArchers: "كل الرماة", arrows: "{n} سهماً",
     },
     home: {
       needOne: "رامٍ واحد يحتاجك", needMany: "{n} رماة يحتاجونك", needNone: "الجميع على المسار",

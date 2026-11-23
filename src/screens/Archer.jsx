@@ -55,7 +55,6 @@ export default function Archer({ tr, lang, selectedId, onGo, onLink }) {
   return (
     <div className="screen">
       <div className="archer-head">
-        <button className="btn-ghost small" style={{ marginBottom: 16 }} onClick={() => onGo("dashboard")}><Icon name="prev" size={16} />{a.back}</button>
         <h2>{athlete.name}</h2>
         <p>{meta}</p>
       </div>

@@ -562,3 +562,14 @@ button.row:hover .row-name { color: var(--blue); }
   .topbar .wordmark, .topbar .topbar-spacer { display: none; }
   .topbar .archer-btn { flex: 1 1 auto; min-width: 0; max-width: none; justify-content: space-between; }
 }
+
+/* Restructure: Today, Archers, one archer's page */
+.hub-nav { flex: none; margin: 8px 16px 0; grid-template-columns: repeat(4, 1fr); }
+@media (min-width: 900px) { .hub-nav { margin-inline: 32px; max-width: 760px; } }
+.roster-search { flex: none; }
+.roster-filter { grid-template-columns: repeat(3, 1fr); margin: 12px 0 4px; }
+.stage-tag { font: 700 12px var(--font-body); padding: 1px 6px; border-radius: 999px; background: var(--blue-tint); color: var(--blue); vertical-align: 2px; }
+.row-line.live-line { color: var(--red-text); font-weight: 600; }
+.today-live { width: 100%; display: flex; align-items: center; gap: 12px; margin: 16px 0 0; padding: 14px 16px; border: 0; border-radius: var(--r-md); background: var(--black); color: var(--white); text-align: start; cursor: pointer; font: inherit; }
+.today-live .grow { flex: 1; display: flex; flex-direction: column; }
+.today-live small { color: var(--g300); font-size: 13px; }
