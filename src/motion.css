@@ -21,6 +21,8 @@
 @keyframes fade { from { opacity: 0; } }
 @keyframes fade-out { to { opacity: 0; } }
 @keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes shake { 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+@keyframes dot-in { from { opacity: 0; transform: scale(.6); } }
 
 /* Screens: a coach switches stages dozens of times a session, so a screen only fades in, quickly and all at once. */
 .screen { animation: fade var(--t-screen) var(--ease-out) both; }
@@ -34,6 +36,11 @@
 .clip-body > * { animation: rise-small var(--t-s) var(--ease-out) both; }
 .clip-body > :nth-child(2) { animation-delay: 30ms; }
 .clip-body > :nth-child(3) { animation-delay: 60ms; }
+/* A wrong PIN or code: the field shakes three times. A new arrow on Live scores grows into place. */
+.shake { display: block; animation: shake 300ms ease both; }
+.live-new { transform-box: fill-box; transform-origin: center; animation: dot-in 160ms var(--ease-out) both; }
+/* The Labeller's trays rise out of the dock when opened. */
+.lab .tray.open { animation: rise-small 200ms var(--ease-out) both; }
 .toast { animation: rise var(--t-m) var(--ease-out) both; }
 /* The Range message lives 1.8 s (Range.jsx say): it rises in, then fades out over its last 200 ms instead of vanishing. */
 .rg-toast { animation: rise var(--t-m) var(--ease-out) both, fade-out 200ms var(--ease-in) 1600ms forwards; }
@@ -81,6 +88,8 @@ input, select, textarea { transition: border-color var(--t-xs) var(--ease-out); 
   @keyframes drop { from { opacity: 0; } }
   @keyframes pop { from { opacity: 0; } }
   @keyframes grow-x { from { opacity: 0; } }
+  @keyframes shake { from { opacity: 1; } }
+  @keyframes dot-in { from { opacity: 0; } }
   *, *::before, *::after { animation-delay: 0ms !important; scroll-behavior: auto !important; }
   .st-move, .st-r, .clip-row .icon-down, .chip:active, .seg button:active, .tabs .tab:active, .btn-primary:active, .btn-ghost:active, .row:active { transition-property: opacity, background-color, color, border-color !important; }
 }

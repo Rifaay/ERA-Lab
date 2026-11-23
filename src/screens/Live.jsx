@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getAthletes, getSessions, deleteSession } from "../storage";
 import { signedIn, configured } from "../sync";
 import { linkOf, isExpired, isLinked, canInvite, createInvite, unlink, refreshInvites, liveOf, finishedOf, pullArchers, inviteUrl, watching, sendNote, endArcherSession, removeArcherSession } from "../archer";
@@ -8,13 +8,30 @@ import EndStrip from "../EndStrip";
 import EndVideo from "../EndVideo";
 import Icon from "../icons";
 
+// A score that changes counts up to its new value (300 ms) instead of jumping; under "reduce motion" it just changes.
+const still = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+function CountUp({ value }) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(value);
+  useEffect(() => {
+    const start = from.current;
+    from.current = value;
+    if (start === value || still()) return;
+    let raf, t0;
+    const step = (t) => { t0 ??= t; const p = Math.min(1, (t - t0) / 300); setShown(Math.round(start + (value - start) * (1 - (1 - p) ** 3))); if (p < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return still() ? value : shown;
+}
+
 function Face({ s }) {
   const n = rings(s.context.face), ends = s.ends, last = ends.length - 1;
   return (
     <svg className="live-face" viewBox="-104 -104 208 208" aria-hidden="true">
       {Array.from({ length: n }, (_, i) => <circle key={i} r={(100 * (n - i)) / n} fill={RING_FILL[10 - n + i]} stroke={10 - n + i < 2 ? "#222" : 10 - n + i < 4 ? "#bbb" : "#111"} strokeWidth=".6" />)}
       {ends.flatMap((e, k) => e.arrows.filter((a) => a.x != null).map((a) => (
-        <circle key={`${k}-${a.arrow}`} cx={a.x * 100} cy={-a.y * 100} r={k === last ? 5 : 3.2} fill={k === last ? "#00e0c6" : "#fff"} fillOpacity={k === last ? 1 : 0.55} stroke="#000" strokeWidth={k === last ? 1.4 : 0.7} />
+        <circle key={`${k}-${a.arrow}`} className={k === last ? "live-new" : undefined} cx={a.x * 100} cy={-a.y * 100} r={k === last ? 5 : 3.2} fill={k === last ? "#00e0c6" : "#fff"} fillOpacity={k === last ? 1 : 0.55} stroke="#000" strokeWidth={k === last ? 1.4 : 0.7} />
       )))}
     </svg>
   );
@@ -62,7 +79,7 @@ export default function LiveBoard({ tr, onCopied }) {
     return (
       <button key={s.session_id} type="button" className={`card live-mini ${done ? "done" : ""}`} onClick={() => setOpen(s.session_id)} aria-label={`${athlete.name}: ${sum.total} / ${sum.outOf}`}>
         <span className="live-mini-head"><b>{athlete.name}</b>{!done && <span className="live-dot" />}</span>
-        <span className="live-mini-total" dir="ltr">{sum.total}<small> / {sum.outOf}</small></span>
+        <span className="live-mini-total" dir="ltr"><CountUp value={sum.total} /><small> / {sum.outOf}</small></span>
         <span className="muted">{done ? l.finishedAt.replace("{t}", new Date(s.end_ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })) : `${l.end.replace("{n}", cur.end)} · ${ago(updated, l)}`}</span>
         {!done && <EndStrip scores={cur.arrows.map((a) => a.score)} />}
       </button>
@@ -107,7 +124,7 @@ function LiveDetail({ tr, item: { athlete, archer, session: s, updated }, live, 
         <div className="live-body">
           <Face s={s} />
           <div>
-            <div className="live-total" dir="ltr">{sum.total}<small> / {sum.outOf}</small></div>
+            <div className="live-total" dir="ltr"><CountUp value={sum.total} /><small> / {sum.outOf}</small></div>
             <div className="muted">{l.line.replace("{avg}", sum.avg == null ? "–" : sum.avg.toFixed(2)).replace("{arrows}", sum.arrows).replace("{dist}", s.context.distance_m)}</div>
           </div>
         </div>

@@ -31,6 +31,7 @@ export default function Account({ tr, as, onChange, invited = false }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [miss, setMiss] = useState(0); // wrong email codes: each one shakes the field
   useEffect(() => { // the session was ended from another device
     const gone = () => { setApp(null); setTick((n) => n + 1); onChange?.(); };
     window.addEventListener("racm-signed-out", gone);
@@ -120,10 +121,10 @@ export default function Account({ tr, as, onChange, invited = false }) {
       <p className="muted">{(mode === "signup" ? s.confirmSent : s.resetSent)} <b dir="ltr">{email.trim().toLowerCase()}</b></p>
       <form className="form" onSubmit={(e) => {
         e.preventDefault();
-        run(async () => { await verifyEmailCode(email.trim().toLowerCase(), code, mode); setCode(""); if (mode === "signup") await sameRole(); refresh(); });
+        run(async () => { await verifyEmailCode(email.trim().toLowerCase(), code, mode).catch((e) => { setMiss((n) => n + 1); throw e; }); setCode(""); if (mode === "signup") await sameRole(); refresh(); });
       }}>
         <label>{s.emailCode}
-          <input className="code-input" inputMode="numeric" autoComplete="one-time-code" dir="ltr" autoFocus value={code} onChange={(e) => setCode(digits(e.target.value, 8))} />
+          <span key={miss} className={miss ? "shake" : undefined}><input className="code-input" inputMode="numeric" autoComplete="one-time-code" dir="ltr" autoFocus value={code} onChange={(e) => setCode(digits(e.target.value, 8))} /></span>
         </label>
         <button className="btn-primary wide-btn" disabled={busy || code.length < 6}>{s.useCode}</button>
         <p className="muted">{s.noEmail}</p>

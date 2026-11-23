@@ -29,7 +29,7 @@ export function LockGate({ children }) {
 function LockScreen({ onOpen }) {
   const [pin, setPinText] = useState("");
   const [wait, setWait] = useState(0);
-  const [wrong, setWrong] = useState(false);
+  const [wrong, setWrong] = useState(0); // wrong tries so far: each one shakes the field again
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (wait <= 0) return;
@@ -42,7 +42,7 @@ function LockScreen({ onOpen }) {
     const r = await checkPin(pin);
     setBusy(false); setPinText("");
     if (r.ok) return onOpen();
-    setWrong(true); setWait(r.wait);
+    setWrong((n) => n + 1); setWait(r.wait);
   };
   const forgot = () => {
     if (!window.confirm("Forgot your PIN? The only way in is to erase ERA Lab's data on this device. Archers in your cloud copy or a backup file can be brought back after.\n\nنسيت الرمز؟ الطريقة الوحيدة هي مسح بيانات ERA Lab على هذا الجهاز. يمكن استعادة الرماة من النسخة السحابية أو ملف النسخة الاحتياطية بعد ذلك.")) return;
@@ -55,8 +55,10 @@ function LockScreen({ onOpen }) {
         <span className="logo-tile"><Logo size={48} /></span>
         <h1>ERA Lab</h1>
         <p>Locked · مقفل</p>
-        <input type="password" inputMode="numeric" autoComplete="off" autoFocus dir="ltr" aria-label="PIN · الرمز"
-          value={pin} onChange={(e) => setPinText(digits(e.target.value, 12))} disabled={secs > 0} />
+        <span key={wrong} className={wrong ? "shake" : undefined}>
+          <input type="password" inputMode="numeric" autoComplete="off" autoFocus dir="ltr" aria-label="PIN · الرمز"
+            value={pin} onChange={(e) => setPinText(digits(e.target.value, 12))} disabled={secs > 0} />
+        </span>
         <button className="btn-primary" disabled={busy || secs > 0 || pin.length < 6}>Unlock · افتح</button>
         {secs > 0 ? <p className="error-msg" role="alert">Too many wrong PINs. Try again in {secs} s · محاولات خاطئة كثيرة. حاول بعد {secs} ث</p>
           : wrong && <p className="error-msg" role="alert">Wrong PIN · رمز خاطئ</p>}
