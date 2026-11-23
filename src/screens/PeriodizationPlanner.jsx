@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { getAthletes, getPlan, savePlan, getSessions, getGoals, getExercises, uid } from "../storage";
-import { PHASES, COLORS, MIX, DEFAULT_RULES, rulesOf, autoPlan, compsIn, weekStart, ramadanWeeks, shotByDay, shotByWeek, loadRatio, warnings } from "../plan";
+import { PHASES, COLORS, MIX, DEFAULT_RULES, rulesOf, autoPlan, compsIn, weekStart, ramadanWeeks, shotByDay, shotByWeek, loadRatio, warnings, dayFilled } from "../plan";
 import { isoDay, planWeek } from "../stats";
 import { saveHtmlFile } from "../scorecardFile";
 import { getSettings } from "../storage";
@@ -8,12 +8,13 @@ import Help from "../Help";
 import { useApp } from "../context";
 import ArcherSelect from "../ArcherSelect";
 import Icon from "../icons";
-import SeasonCalendar from "./SeasonCalendar";
+import SeasonCalendar, { DayEditor } from "./SeasonCalendar";
 import { configured, signedIn } from "../sync";
 import { isLinked, sharePlan } from "../archer";
 
-const TABS = ["season", "load", "rules", "send"];
 const fill = (t, v) => t.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
+const addDays = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); return isoDay(new Date(y, m - 1, d + n)); };
+const short = (lang, iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "short" }); };
 
 // An older plan: its tournaments (listed by week number) become B competitions on that week's first day, and the
 // weeks the coach coloured count as edited, so building the season never paints over them.
@@ -33,11 +34,12 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
   const today = isoDay(new Date()), thisYear = +today.slice(0, 4);
   const [year, setYear] = useState(thisYear);
   const [plan, setPlanState] = useState(() => upgrade(getPlan(selectedId, thisYear), thisYear));
-  const [tab, setTab] = useState("season");
+  const [view, setView] = useState("season"); // season → week → send; rules and load open from the season
   const [armed, setArmed] = useState(null);
   const [sel, setSel] = useState(null); // the week open in the editor
   const [comp, setComp] = useState({ name: "", date: "", priority: "A" });
-  const [view, setView] = useState("cal"); // the season as a calendar (months, days) or as 52 plan weeks
+  const [seasonAs, setSeasonAs] = useState("timeline"); // the season as phase blocks, or as months and days
+  const [weekOpen, setWeekOpen] = useState(null); // the plan week open in the week view
 
   const autoRamadan = useMemo(() => ramadanWeeks(year), [year]);
   const byDay = useMemo(() => shotByDay(getSessions(), selectedId), [selectedId]);
@@ -96,6 +98,8 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
     o[path.at(-1)] = v === "" ? undefined : v;
     rebuildWith({ rules: r });
   };
+  const openWeek = (w) => { setWeekOpen(Math.min(52, Math.max(1, w))); setView("week"); setSel(null); };
+  const setDay = (iso, d) => { const days = { ...plan.days }; if (d) days[iso] = d; else delete days[iso]; setPlan({ ...plan, days }); };
   const setRamadan = (w, on) => { const list = on ? [...new Set([...ramadan, w])] : ramadan.filter((x) => x !== w); rebuildWith({ ramadan: list }, list); };
 
   return (
@@ -110,11 +114,9 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
           <button className="icon-btn" onClick={() => loadYear(year + 1)} aria-label={pl.nextYear}><Icon name="next" size={18} /></button>
         </div>
       </div>
-      <div className="seg pz-tabs" role="tablist">
-        {TABS.map((k) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>{pl.tabs[k]}{k === "load" && warns.length ? ` (${warns.length})` : ""}</button>)}
-      </div>
+      {view !== "season" && <button className="btn-ghost small pz-back" onClick={() => setView("season")}><Icon name="prev" size={16} />{pl.backToSeason}</button>}
 
-      {tab === "season" && <>
+      {view === "season" && <>
         <div className="card">
           <div className="card-header"><div className="card-title">{pl.comps}</div><Help text={pl.help.comps} /></div>
           <p className="muted">{pl.compsIntro}</p>
@@ -138,24 +140,41 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
           </div>
         </div>
 
+        <p className="muted pz-ramadan"><Icon name="moon" size={16} /> {ramadan.length ? fill(pl.flow.ramadan, { from: short(lang, weekStart(year, Math.min(...ramadan))), to: short(lang, addDays(weekStart(year, Math.max(...ramadan)), 6)) }) : pl.flow.ramadanNone}</p>
         <div className="btn-row pz-actions">
-          <button className="btn-primary small" onClick={build}>{pl.build}</button>
-          <button className="btn-ghost small" onClick={rebuild}>{pl.rebuild}</button>
-          <button className="btn-ghost small danger" onClick={clear}>{pl.clear}</button>
+          <button className="btn-primary" onClick={build}>{pl.build}</button>
           <Help text={pl.help.build} />
         </div>
         <p className="muted">{edited.size ? fill(pl.editedNote, { n: edited.size }) : pl.buildNote}</p>
 
+        {nowWeek >= 1 && nowWeek <= 52 && (
+          <div className="pz-now">
+            <b>{fill(pl.flow.now, { phase: plan.weeks?.[nowWeek] ? pl.phases[plan.weeks[nowWeek]] : pl.flow.notPlanned, w: nowWeek })}</b>
+            <button className="btn-primary small" onClick={() => openWeek(nowWeek)}>{pl.flow.openWeek}</button>
+          </div>
+        )}
         <div className="seg pz-view" role="tablist" aria-label={pl.cal.view}>
-          {[["cal", pl.cal.calView], ["weeks", pl.cal.weeksView]].map(([k, label]) => (
-            <button key={k} type="button" role="tab" aria-selected={view === k} className={view === k ? "active" : ""} onClick={() => setView(k)}>{label}</button>
+          {[["timeline", pl.flow.timeline], ["cal", pl.flow.calendar]].map(([k, label]) => (
+            <button key={k} type="button" role="tab" aria-selected={seasonAs === k} className={seasonAs === k ? "active" : ""} onClick={() => setSeasonAs(k)}>{label}</button>
           ))}
         </div>
-        {view === "cal" && <SeasonCalendar key={year} {...{ plan, year, lang, pl, comps, exercises, today }}
-          onDay={(iso, d) => { const days = { ...plan.days }; if (d) days[iso] = d; else delete days[iso]; setPlan({ ...plan, days }); }}
-          onWeek={(w) => { setView("weeks"); setSel(w); setArmed(null); }} />}
+        {seasonAs === "timeline" && <Timeline {...{ plan, year, lang, pl, comps, ramadan, warns, nowWeek }} onOpen={openWeek} />}
+        {seasonAs === "cal" && <SeasonCalendar key={year} {...{ plan, year, lang, pl, comps, exercises, today }} onDay={setDay} onWeek={openWeek} />}
+        <div className="btn-row pz-next">
+          <button className="btn-primary" onClick={() => setView("send")}>{pl.flow.reviewSend}</button>
+          <button className="btn-ghost" onClick={() => setView("rules")}>{pl.flow.adjust}</button>
+          <button className="btn-ghost" onClick={() => setView("load")}>{pl.tabs.load}{warns.length ? ` (${warns.length})` : ""}</button>
+        </div>
+      </>}
 
-        {view === "weeks" && <>
+      {view === "week" && weekOpen && <WeekDays key={weekOpen} w={weekOpen} {...{ plan, year, lang, pl, comps, exercises, shot, ramadan, goals, edited }}
+        onWeek={openWeek} onDay={setDay} onDays={(days) => setPlan({ ...plan, days })} onSend={() => setView("send")}
+        onTargets={(change) => touch(weekOpen, change)} onAuto={() => rebuildWith({ edited: [...edited].filter((x) => x !== weekOpen) })} onRamadan={(on) => setRamadan(weekOpen, on)} />}
+
+      {view === "rules" && <>
+        <RulesView {...{ rules, pl }} set={setRule} onReset={() => window.confirm(pl.confirmRules) && rebuildWith({ rules: {} })} />
+        <div className="card">
+        <div className="card-title">{pl.flow.paint}</div>
         <div className="phase-palette" aria-label={pl.legend}>
           {PHASES.map((k) => (
             <button key={k} className={`phase-chip ${armed === k ? "armed" : ""}`} aria-pressed={armed === k}
@@ -185,16 +204,112 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
         {sel && <WeekEditor key={sel} w={sel} {...{ plan, year, lang, pl, shot, comps, ramadan, goals, exercises, edited }}
           onChange={(change) => touch(sel, change)} onAuto={() => rebuildWith({ edited: [...edited].filter((x) => x !== sel) })}
           onRamadan={(on) => setRamadan(sel, on)} onClose={() => setSel(null)} />}
-        </>}
+        </div>
+        <div className="btn-row">
+          <button className="btn-ghost small" onClick={rebuild}>{pl.flow.rebuildAll}</button>
+          <button className="btn-ghost small danger" onClick={clear}>{pl.flow.reset}</button>
+        </div>
       </>}
 
-      {tab === "load" && <LoadView {...{ plan, year, pl, shot, byDay, warns, nowWeek }}
+      {view === "load" && <LoadView {...{ plan, year, pl, shot, byDay, warns, nowWeek }}
         onDismiss={(key) => setPlan({ ...plan, dismissed: [...(plan.dismissed || []), key] })}
-        onRestore={() => setPlan({ ...plan, dismissed: [] })} onOpen={(w) => { setTab("season"); setSel(w); setArmed(null); }} />}
+        onRestore={() => setPlan({ ...plan, dismissed: [] })} onOpen={openWeek} />}
 
-      {tab === "rules" && <RulesView {...{ rules, pl }} set={setRule} onReset={() => window.confirm(pl.confirmRules) && rebuildWith({ rules: {} })} />}
+      {view === "send" && <SendView {...{ plan, year, pl, lang, athlete, goals, exercises, shot, ramadan, nowWeek }} onSent={(at) => setPlan({ ...plan, sentAt: at })} />}
+    </div>
+  );
+}
 
-      {tab === "send" && <SendView {...{ plan, year, pl, lang, athlete, goals, exercises, shot, ramadan, nowWeek }} />}
+// The season as phase blocks: weeks in a row with one phase are one block, with its dates, competitions, Ramadan and
+// load warnings. A block opens its first week, or this week when the block is the current one.
+function Timeline({ plan, year, lang, pl, comps, ramadan, warns, nowWeek, onOpen }) {
+  const blocks = [];
+  for (let w = 1; w <= 52; w++) {
+    const k = plan.weeks?.[w] || null, last = blocks.at(-1);
+    if (last && last.k === k) last.to = w; else blocks.push({ k, from: w, to: w });
+  }
+  return (
+    <ol className="pz-timeline">
+      {blocks.map((b) => {
+        const cs = comps.filter((c) => c.week >= b.from && c.week <= b.to);
+        const ws = warns.filter((x) => x.week >= b.from && x.week <= b.to).length;
+        const now = nowWeek >= b.from && nowWeek <= b.to;
+        return (
+          <li key={b.from}>
+            <button type="button" className={`pz-block ${now ? "now" : ""}`} onClick={() => onOpen(now ? nowWeek : b.from)}>
+              <i style={{ background: b.k ? COLORS[b.k] : "var(--g200)" }} aria-hidden="true" />
+              <span className="grow">
+                <b>{b.k ? pl.phases[b.k] : pl.flow.notPlanned}</b>
+                <span className="muted">{short(lang, weekStart(year, b.from))} – {short(lang, addDays(weekStart(year, b.to), 6))} · {b.to === b.from ? pl.flow.weekOne : fill(pl.flow.weeks, { n: b.to - b.from + 1 })}</span>
+                {cs.map((c) => <span key={c.id} className="pz-block-line"><span className={`wk-comp p${c.priority}`}>{c.priority}</span> {c.name}</span>)}
+                {ramadan.some((w) => w >= b.from && w <= b.to) && <span className="pz-block-line muted"><Icon name="moon" size={12} /> {pl.ramadan}</span>}
+                {ws > 0 && <span className="pz-block-line pz-block-warn">{fill(pl.flow.warnN, { n: ws })}</span>}
+              </span>
+              <Icon name="next" size={18} />
+            </button>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// One plan week, every day in one list: tap a day to edit it in place. The planned arrows are checked against the
+// week's target; the week's targets (mix, physical, goals) fold out underneath.
+function WeekDays({ w, plan, year, lang, pl, comps, exercises, shot, ramadan, goals, edited, onWeek, onDay, onDays, onSend, onTargets, onAuto, onRamadan }) {
+  const f = pl.flow;
+  const [open, setOpen] = useState(null);
+  const [targets, setTargets] = useState(false);
+  const [msg, setMsg] = useState("");
+  const daysOf = (wk) => { const s0 = weekStart(year, wk), out = []; for (let i = 0; i < 9; i++) { const iso = addDays(s0, i); if (+iso.slice(0, 4) === year && planWeek(iso) === wk) out.push(iso); } return out; };
+  const days = daysOf(w), k = plan.weeks?.[w];
+  const sum = days.reduce((n, iso) => n + (+plan.days?.[iso]?.arrows || 0), 0), target = +plan.targets?.[w]?.arrows || 0;
+  const exName = new Map(exercises.map((x) => [x.id, x.name]));
+  const label = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { weekday: "short", day: "numeric" }); };
+  const repeat = () => { // last week's days, in the same order, into this week's empty days
+    const prev = daysOf(w - 1), next = { ...plan.days };
+    let n = 0;
+    days.forEach((iso, i) => { const src = plan.days?.[prev[i]]; if (dayFilled(src) && !dayFilled(next[iso])) { next[iso] = { ...src }; n++; } });
+    onDays(next); setMsg(fill(f.repeated, { n }));
+  };
+  return (
+    <div className="pz-weekview">
+      <div className="pz-weekhead">
+        <button className="icon-btn" onClick={() => onWeek(w - 1)} disabled={w <= 1} aria-label={f.prevWeek}><Icon name="prev" size={18} /></button>
+        <div className="grow">
+          <h3>{fill(f.weekTitle, { w, from: short(lang, days[0]), to: short(lang, days.at(-1)) })}</h3>
+          <p className="muted">{k ? pl.phases[k] : f.notPlanned} · {target ? fill(f.planned, { p: sum, t: target }) : fill(f.plannedOnly, { p: sum })}</p>
+        </div>
+        <button className="icon-btn" onClick={() => onWeek(w + 1)} disabled={w >= 52} aria-label={f.nextWeek}><Icon name="next" size={18} /></button>
+      </div>
+      {comps.filter((c) => c.week === w).map((c) => <p key={c.id}><span className={`wk-comp p${c.priority}`} style={{ position: "static", display: "inline-grid" }}>{c.priority}</span> {c.name}</p>)}
+      <div className="pz-days">
+        {days.map((iso) => {
+          const d = plan.days?.[iso];
+          return (
+            <Fragment key={iso}>
+              <button type="button" className={`pz-day ${open === iso ? "sel" : ""}`} aria-expanded={open === iso} onClick={() => setOpen(open === iso ? null : iso)}>
+                <b className="pz-day-date">{label(iso)}</b>
+                <span className="grow">
+                  {dayFilled(d) ? <>
+                    <span>{[d.focus, +d.arrows ? fill(f.arrowsN, { n: d.arrows }) : ""].filter(Boolean).join(" · ")}</span>
+                    <small className="muted">{(d.exercises || []).map((id) => exName.get(id)).filter(Boolean).join(", ") || d.note || ""}</small>
+                  </> : <span className="muted">{f.nothing}</span>}
+                </span>
+              </button>
+              {open === iso && <DayEditor iso={iso} plan={plan} lang={lang} pl={pl} exercises={exercises} comps={comps.filter((c) => c.date === iso)}
+                onChange={(patch) => onDay(iso, patch)} onWeek={() => setTargets(true)} onClose={() => setOpen(null)} />}
+            </Fragment>
+          );
+        })}
+      </div>
+      <div className="btn-row">
+        <button className="btn-ghost small" onClick={repeat} disabled={w <= 1}>{f.repeat}</button>
+        <button className="btn-ghost small" onClick={() => setTargets(!targets)} aria-expanded={targets}>{targets ? f.hideTargets : f.targets}</button>
+        <button className="btn-primary small" onClick={onSend}>{f.sendWeek}</button>
+      </div>
+      {msg && <p className="success-msg" role="status">{msg}</p>}
+      {targets && <WeekEditor w={w} {...{ plan, year, lang, pl, shot, comps, ramadan, goals, exercises, edited }} onChange={onTargets} onAuto={onAuto} onRamadan={onRamadan} onClose={() => setTargets(false)} />}
     </div>
   );
 }
@@ -333,7 +448,7 @@ function RulesView({ rules, pl, set, onReset }) {
   </>;
 }
 
-function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramadan, nowWeek }) {
+function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramadan, nowWeek, onSent }) {
   const [opt, setOpt] = useState({ from: "now", comps: true, targets: true, mix: true, exercises: true, goals: true, notes: true, shot: false });
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -351,7 +466,10 @@ function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramad
     }
     setBusy(false);
   };
+  const can = configured && signedIn() && isLinked(athlete.id);
   return (<>
+    {can ? <ToArcherApp {...{ plan, pl, lang, athlete, exercises, onSent }} />
+      : <div className="card"><p className="muted">{!configured ? pl.flow.cant.noCloud : !signedIn() ? pl.flow.cant.signIn : fill(pl.flow.cant.noApp, { name: athlete.name })}</p></div>}
     <div className="card form">
       <div className="card-header"><div className="card-title">{pl.sendTitle}</div><Help text={pl.help.send} /></div>
       <p className="muted">{pl.sendIntro}</p>
@@ -363,26 +481,26 @@ function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramad
       {["comps", "targets", "mix", "exercises", "goals", "notes", "shot"].map((k) => (
         <label key={k} className="pz-check"><input type="checkbox" checked={opt[k]} onChange={() => setOpt({ ...opt, [k]: !opt[k] })} />{pl.include[k]}</label>
       ))}
-      <button className="btn-primary" style={{ alignSelf: "flex-start" }} onClick={send} disabled={busy}><Icon name="download" size={18} />{busy ? pl.making : pl.send}</button>
+      <button className="btn-ghost" style={{ alignSelf: "flex-start" }} onClick={send} disabled={busy}><Icon name="download" size={18} />{busy ? pl.making : pl.send}</button>
       {msg && <p className="success-msg" role="status">{msg}</p>}
     </div>
-    {configured && signedIn() && isLinked(athlete.id) && <ToArcherApp {...{ plan, pl, athlete, exercises }} />}
   </>);
 }
 
 // A linked archer has their own ERA Lab: the plan goes straight there, and their phone is told.
-function ToArcherApp({ plan, pl, athlete, exercises }) {
+function ToArcherApp({ plan, pl, lang, athlete, exercises, onSent }) {
   const a = pl.app, name = { name: athlete.name };
   const [state, setState] = useState(""); // "" | busy | sent | error text
   const go = async () => {
     setState("busy");
-    try { await sharePlan(plan, athlete, exercises); setState("sent"); }
+    try { await sharePlan(plan, athlete, exercises); setState("sent"); onSent?.(new Date().toISOString()); }
     catch (e) { setState(navigator.onLine === false || e instanceof TypeError ? a.offline : e.message); }
   };
   return (
     <div className="card form">
       <div className="card-title">{fill(a.title, name)}</div>
       <p className="muted">{fill(a.intro, name)}</p>
+      <p className="muted"><b>{plan.sentAt ? fill(pl.flow.lastSent, { date: new Date(plan.sentAt).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "short" }) }) : pl.flow.neverSent}</b></p>
       <button className="btn-primary" style={{ alignSelf: "flex-start" }} onClick={go} disabled={state === "busy"}>{fill(state === "sent" ? a.again : a.send, name)}</button>
       {state === "sent" && <p className="success-msg" role="status">{fill(a.sent, name)}</p>}
       {state && state !== "busy" && state !== "sent" && <p className="error-msg" role="alert">{state}</p>}

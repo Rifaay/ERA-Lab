@@ -63,7 +63,7 @@ export default function SeasonCalendar({ plan, year, lang, pl, comps, exercises,
   );
 }
 
-function DayEditor({ iso, plan, lang, pl, exercises, comps, onChange, onWeek, onClose }) {
+export function DayEditor({ iso, plan, lang, pl, exercises, comps, onChange, onWeek, onClose }) {
   const c = pl.cal, d = plan.days?.[iso] || {}, w = planWeek(iso), k = plan.weeks?.[w];
   const set = (patch) => onChange({ ...d, ...patch });
   const toggle = (field, id) => { const list = d[field] || []; set({ [field]: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] }); };

@@ -52,6 +52,7 @@ export default function ArcherPlan({ tr, lang }) {
       <h2>{p.title} {plan.year}</h2>
       <p className="muted">{fill(p.sentOn, { date: new Date(plan.updated_at).toLocaleDateString(loc) })}{offline ? ` · ${p.offline}` : ""}</p>
       {plan.year === year && day(today, true)}
+      {plan.year === year && d.targets?.[planWeek(today)]?.arrows > 0 && <div className="card"><p><b>{fill(p.weekTarget, { n: d.targets[planWeek(today)].arrows })}</b></p></div>}
       {comps.length > 0 && <div className="card">
         <div className="card-title">{p.comps}</div>
         {comps.map((c, i) => <p key={i}><span className={`wk-comp p${c.priority}`} style={{ position: "static", display: "inline-grid" }}>{c.priority}</span> {c.name} · {date(c.date, { day: "numeric", month: "long" })}</p>)}

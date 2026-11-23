@@ -304,6 +304,15 @@ export const t = {
       title: "Season plan", noAthlete: "Select an athlete first.", year: "Year", prevYear: "Previous year", nextYear: "Next year",
       cal: { daysTitle: "Day by day", view: "Season view", calView: "Calendar", weeksView: "Weeks", hint: "Tap a month, then a day, to plan that day's training. Colours are the phases of the plan weeks.", allMonths: "All months", prevMonth: "Previous month", nextMonth: "Next month", key: "Colour: the week's phase · A/B/C: competition · dot: day planned.", openWeek: "Plan week {w} · {phase} — open the week", areasLabel: "Focus areas (pick as many as you need)", areas: { technical: "Technical", mental: "Mental", physical: "Physical", competition: "Competition" }, focus: "Focus details", focusHint: "e.g. Anchor and release, 18 m blank bale", arrows: "Arrows", materials: "Training materials and links", materialsHint: "Drills, videos, documents… one link per line", note: "Notes", clear: "Clear this day", confirmClear: "Remove everything planned for this day?" },
       app: { title: "In {name}'s ERA Lab", intro: "{name} has their own app. Send this plan there: they see each day's plan, and with notifications on they get a reminder on training days.", send: "Send plan to {name}", sent: "Sent. {name} sees it under Plan.", again: "Send the latest version", offline: "No connection. Send it again when this device is online." },
+      flow: {
+        now: "Now: {phase} · week {w}", openWeek: "Open this week", timeline: "Timeline", calendar: "Calendar", reviewSend: "Review & send", adjust: "Adjust rules",
+        ramadan: "Ramadan weeks {from} – {to}: lighter, with the Ramadan protocol", ramadanNone: "No Ramadan weeks this year",
+        weekTitle: "Week {w} · {from} – {to}", planned: "Planned {p} of {t} arrows", plannedOnly: "{p} arrows planned", nothing: "Nothing planned",
+        repeat: "Repeat last week", arrowsN: "{n} arrows", repeated: "Copied {n} day(s) from last week", targets: "Week targets", hideTargets: "Hide week targets",
+        prevWeek: "Previous week", nextWeek: "Next week", sendWeek: "Review & send", notPlanned: "Not planned yet", weeks: "{n} weeks", weekOne: "1 week", warnN: "{n} load warning(s)",
+        lastSent: "Last sent {date}", neverSent: "Not sent yet", paint: "Paint weeks by hand", rebuildAll: "Rebuild every week", reset: "Reset season",
+        cant: { noCloud: "Sending to an archer's app needs the cloud copy (Settings → Cloud copy).", signIn: "Sign in to your cloud copy to send plans to archers' apps.", noApp: "{name} has no app of their own yet. Invite them from their page, then send." },
+      },
       tabs: { season: "Season", load: "Load", rules: "Rules", send: "Send" },
       comps: "Competitions", compsIntro: "Add each competition with its date and priority. A is the event to peak for, B matters, C is practice. The season is built back from the A events.",
       priority: "Priority", prio: { A: "A · peak", B: "B · important", C: "C · practice" }, compName: "Competition name", compDate: "Date", add: "Add", remove: "Remove",
@@ -421,7 +430,7 @@ export const t = {
     archerPlan: {
       title: "Your season plan", none: "Your coach hasn't sent you a plan yet. When they do, it shows here.",
       today: "Today", nothingToday: "Nothing planned for today.", next: "Coming up", comps: "Competitions",
-      week: "Week {w} · {phase}", arrows: "{n} arrows", sentOn: "Sent by your coach on {date}", offline: "Showing the copy on this phone. It updates when you're online.",
+      week: "Week {w} · {phase}", weekTarget: "This week: {n} arrows planned by your coach", arrows: "{n} arrows", sentOn: "Sent by your coach on {date}", offline: "Showing the copy on this phone. It updates when you're online.",
     },
     lab: {
       tools: "Video tools", points: "Body points", nextPoint: "Next point", colour: "Colour",
@@ -815,6 +824,15 @@ export const t = {
       title: "خطة الموسم", noAthlete: "اختر رياضياً أولاً.", year: "السنة", prevYear: "السنة السابقة", nextYear: "السنة التالية",
       cal: { daysTitle: "يوماً بيوم", view: "عرض الموسم", calView: "التقويم", weeksView: "الأسابيع", hint: "اضغط شهراً ثم يوماً لتخطط تدريب ذلك اليوم. الألوان هي مراحل أسابيع الخطة.", allMonths: "كل الشهور", prevMonth: "الشهر السابق", nextMonth: "الشهر التالي", key: "اللون: مرحلة الأسبوع · A/B/C: بطولة · نقطة: يوم مخطط.", openWeek: "أسبوع الخطة {w} · {phase} — افتح الأسبوع", areasLabel: "مجالات التركيز (اختر ما تحتاج منها)", areas: { technical: "تقني", mental: "نفسي", physical: "بدني", competition: "منافسة" }, focus: "تفاصيل التركيز", focusHint: "مثلاً: التثبيت والإطلاق، ١٨ م على الهدف الفارغ", arrows: "الأسهم", materials: "مواد التدريب والروابط", materialsHint: "تمارين، فيديوهات، ملفات… رابط في كل سطر", note: "ملاحظات", clear: "امسح هذا اليوم", confirmClear: "حذف كل ما خُطط لهذا اليوم؟" },
       app: { title: "في تطبيق {name}", intro: "لدى {name} تطبيقه الخاص. أرسل الخطة إليه: يرى خطة كل يوم، ومع تفعيل الإشعارات يصله تذكير في أيام التدريب.", send: "أرسل الخطة إلى {name}", sent: "أُرسلت. يراها {name} في الخطة.", again: "أرسل آخر نسخة", offline: "لا يوجد اتصال. أرسلها مجددًا عند الاتصال." },
+      flow: {
+        now: "الآن: {phase} · الأسبوع {w}", openWeek: "افتح هذا الأسبوع", timeline: "الخط الزمني", calendar: "التقويم", reviewSend: "راجع وأرسل", adjust: "اضبط القواعد",
+        ramadan: "أسابيع رمضان {from} – {to}: أخف، ببروتوكول رمضان", ramadanNone: "لا أسابيع رمضان هذا العام",
+        weekTitle: "الأسبوع {w} · {from} – {to}", planned: "مخطط {p} من {t} سهماً", plannedOnly: "{p} سهماً مخططة", nothing: "لا شيء مخطط",
+        repeat: "كرر الأسبوع الماضي", arrowsN: "{n} سهماً", repeated: "نُسخ {n} يوم من الأسبوع الماضي", targets: "أهداف الأسبوع", hideTargets: "أخفِ أهداف الأسبوع",
+        prevWeek: "الأسبوع السابق", nextWeek: "الأسبوع التالي", sendWeek: "راجع وأرسل", notPlanned: "لم يُخطط بعد", weeks: "{n} أسابيع", weekOne: "أسبوع واحد", warnN: "تحذيرات الحمل: {n}",
+        lastSent: "آخر إرسال {date}", neverSent: "لم تُرسل بعد", paint: "لوّن الأسابيع يدوياً", rebuildAll: "أعد بناء كل الأسابيع", reset: "صفّر الموسم",
+        cant: { noCloud: "الإرسال إلى تطبيق الرامي يحتاج النسخة السحابية (الإعدادات ← النسخة السحابية).", signIn: "سجّل الدخول إلى نسختك السحابية لإرسال الخطط إلى تطبيقات الرماة.", noApp: "ليس لدى {name} تطبيق بعد. ادعُه من صفحته ثم أرسل." },
+      },
       tabs: { season: "الموسم", load: "الحمل", rules: "القواعد", send: "إرسال" },
       comps: "البطولات", compsIntro: "أضف كل بطولة بتاريخها وأولويتها. A هي البطولة التي نبلغ فيها الذروة، B مهمة، C للتدريب. يُبنى الموسم رجوعاً من بطولات A.",
       priority: "الأولوية", prio: { A: "A · ذروة", B: "B · مهمة", C: "C · تدريب" }, compName: "اسم البطولة", compDate: "التاريخ", add: "أضف", remove: "إزالة",
@@ -932,7 +950,7 @@ export const t = {
     archerPlan: {
       title: "خطة موسمك", none: "لم يرسل مدربك خطة بعد. عندما يفعل تظهر هنا.",
       today: "اليوم", nothingToday: "لا شيء مخطط لليوم.", next: "القادم", comps: "المنافسات",
-      week: "الأسبوع {w} · {phase}", arrows: "{n} سهمًا", sentOn: "أرسلها مدربك في {date}", offline: "تُعرض النسخة المحفوظة على هذا الهاتف. تتحدث عند الاتصال.",
+      week: "الأسبوع {w} · {phase}", weekTarget: "هذا الأسبوع: {n} سهمًا خططها مدربك", arrows: "{n} سهمًا", sentOn: "أرسلها مدربك في {date}", offline: "تُعرض النسخة المحفوظة على هذا الهاتف. تتحدث عند الاتصال.",
     },
     lab: {
       tools: "أدوات الفيديو", points: "نقاط الجسم", nextPoint: "النقطة التالية", colour: "اللون",

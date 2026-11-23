@@ -90,7 +90,8 @@ export const refreshInvites = async () => {
 export const planForArcher = (plan, exercises = []) => {
   const name = new Map(exercises.map((x) => [x.id, x.name]));
   const days = Object.fromEntries(Object.entries(plan.days || {}).filter(([, d]) => d).map(([iso, d]) => [iso, { ...d, exercises: (d.exercises || []).map((id) => name.get(id)).filter(Boolean) }]));
-  return { weeks: plan.weeks || {}, days, comps: (plan.comps || []).map(({ name, date, priority }) => ({ name, date, priority })) };
+  const targets = Object.fromEntries(Object.entries(plan.targets || {}).filter(([, t]) => +t?.arrows).map(([w, t]) => [w, { arrows: +t.arrows }]));
+  return { weeks: plan.weeks || {}, days, targets, comps: (plan.comps || []).map(({ name, date, priority }) => ({ name, date, priority })) };
 };
 export const sharePlan = async (plan, athlete, exercises) => {
   const link = linkOf(athlete.id);

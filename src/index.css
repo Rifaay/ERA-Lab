@@ -573,3 +573,24 @@ button.row:hover .row-name { color: var(--blue); }
 .today-live { width: 100%; display: flex; align-items: center; gap: 12px; margin: 16px 0 0; padding: 14px 16px; border: 0; border-radius: var(--r-md); background: var(--black); color: var(--white); text-align: start; cursor: pointer; font: inherit; }
 .today-live .grow { flex: 1; display: flex; flex-direction: column; }
 .today-live small { color: var(--g300); font-size: 13px; }
+
+/* Planner: season timeline, the week of days */
+.pz-back { align-self: flex-start; margin-bottom: 8px; }
+.pz-ramadan { display: flex; align-items: center; gap: 6px; margin: 8px 0; }
+.pz-now { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; margin: 12px 0; background: var(--black); color: var(--white); border-radius: var(--r-md); }
+.pz-timeline { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 0; }
+.pz-block { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 0; border: 0; border-bottom: 1px solid var(--g200); background: none; text-align: start; font: inherit; color: inherit; cursor: pointer; }
+.pz-block > i { width: 8px; align-self: stretch; border-radius: 4px; flex: none; }
+.pz-block .grow { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.pz-block.now b { color: var(--blue); }
+.pz-block-line { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.pz-block-warn { color: var(--red-text); font-weight: 600; }
+.pz-block .wk-comp { position: static; display: inline-grid; }
+.pz-next { margin-top: 16px; flex-wrap: wrap; }
+.pz-weekhead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pz-weekhead .grow { flex: 1; }
+.pz-days { display: grid; border-top: 2px solid var(--black); margin: 8px 0 12px; }
+.pz-day { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border: 0; border-bottom: 1px solid var(--g200); background: none; text-align: start; font: inherit; color: inherit; cursor: pointer; width: 100%; }
+.pz-day.sel { background: var(--g50); }
+.pz-day .grow { flex: 1; display: flex; flex-direction: column; }
+.pz-day-date { width: 72px; flex: none; font: 700 15px var(--font-head); text-transform: uppercase; }
