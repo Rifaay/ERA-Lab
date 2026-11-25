@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getAthletes, getSessions, getAssessments, getGoals, getPlan } from "../storage";
+import { getAthletes, getSessions, getAssessments, getGoals, getPlans } from "../storage";
 import { isoDay } from "../stats";
 import { dayFilled } from "../plan";
 import { roster } from "../insights";
@@ -10,7 +10,7 @@ const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 const one = (n) => n.toFixed(1), two = (n) => n.toFixed(2);
 
 // Today: who is shooting now, who needs the coach and why, and what is planned today. Everyone else is in Archers.
-export default function CoachDashboard({ tr, lang, tick, live = [], onOpen, onGo, onNew, onLive, onAll }) {
+export default function CoachDashboard({ tr, lang, tick, live = [], onOpen, onGo, onPlan, onNew, onLive, onAll }) {
   const h = tr.home, t = tr.today;
   const { need, total } = useMemo(() => {
     const athletes = getAthletes();
@@ -18,7 +18,10 @@ export default function CoachDashboard({ tr, lang, tick, live = [], onOpen, onGo
   }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const planned = useMemo(() => {
     const iso = isoDay(new Date()), year = +iso.slice(0, 4);
-    return getAthletes().map((a) => ({ a, d: getPlan(a.id, year).days?.[iso] })).filter((x) => dayFilled(x.d));
+    // Each plan of this season that has archers: today's session, or a rest day; and its competitions in the next 30 days.
+    const names = Object.fromEntries(getAthletes().map((a) => [a.id, a.name]));
+    return getPlans().filter((p) => p.year === year && p.archers.length).map((p) => ({ p, d: p.days?.[iso], who: p.archers.map((id) => names[id]).filter(Boolean),
+      comps: (p.comps || []).filter((c) => c.date >= iso && (new Date(c.date) - new Date(iso)) / 864e5 <= 30) }));
   }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
@@ -77,15 +80,21 @@ export default function CoachDashboard({ tr, lang, tick, live = [], onOpen, onGo
         })}
 
         <h3>{t.planned}</h3>
-        {planned.map(({ a, d }) => (
-          <button key={a.id} className="row" onClick={() => onGo(a.id, "planner")}>
-            <span>
-              <span className="row-name" style={{ display: "block" }}>{a.name}</span>
-              <span className="row-line">{[d.focus, +d.arrows ? fill(t.arrows, { n: d.arrows }) : ""].filter(Boolean).join(" · ") || d.note}</span>
-            </span>
-            <Icon name="next" size={18} />
+        {planned.map(({ p, d, who }) => (
+          <button key={p.id} className="today-plan" onClick={() => onPlan(p.id)}>
+            <span className="today-plan-top"><b>{p.name}</b><span className="today-ppl" aria-label={who.join(", ")}>{who.slice(0, 4).map((n) => <i key={n}>{n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</i>)}</span></span>
+            <span className={dayFilled(d) ? "" : "muted"}>{dayFilled(d) ? [d.focus, +d.arrows ? fill(t.arrows, { n: d.arrows }) : ""].filter(Boolean).join(" · ") || d.note : t.rest}</span>
           </button>
         ))}
+        {planned.some((x) => x.comps.length) && <>
+          <h3>{t.compsSoon}</h3>
+          {planned.flatMap(({ p, comps }) => comps.map((c) => (
+            <button key={p.id + c.date + c.name} className="row" onClick={() => onPlan(p.id)}>
+              <span><span className="row-name" style={{ display: "block" }}>{c.priority} · {c.name}</span><span className="row-line">{c.date} · {p.name}</span></span>
+              <Icon name="next" size={18} />
+            </button>
+          )))}
+        </>}
         {!planned.length && <p className="muted">{t.nothingPlanned}</p>}
         <button className="btn-ghost" style={{ marginTop: 16 }} onClick={onAll}>{t.allArchers} · {total}</button>
       </div>

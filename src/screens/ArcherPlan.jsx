@@ -52,7 +52,7 @@ export default function ArcherPlan({ tr, lang, onStart }) {
 
   return (
     <div className="screen">
-      <h2>{p.title} {plan.year}</h2>
+      <h2>{plan.data?.name || `${p.title} ${plan.year}`}</h2>
       <p className="muted">{fill(p.sentOn, { date: new Date(plan.updated_at).toLocaleDateString(loc) })}{offline ? ` · ${p.offline}` : ""}</p>
       {plan.year === year && day(today, true)}
       {plan.year === year && d.targets?.[planWeek(today)]?.arrows > 0 && (() => {

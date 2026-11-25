@@ -104,7 +104,7 @@ export default function Stats({ tr, lang, selectedId, onGo }) {
   const athlete = getAthletes().find((a) => a.id === selectedId);
   const sessions = useMemo(() => getSessions().filter((x) => x.athleteId === selectedId), [selectedId]);
   const reviews = useMemo(() => getReviews(), []);
-  const plans = useMemo(() => getPlans().filter((p) => p.athleteId === selectedId), [selectedId]);
+  const plans = useMemo(() => getPlans().filter((p) => p.archers.includes(selectedId)), [selectedId]);
   const latest = sessions.map((x) => x.date).sort().at(-1) || isoDay(new Date());
   const first = sessions.map((x) => x.date).sort()[0];
   const ctx = { plans, first };

@@ -64,3 +64,6 @@
 .clips-head h3 { margin: 0; }
 .clips-filter { min-width: 260px; }
 .rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); display: inline-block; }
+.clips-who { display: flex; gap: 6px; overflow-x: auto; margin: 14px 0 0; padding-bottom: 4px; }
+.clips-who button { flex: none; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--g200); background: var(--white); color: var(--g600); font: 600 14px var(--font-body); cursor: pointer; }
+.clips-who button.on { background: var(--black); color: var(--white); border-color: var(--black); }

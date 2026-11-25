@@ -118,3 +118,23 @@ test("deleting an athlete removes all their records, keeps everyone else's, and 
   assert.deepEqual(s.getCheckIns().map((x) => x.goalId), ["g-b"]);
   assert.deepEqual(s.getReviews(), [{ id: "clip-b.mp4", athleteId: "b", verdict: "good" }]);
 });
+
+test("plans belong to the coach: older one-archer plans read as plans with that archer, and an archer follows one plan a season", () => {
+  reset();
+  s.saveAthlete({ id: "a", name: "Test One" }); s.saveAthlete({ id: "b", name: "Test Two" });
+  s.savePlan({ id: "a-2026", athleteId: "a", year: 2026, weeks: {} }); // made before plans had archers
+  const old = s.getPlanById("a-2026");
+  assert.deepEqual(old.archers, ["a"]);
+  assert.equal(old.name, "Test One 2026");
+  assert.equal(s.planFor("a", 2026).id, "a-2026");
+  const group = s.newPlan({ name: "Seniors", level: "elite", year: 2026 });
+  assert.equal(group.rules.peakArrows, s.LEVELS.elite);
+  s.assignArchers(group.id, ["a", "b"]);
+  assert.equal(s.planFor("a", 2026).id, group.id, "ticking moves an archer off their other plan of the season");
+  assert.deepEqual(s.getPlanById("a-2026").archers, []);
+  s.deleteAthlete("a");
+  assert.equal(s.getPlanById("a-2026"), null, "the plan named after the deleted archer goes");
+  assert.deepEqual(s.getPlanById(group.id).archers, ["b"], "a plan others follow stays, without them");
+  s.deletePlan(group.id);
+  assert.equal(s.getPlans().length, 0);
+});

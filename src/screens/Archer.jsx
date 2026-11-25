@@ -1,8 +1,9 @@
-import { getAthletes, getSessions, getAssessments, getGoals, getPlan, getReviews, calcWACategory } from "../storage";
+import { getAthletes, getSessions, getAssessments, getGoals, planFor, getReviews, calcWACategory } from "../storage";
 import { athleteFacts, daysSince } from "../insights";
 import { reviewFacts } from "../review";
 import Icon from "../icons";
 import EndStrip from "../EndStrip";
+import { isoDay as isoDayOf } from "../stats";
 import { ArcherLink } from "./Live";
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
@@ -39,9 +40,9 @@ export default function Archer({ tr, lang, selectedId, onGo, onLink }) {
 
   // The planner numbers weeks 1 to 52 from 1 January.
   const week = Math.min(52, Math.floor((now - new Date(now.getFullYear(), 0, 1)) / (7 * 86400000)) + 1);
-  const plan = getPlan(athlete.id, now.getFullYear());
-  const phase = plan.weeks?.[week];
-  const nextEvent = (plan.tournaments || []).filter((t) => t.week >= week).sort((x, y) => x.week - y.week)[0];
+  const plan = planFor(athlete.id, now.getFullYear()); // the plan this archer follows this season, if any
+  const phase = plan?.weeks?.[week];
+  const todayIso = isoDayOf(now), nextEvent = (plan?.comps || []).filter((c) => c.date >= todayIso).sort((x, y) => x.date.localeCompare(y.date))[0];
 
   const stageNum = Number(athlete.stage || 0);
   const wa = calcWACategory(athlete.discipline, athlete.gender, athlete.ageBand);
@@ -61,8 +62,8 @@ export default function Archer({ tr, lang, selectedId, onGo, onLink }) {
 
       <div>
         <Row onGo={onGo} to="planner" label={a.plan}
-          fact={phase ? `${fill(a.week, { n: week })} · ${tr.planner.phases[phase] || phase}` : a.noPlan}
-          sub={nextEvent ? fill(a.nextEvent, { name: nextEvent.name, week: nextEvent.week }) : phase ? null : a.planHint} />
+          fact={plan ? `${plan.name}${phase ? ` · ${tr.planner.phases[phase] || phase}` : ""}` : a.noPlan}
+          sub={nextEvent ? fill(a.nextComp, { name: nextEvent.name, date: nextEvent.date }) : plan ? null : a.planHint} />
         <Row onGo={onGo} to="session" label={a.range}
           fact={f.last ? [f.last.score ? `${f.last.score}${f.last.outOf ? ` / ${f.last.outOf}` : ""}` : f.last.type, when(f.lastDays)].join(" · ") : a.noSession}
           sub={f.last ? fill(a.sessions30, { n: f.sessions30 }) : a.noSessionHint}

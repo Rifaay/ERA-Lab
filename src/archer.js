@@ -91,8 +91,10 @@ export const planForArcher = (plan, exercises = []) => {
   const name = new Map(exercises.map((x) => [x.id, x.name]));
   const days = Object.fromEntries(Object.entries(plan.days || {}).filter(([, d]) => d).map(([iso, d]) => [iso, { ...d, exercises: (d.exercises || []).map((id) => name.get(id)).filter(Boolean) }]));
   const targets = Object.fromEntries(Object.entries(plan.targets || {}).filter(([, t]) => +t?.arrows).map(([w, t]) => [w, { arrows: +t.arrows }]));
-  return { weeks: plan.weeks || {}, days, targets, comps: (plan.comps || []).map(({ name, date, priority }) => ({ name, date, priority })) };
+  return { name: plan.name || "", weeks: plan.weeks || {}, days, targets, comps: (plan.comps || []).map(({ name, date, priority }) => ({ name, date, priority })) };
 };
+// An archer taken off a plan: that season's copy leaves their phone.
+export const unsharePlan = (athleteId, year) => rest(`shared_plans?athlete_id=eq.${encodeURIComponent(athleteId)}&coach_id=eq.${userId()}&year=eq.${year}`, { method: "DELETE" });
 export const sharePlan = async (plan, athlete, exercises) => {
   const link = linkOf(athlete.id);
   if (!link?.claimed_by) throw Object.assign(new Error("Not linked"), { code: "unlinked" });

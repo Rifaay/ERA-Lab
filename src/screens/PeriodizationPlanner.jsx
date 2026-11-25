@@ -1,16 +1,14 @@
 import { Fragment, useMemo, useState } from "react";
-import { getAthletes, getPlan, savePlan, getSessions, getGoals, getExercises, uid } from "../storage";
+import { getAthletes, getPlanById, getPlans, savePlan, assignArchers, getSessions, getGoals, getExercises, uid } from "../storage";
 import { PHASES, COLORS, MIX, DEFAULT_RULES, rulesOf, autoPlan, compsIn, weekStart, ramadanWeeks, shotByDay, shotByWeek, loadRatio, warnings, dayFilled } from "../plan";
 import { isoDay, planWeek } from "../stats";
 import { saveHtmlFile } from "../scorecardFile";
 import { getSettings } from "../storage";
 import Help from "../Help";
-import { useApp } from "../context";
-import ArcherSelect from "../ArcherSelect";
 import Icon from "../icons";
 import SeasonCalendar, { DayEditor } from "./SeasonCalendar";
-import { configured, signedIn } from "../sync";
-import { isLinked, sharePlan } from "../archer";
+import { configured, signedIn, isAdult } from "../sync";
+import { isLinked, sharePlan, unsharePlan } from "../archer";
 
 const fill = (t, v) => t.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
 const addDays = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); return isoDay(new Date(y, m - 1, d + n)); };
@@ -24,16 +22,14 @@ const upgrade = (plan, year) => (plan.comps ? plan : {
   edited: plan.edited || Object.keys(plan.weeks || {}).map(Number),
 });
 
-// The season plan for one archer and one year. ERA Lab builds it from the competitions and the coach's rules; every
-// week, rule, warning and part of the sent file stays the coach's to change. Changes save as they are made.
-export default function PeriodizationPlanner({ lang, tr, selectedId }) {
+// One of the coach's plans: one season, followed by the archers the coach ticks. ERA Lab builds it from the
+// competitions and the coach's rules; every week, rule, warning and part of the sent file stays the coach's to change.
+// Changes save as they are made.
+export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
   const pl = tr.planner;
-  const { setSelectedId } = useApp();
-  const athletes = getAthletes();
-  const athlete = athletes.find((a) => a.id === selectedId) || null;
   const today = isoDay(new Date()), thisYear = +today.slice(0, 4);
-  const [year, setYear] = useState(thisYear);
-  const [plan, setPlanState] = useState(() => upgrade(getPlan(selectedId, thisYear), thisYear));
+  const [plan, setPlanState] = useState(() => { const p = getPlanById(planId); return p && upgrade(p, p.year); });
+  const year = plan?.year ?? thisYear;
   const [view, setView] = useState("season"); // season → week → send; rules and load open from the season
   const [armed, setArmed] = useState(null);
   const [sel, setSel] = useState(null); // the week open in the editor
@@ -42,12 +38,17 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
   const [weekOpen, setWeekOpen] = useState(null); // the plan week open in the week view
 
   const autoRamadan = useMemo(() => ramadanWeeks(year), [year]);
-  const byDay = useMemo(() => shotByDay(getSessions(), selectedId), [selectedId]);
+  // What the plan's archers shot, as one archer's average, so the load warnings read for anyone on the plan.
+  const ids = (plan?.archers || []).join(",");
+  const byDay = useMemo(() => {
+    const list = ids ? ids.split(",") : [], sessions = getSessions(), sum = {};
+    for (const id of list) for (const [d, n] of Object.entries(shotByDay(sessions, id))) sum[d] = (sum[d] || 0) + n;
+    for (const d in sum) sum[d] = Math.round(sum[d] / list.length);
+    return sum;
+  }, [ids]);
   const shot = useMemo(() => shotByWeek(byDay, year), [byDay, year]);
 
-  if (!athlete) return (
-    <div className="screen"><h2>{pl.title}</h2><ArcherSelect tr={tr} athletes={athletes} selectedId={selectedId} onPick={setSelectedId} prompt={tr.shell.pickFirst} /></div>
-  );
+  if (!plan) return <div className="screen"><p className="muted">{pl.flow.gone}</p><button className="btn-ghost" onClick={onBack}>{pl.flow.allPlans}</button></div>;
 
   const setPlan = (next) => { setPlanState(next); savePlan(next); };
   const rules = rulesOf(plan);
@@ -55,11 +56,10 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
   const nowWeek = year === thisYear ? planWeek(today) : year < thisYear ? 53 : 0;
   const comps = compsIn(plan.comps, year).sort((a, b) => a.week - b.week);
   const warns = warnings(plan, year, byDay, nowWeek);
-  const goals = getGoals().filter((g) => g.athleteId === selectedId);
-  const exercises = getExercises().filter((x) => x.athleteId === selectedId);
+  const goals = getGoals().filter((g) => plan.archers.includes(g.athleteId));
+  const exercises = getExercises().filter((x) => !x.athleteId || plan.archers.includes(x.athleteId)); // the coach's library and the plan's archers' own
   const edited = new Set((plan.edited || []).map(Number));
 
-  const loadYear = (y) => { setYear(y); setPlanState(upgrade(getPlan(selectedId, y), y)); setSel(null); };
   const touch = (w, change) => setPlan({ ...plan, ...change, edited: [...new Set([...edited, w])] });
   const rebuildWith = (change, ram = ramadan) => setPlan(autoPlan({ ...plan, ...change }, year, ram));
   const build = () => rebuildWith({});
@@ -71,12 +71,8 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
     if (armed === "none") delete weeks[w]; else weeks[w] = armed;
     touch(w, { weeks });
   };
-  // Each year has its own plan. A competition dated in another year goes into that year's plan, which then opens.
-  const fileInYear = (c) => {
-    const y = +c.date.slice(0, 4), other = upgrade(getPlan(selectedId, y), y);
-    const next = autoPlan({ ...other, comps: [...(other.comps || []), c] }, y, other.ramadan || ramadanWeeks(y));
-    savePlan(next); setYear(y); setPlanState(next); setSel(null);
-  };
+  // A plan is one season: a competition in another year belongs in another plan.
+  const fileInYear = (c) => window.alert(fill(pl.flow.otherYear, { year, y: c.date.slice(0, 4) }));
   const addComp = () => {
     if (!comp.name.trim() || !comp.date) return;
     const c = { ...comp, name: comp.name.trim(), id: uid() };
@@ -85,10 +81,7 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
   };
   const setCompField = (id, k, v) => {
     const c = { ...plan.comps.find((x) => x.id === id), [k]: v };
-    if (k === "date" && v && +v.slice(0, 4) !== year) { // moved to another year
-      setPlan(autoPlan({ ...plan, comps: plan.comps.filter((x) => x.id !== id) }, year, ramadan));
-      return fileInYear(c);
-    }
+    if (k === "date" && v && +v.slice(0, 4) !== year) return fileInYear(c); // moved to another year
     rebuildWith({ comps: plan.comps.map((x) => (x.id === id ? c : x)) });
   };
   const removeComp = (id) => rebuildWith({ comps: plan.comps.filter((c) => c.id !== id) });
@@ -104,17 +97,13 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
 
   return (
     <div className="screen pz">
-      <div className="card-header">
-        <h2>{pl.title}</h2>
-        <div className="pz-year">
-          <button className="icon-btn" onClick={() => loadYear(year - 1)} aria-label={pl.prevYear}><Icon name="prev" size={18} /></button>
-          <input type="number" inputMode="numeric" min="1990" max="2100" defaultValue={year} key={year} aria-label={pl.year}
-            onBlur={(e) => { const y = +e.target.value; if (y >= 1990 && y <= 2100 && y !== year) loadYear(y); else e.target.value = year; }}
-            onKeyDown={(e) => e.key === "Enter" && e.target.blur()} />
-          <button className="icon-btn" onClick={() => loadYear(year + 1)} aria-label={pl.nextYear}><Icon name="next" size={18} /></button>
-        </div>
+      <button className="btn-ghost small pz-back" onClick={view === "season" ? onBack : () => setView("season")}><Icon name="prev" size={16} />{view === "season" ? pl.flow.allPlans : pl.backToSeason}</button>
+      <div className="pz-head">
+        <h2>{plan.name}</h2>
+        <button type="button" className="pz-who" onClick={() => setView("send")}>
+          {plan.archers.length ? fill(plan.archers.length === 1 ? pl.flow.oneArcher : pl.flow.nArchers, { n: plan.archers.length }) : pl.flow.noArchers} · {year}
+        </button>
       </div>
-      {view !== "season" && <button className="btn-ghost small pz-back" onClick={() => setView("season")}><Icon name="prev" size={16} />{pl.backToSeason}</button>}
 
       {view === "season" && <>
         <div className="card">
@@ -215,7 +204,8 @@ export default function PeriodizationPlanner({ lang, tr, selectedId }) {
         onDismiss={(key) => setPlan({ ...plan, dismissed: [...(plan.dismissed || []), key] })}
         onRestore={() => setPlan({ ...plan, dismissed: [] })} onOpen={openWeek} />}
 
-      {view === "send" && <SendView {...{ plan, year, pl, lang, athlete, goals, exercises, shot, ramadan, nowWeek }} onSent={(at) => setPlan({ ...plan, sentAt: at })} />}
+      {view === "send" && <SendView {...{ plan, year, pl, lang, goals, exercises, shot, ramadan, nowWeek }} onSent={(at) => setPlan({ ...getPlanById(plan.id), sentAt: at })}
+        onArchers={(list) => { assignArchers(plan.id, list); setPlanState(upgrade(getPlanById(plan.id), year)); }} />}
     </div>
   );
 }
@@ -448,7 +438,8 @@ function RulesView({ rules, pl, set, onReset }) {
   </>;
 }
 
-function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramadan, nowWeek, onSent }) {
+function SendView({ plan, year, pl, lang, goals, exercises, shot, ramadan, nowWeek, onSent, onArchers }) {
+  const athlete = { name: plan.name }; // the PDF is titled with the plan
   const [opt, setOpt] = useState({ from: "now", comps: true, targets: true, mix: true, exercises: true, goals: true, notes: true, shot: false });
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -458,7 +449,7 @@ function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramad
       const [{ planPdf }, { default: fonts }] = await Promise.all([import("../planPdf"), import("../pdfFonts")]); // loaded only now
       const first = opt.from === "now" && nowWeek >= 1 && nowWeek <= 52 ? nowWeek : 1;
       const pdf = planPdf({ plan, year, first, opt, pl, lang, athlete, goals, exercises, shot, ramadan, fonts, coach: getSettings().coachName || "" });
-      await saveHtmlFile(`${pl.fileName} ${athlete.name} ${year}.pdf`, pdf, "application/pdf");
+      await saveHtmlFile(`${pl.fileName} ${plan.name}.pdf`, pdf, "application/pdf");
       setMsg(pl.sent);
     } catch (e) {
       console.warn("PDF failed", e);
@@ -466,10 +457,8 @@ function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramad
     }
     setBusy(false);
   };
-  const can = configured && signedIn() && isLinked(athlete.id);
   return (<>
-    {can ? <ToArcherApp {...{ plan, pl, lang, athlete, exercises, onSent }} />
-      : <div className="card"><p className="muted">{!configured ? pl.flow.cant.noCloud : !signedIn() ? pl.flow.cant.signIn : fill(pl.flow.cant.noApp, { name: athlete.name })}</p></div>}
+    <Followers {...{ plan, pl, lang, exercises, onSent, onArchers }} />
     <div className="card form">
       <div className="card-header"><div className="card-title">{pl.sendTitle}</div><Help text={pl.help.send} /></div>
       <p className="muted">{pl.sendIntro}</p>
@@ -487,23 +476,50 @@ function SendView({ plan, year, pl, lang, athlete, goals, exercises, shot, ramad
   </>);
 }
 
-// A linked archer has their own ERA Lab: the plan goes straight there, and their phone is told.
-function ToArcherApp({ plan, pl, lang, athlete, exercises, onSent }) {
-  const a = pl.app, name = { name: athlete.name };
-  const [state, setState] = useState(""); // "" | busy | sent | error text
-  const go = async () => {
+// Who follows the plan: tick the archers. Saving sends it to every ticked archer with their own app (adults with a
+// linked phone); archers ticked off lose that season's copy. Under-18s and archers without the app follow it on the
+// coach's phone. Ticking an archer on another plan of the season moves them here.
+function Followers({ plan, pl, lang, exercises, onSent, onArchers }) {
+  const f = pl.followers, athletes = getAthletes();
+  const [on, setOn] = useState(() => new Set(plan.archers));
+  const [state, setState] = useState(""); // "" | busy | done | error text
+  const elsewhere = Object.fromEntries(getPlans().filter((p) => p.year === plan.year && p.id !== plan.id).flatMap((p) => p.archers.map((a) => [a, p.name])));
+  const cloud = configured && signedIn();
+  const app = (a) => cloud && isAdult(a.dob) && isLinked(a.id);
+  const ticked = athletes.filter((a) => on.has(a.id)), sending = ticked.filter(app);
+  const tag = (a) => app(a) ? <span className="pz-tag app">{f.ownApp}</span>
+    : !isAdult(a.dob) ? <span className="pz-tag">{f.minor}</span>
+    : elsewhere[a.id] ? <span className="pz-tag move">{fill(f.elsewhere, { plan: elsewhere[a.id] })}</span>
+    : <span className="pz-tag">{f.here}</span>;
+  const save = async () => {
+    const before = new Set(plan.archers), dropped = athletes.filter((a) => before.has(a.id) && !on.has(a.id) && app(a));
+    onArchers([...on]);
+    if (!sending.length && !dropped.length) { setState("done"); return; }
     setState("busy");
-    try { await sharePlan(plan, athlete, exercises); setState("sent"); onSent?.(new Date().toISOString()); }
-    catch (e) { setState(navigator.onLine === false || e instanceof TypeError ? a.offline : e.message); }
+    try {
+      for (const a of dropped) await unsharePlan(a.id, plan.year);
+      for (const a of sending) await sharePlan({ ...plan, archers: [...on] }, a, exercises);
+      setState("done"); if (sending.length) onSent?.(new Date().toISOString());
+    } catch (e) { setState(navigator.onLine === false || e instanceof TypeError ? pl.app.offline : e.message); }
   };
   return (
-    <div className="card form">
-      <div className="card-title">{fill(a.title, name)}</div>
-      <p className="muted">{fill(a.intro, name)}</p>
+    <div className="card form pz-followers">
+      <div className="card-title">{f.title}</div>
+      {!athletes.length && <p className="muted">{f.none}</p>}
+      <div className="pz-list">
+        {athletes.map((a) => (
+          <label key={a.id} className="pz-arch">
+            <input type="checkbox" checked={on.has(a.id)} onChange={() => { const n = new Set(on); if (n.has(a.id)) n.delete(a.id); else n.add(a.id); setOn(n); setState(""); }} />
+            <span className="pz-av" aria-hidden="true">{a.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>
+            <span className="pz-arch-text"><b>{a.name}</b>{tag(a)}</span>
+          </label>
+        ))}
+      </div>
+      <p className="muted">{cloud ? f.whatTheySee : !configured ? pl.flow.cant.noCloud : pl.flow.cant.signIn}</p>
+      <button className="btn-primary" onClick={save} disabled={state === "busy"}>{state === "busy" ? f.sending : sending.length ? fill(sending.length === 1 ? f.sendOne : f.sendN, { n: sending.length }) : f.save}</button>
       <p className="muted"><b>{plan.sentAt ? fill(pl.flow.lastSent, { date: new Date(plan.sentAt).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "short" }) }) : pl.flow.neverSent}</b></p>
-      <button className="btn-primary" style={{ alignSelf: "flex-start" }} onClick={go} disabled={state === "busy"}>{fill(state === "sent" ? a.again : a.send, name)}</button>
-      {state === "sent" && <p className="success-msg" role="status">{fill(a.sent, name)}</p>}
-      {state && state !== "busy" && state !== "sent" && <p className="error-msg" role="alert">{state}</p>}
+      {state === "done" && <p className="success-msg" role="status">{sending.length ? fill(f.sent, { n: sending.length }) : f.saved}</p>}
+      {state && state !== "busy" && state !== "done" && <p className="error-msg" role="alert">{state}</p>}
     </div>
   );
 }

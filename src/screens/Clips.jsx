@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { getAthletes, getReviews, saveReview, deleteReview, getSessions, getRange } from "../storage";
 import { FAULTS, quickReview, suggestShot, arrowChoices } from "../clips";
 import { listClips, getClip, putClip, deleteClip, updateClip, hasClipStore } from "../clipStore";
-import ArcherSelect from "../ArcherSelect";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import Scorecard from "./Scorecard";
@@ -90,15 +89,9 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
     navigator.storage?.estimate?.().then(setSpace).catch(() => {});
   }, []);
 
-  if (!athlete) return (
-    <div className="screen">
-      <h2>{c.title}</h2>
-      <ArcherSelect tr={tr} athletes={athletes} selectedId={selectedId} onPick={setSelectedId} prompt={c.pick} />
-    </div>
-  );
-
   const reviews = Object.fromEntries(getReviews().map((r) => [r.id, r]));
-  const mine = (clips || []).filter((x) => x.athleteId === selectedId);
+  const mine = (clips || []).filter((x) => !athlete || x.athleteId === selectedId); // no archer chosen: everyone's clips
+  const withClips = athletes.filter((a) => (clips || []).some((x) => x.athleteId === a.id));
   const isDone = (x) => { const rv = reviews[x.id]; return !!(rv && (rv.verdict || rv.faults?.length || rv.phasesMarked)); };
   const todo = mine.filter((x) => !isDone(x)).length;
   const shown = mine.filter((x) => show === "all" || (show === "todo" ? !isDone(x) : isDone(x)));
@@ -122,7 +115,8 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
   const ranges = [...sessions.filter((x) => x.athleteId === selectedId && x.range).map((x) => x.range), ...liveHere.map((x) => x.range)];
   const taken = new Set(Object.values(reviews).filter((r) => r.shot).map((r) => `${r.shot.session_id}/${r.shot.end}/${r.shot.arrow}`));
   const keyOf = (a) => `${a.session_id}/${a.end}/${a.arrow}`;
-  const choicesFor = (x) => [...arrowChoices(sessions, selectedId, x.recordedAt), ...arrowChoices(liveHere, selectedId, x.recordedAt)];
+  const choicesFor = (x) => { const here = live?.athlete_id === x.athleteId ? [{ athleteId: x.athleteId, date: new Date().toISOString().slice(0, 10), range: live }] : [];
+    return [...arrowChoices(sessions, x.athleteId, x.recordedAt), ...arrowChoices(here, x.athleteId, x.recordedAt)]; };
   const link = (id, shot) => {
     const rv = reviews[id];
     if (!rv) return;
@@ -182,10 +176,16 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
       <h2>{c.title}</h2>
       <div className="clips-actions">
         <button className="btn-primary" onClick={() => onGo("range")}><span className="rec-dot" />{c.record}</button>
-        <button className="btn-ghost" disabled={busy} onClick={() => fileRef.current.click()}><Icon name="import" size={18} />{busy ? c.importing : c.import}</button>
+        <button className="btn-ghost" disabled={busy || !athlete} onClick={() => fileRef.current.click()}><Icon name="import" size={18} />{busy ? c.importing : c.import}</button>
         <input ref={fileRef} type="file" accept="video/*,.mp4,.mov,.m4v,.webm" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ""; if (f.length) importFiles(f); }} />
       </div>
-      <small className="muted">{c.importHint}</small>
+      <small className="muted">{athlete ? c.importHint : c.pickToImport}</small>
+      {withClips.length > 0 && (
+        <div className="clips-who" role="tablist" aria-label={c.whose}>
+          <button role="tab" aria-selected={!athlete} className={!athlete ? "on" : ""} onClick={() => setSelectedId("")}>{c.everyone}</button>
+          {withClips.map((a) => <button key={a.id} role="tab" aria-selected={a.id === selectedId} className={a.id === selectedId ? "on" : ""} onClick={() => setSelectedId(a.id)}>{a.name.split(/\s+/)[0]}</button>)}
+        </div>
+      )}
 
       {atRisk.length > 0 && (
         <div className="clips-risk" role="status">
@@ -215,7 +215,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
                   <span className="clip-thumb" aria-hidden="true"><Icon name="play" size={18} /><small>{Math.floor(x.durationS / 60)}:{String(Math.round(x.durationS % 60)).padStart(2, "0")}</small></span>
                   <span className="clip-what">
                     <b>{rv?.shot?.whole ? fill(c.wholeEnd, rv.shot) : rv?.shot ? fill(c.endArrow, { end: rv.shot.end, n: rv.shot.arrow }) : c.noArrow}</b>
-                    <small>{when(x.recordedAt)} · {mb(x.size)} MB{!x.savedOut && ` · ${c.onlyHere}`}</small>
+                    <small>{!athlete && `${athletes.find((a) => a.id === x.athleteId)?.name || ""} · `}{when(x.recordedAt)} · {mb(x.size)} MB{!x.savedOut && ` · ${c.onlyHere}`}</small>
                     {tagged ? <small className="clip-tags">{rv.verdict === "good" ? c.good : rv.faults.map((f) => tr.quick.faults[FAULTS.indexOf(f)] || f).join(", ") || c.fault}</small> : <small className="clip-tags none">{c.untagged}</small>}
                   </span>
                   {rv?.shot?.score != null && <span className={`clip-badge ${rv?.verdict || "none"}`}>{rv.shot.score}</span>}
@@ -259,7 +259,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
         </>
       )}
 
-      {resultSessions.length > 0 && (
+      {athlete && resultSessions.length > 0 && (
         <section className="card clips-result">
           <h3>{c.resultTitle}</h3>
           <p className="muted">{c.resultHint}</p>

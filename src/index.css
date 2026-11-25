@@ -626,3 +626,54 @@ button.row:hover .row-name { color: var(--blue); }
 .swipe-card { margin-bottom: 6px; border-radius: var(--r-lg); }
 .rg-zoom { position: absolute; top: 28px; inset-inline-end: 8px; min-height: 36px; min-width: 48px; border-radius: 18px; border: 0; background: var(--black); color: var(--white); font: 700 14px var(--font-body); cursor: pointer; }
 .swipe.on .swipe-del { visibility: visible; }
+
+/* Range: who's shooting (the coach picks the archer here, not in a header bar) */
+.rg-who-wrap { margin-bottom: 12px; }
+.rg-who-label { display: block; font-weight: 600; margin: 4px 0 8px; }
+.rg-who { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; }
+.rg-who button { flex: none; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0; font: 600 12px var(--font-body); color: var(--g500); cursor: pointer; }
+.rg-who i { width: 48px; height: 48px; border-radius: 50%; background: var(--g100); color: var(--black); display: grid; place-items: center; font: 700 15px var(--font-body); font-style: normal; }
+.rg-who button.on { color: var(--black); }
+.rg-who button.on i { background: var(--black); color: var(--white); box-shadow: 0 0 0 3px var(--white), 0 0 0 5px var(--blue); }
+.rg-who span { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Plans: the coach's plans, each given to the archers who follow it */
+.plans-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.plans-head h2 { margin: 0; }
+.plans-list { display: grid; gap: 12px; }
+.plan-card { width: 100%; display: grid; gap: 12px; padding: 18px; border: 1.5px solid var(--g200); border-radius: 16px; background: var(--white); color: var(--black); text-align: start; font: inherit; cursor: pointer; transition: border-color var(--t-xs) var(--ease-out); }
+.plan-card:hover { border-color: var(--blue); }
+.plan-card.draft { border-style: dashed; }
+.plan-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.plan-top b { display: block; font-size: 18px; }
+.plan-top small { color: var(--g500); font-size: 14px; }
+.plan-ppl, .today-ppl { display: flex; flex: none; }
+.plan-ppl i, .today-ppl i { width: 30px; height: 30px; border-radius: 50%; background: var(--black); color: var(--white); border: 2px solid var(--white); margin-inline-start: -8px; display: grid; place-items: center; font: 700 11px var(--font-body); font-style: normal; }
+.plan-ppl i:first-child, .today-ppl i:first-child { margin-inline-start: 0; }
+.plan-strip { display: grid; grid-template-columns: repeat(52, 1fr); gap: 1px; height: 10px; border-radius: 5px; overflow: hidden; direction: ltr; }
+.plan-strip i { background: var(--g200); }
+.plan-strip i.now { outline: 2px solid var(--black); outline-offset: -1px; }
+.plans-without { margin-top: 16px; gap: 4px; display: grid; background: var(--g50); border: 0; }
+.plans-new .pn-field { display: grid; gap: 8px; margin-bottom: 20px; font-weight: 600; }
+.pn-levels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pn-levels button { display: grid; gap: 2px; padding: 12px; border: 1.5px solid var(--g200); border-radius: 12px; background: var(--white); text-align: start; cursor: pointer; font: inherit; }
+.pn-levels button b { font-size: 15px; }
+.pn-levels button small { color: var(--g500); font-weight: 400; }
+.pn-levels button.on { border-color: var(--black); box-shadow: inset 0 0 0 1px var(--black); }
+/* Planner header: the plan, and who follows it */
+.pz-head { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 14px; }
+.pz-head h2 { margin: 0; }
+.pz-who { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--blue); font: 600 15px var(--font-body); cursor: pointer; min-height: 32px; }
+.pz-list { display: grid; }
+.pz-arch { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--g200); cursor: pointer; font-weight: 400; }
+.pz-arch input { width: 22px; height: 22px; accent-color: var(--blue); flex: none; }
+.pz-av { width: 36px; height: 36px; border-radius: 50%; background: var(--black); color: var(--white); display: grid; place-items: center; font: 700 13px var(--font-body); flex: none; }
+.pz-arch-text { display: grid; gap: 2px; }
+.pz-tag { justify-self: start; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--g100); color: var(--g600); }
+.pz-tag.app { background: var(--green-tint); color: var(--green-text); }
+.pz-tag.move { background: #FFF4E5; color: #8a4b00; }
+/* Today: training today, one card per plan */
+.today-plan { width: 100%; display: grid; gap: 6px; padding: 14px 16px; border-radius: 14px; background: var(--g50); border: 0; text-align: start; font: inherit; color: var(--black); cursor: pointer; margin-bottom: 8px; }
+.today-plan-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.form .pz-arch { flex-direction: row; align-items: center; }
+.plans-list .swipe { border-radius: 16px; padding: 1px; }

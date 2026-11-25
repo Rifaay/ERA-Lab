@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { getAthletes, getRange, saveRange, saveSession, getReviews, saveReview, uid } from "../storage";
+import { getAthletes, getRange, saveRange, saveSession, getReviews, saveReview, uid, getPlans } from "../storage";
+import { dayFilled } from "../plan";
+import { isoDay } from "../stats";
 import { dropUpload } from "../archer";
 import { putClip } from "../clipStore";
 import { clipName, quickReview, shotOf, refreshShots } from "../clips";
@@ -54,6 +56,22 @@ function Choice({ values, labels, value, onChange }) {
     <div className="rg-chips">
       {values.map((v, i) => (
         <button key={v} type="button" className={`chip ${value === v ? "active" : ""}`} aria-pressed={value === v} onClick={() => onChange(value === v ? "" : v)}>{labels[i]}</button>
+      ))}
+    </div>
+  );
+}
+
+// "Who's shooting?": every archer, those with training planned today first. The coach's app only.
+function Who({ label, selectedId, onPick }) {
+  const iso = isoDay(new Date()), year = +iso.slice(0, 4);
+  const today = new Set(getPlans().filter((p) => p.year === year && dayFilled(p.days?.[iso])).flatMap((p) => p.archers));
+  const list = getAthletes().sort((a, b) => Number(today.has(b.id)) - Number(today.has(a.id)) || a.name.localeCompare(b.name));
+  return (
+    <div className="rg-who" role="radiogroup" aria-label={label}>
+      {list.map((a) => (
+        <button key={a.id} type="button" role="radio" aria-checked={a.id === selectedId} className={a.id === selectedId ? "on" : ""} onClick={() => onPick(a.id)}>
+          <i aria-hidden="true">{a.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</i><span>{a.name.split(/\s+/)[0]}</span>
+        </button>
       ))}
     </div>
   );
@@ -298,8 +316,10 @@ export default function Range({ tr, lang, selectedId }) {
       </div>
     </div>
   );
-  if (!athlete) return (
+  if (!athlete) return archer ? (
     <div className="screen" key={step}><div className="no-athlete"><div className="no-athlete-icon"><Icon name="target" size={56} /></div><div className="no-athlete-text">{r.noAthlete}</div></div></div>
+  ) : (
+    <div className="screen" key={step}><h2>{r.newSessionTitle}</h2><label className="rg-who-label">{r.who}</label><Who label={r.who} selectedId="" onPick={setSelectedId} />{!getAthletes().length && <p className="muted">{r.noAthlete}</p>}</div>
   );
 
   const stepIndex = { setup: 0, range: 1, review: 2, done: 2 }[step];
@@ -315,6 +335,7 @@ export default function Range({ tr, lang, selectedId }) {
   if (step === "setup") return (
     <div className="screen" key={step}>
       {header}
+      {!archer && <div className="rg-who-wrap"><label className="rg-who-label">{r.who}</label><Who label={r.who} selectedId={selectedId} onPick={setSelectedId} /></div>}
       <div className="card">
         <div className="form">
           <div><label>{r.distance}</label><Pick values={["18", "30", "50", "70", "90"]} value={setup.distance} onChange={(v) => set("distance", v)} max={150} other={r.other} /></div>

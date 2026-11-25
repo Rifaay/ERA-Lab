@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getAthletes, getExercises, saveExercise, deleteExercise, getGoals, uid } from "../storage";
+import { getExercises, saveExercise, deleteExercise, getGoals, uid } from "../storage";
 import Icon from "../icons";
 
 const BLANK = { id: "", name: "", category: "technique", sets: "", reps: "", frequency: "", goalLink: "", videoUrl: "", notes: "" };
@@ -55,16 +55,14 @@ function ExForm({ athleteId, existing, tr, onSaved, onCancel }) {
   );
 }
 
-export default function Exercises({ tr, selectedId }) {
+// The coach's exercise library, for every plan and archer. Older exercises made for one archer stay in it.
+export default function Exercises({ tr }) {
   const e = tr.exercises;
-  const athletes = getAthletes();
-  const athlete = athletes.find((a) => a.id === selectedId) || null;
-
-  const [exercises, setExercises] = useState(() => getExercises().filter((x) => x.athleteId === selectedId));
+  const [exercises, setExercises] = useState(getExercises);
   const [editing, setEditing] = useState(null);
   const [filterCat, setFilterCat] = useState("all");
 
-  const refresh = () => setExercises(getExercises().filter((x) => x.athleteId === selectedId));
+  const refresh = () => setExercises(getExercises());
 
   const handleDelete = (id) => {
     if (!window.confirm(e.confirmDelete)) return;
@@ -72,18 +70,9 @@ export default function Exercises({ tr, selectedId }) {
     refresh();
   };
 
-  if (!athlete) return (
-    <div className="screen">
-      <div className="no-athlete">
-        <div className="no-athlete-icon"><Icon name="archer" size={56} /></div>
-        <div className="no-athlete-text">{e.noAthlete}</div>
-      </div>
-    </div>
-  );
-
   const cats = ["all", ...Object.keys(e.categories)];
   const filtered = filterCat === "all" ? exercises : exercises.filter((ex) => ex.category === filterCat);
-  const goals = getGoals().filter((g) => g.athleteId === selectedId);
+  const goals = getGoals();
 
   return (
     <div className="screen">
@@ -103,7 +92,7 @@ export default function Exercises({ tr, selectedId }) {
 
       {editing && (
         <ExForm
-          athleteId={selectedId}
+          athleteId={editing.athleteId || ""}
           existing={editing.id ? editing : null}
           tr={tr}
           onSaved={() => { refresh(); setEditing(null); }}

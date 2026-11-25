@@ -65,9 +65,11 @@ export const deleteAthlete = (id) => {
   exportBackup();
   const goalIds = new Set(getGoals().filter((g) => g.athleteId === id).map((g) => g.id));
   const theirs = (x) => x.athleteId === id || goalIds.has(x.goalId);
-  for (const k of ["sessions", "assessments", "plans", "goals", "progressLogs", "checkIns", "reviews"]) {
+  for (const k of ["sessions", "assessments", "goals", "progressLogs", "checkIns", "reviews"]) {
     store(KEY[k], load(KEY[k], "[]").filter((x) => !theirs(x)));
   }
+  // A plan made for this archer alone (named after them) goes; a plan others follow stays, without them.
+  store(KEY.plans, getPlans().filter((p) => p.athleteId !== id).map((p) => ({ ...p, archers: p.archers.filter((a) => a !== id) })));
   const range = getRange();
   if (range.live?.athlete_id === id) range.live = null;
   delete range.setups?.[id];
@@ -96,12 +98,30 @@ export const saveAssessment  = (a) => { const list = getAssessments(); list.push
 export const deleteAssessment = (id) => store(KEY.assessments, getAssessments().filter((a) => a.id !== id));
 
 // ── Plans ─────────────────────────────────────────────────────────────────
-export const getPlans = () => load(KEY.plans, "[]");
-export const getPlan  = (athleteId, year) => {
-  return getPlans().find((p) => p.athleteId === athleteId && p.year === year)
-    || { id: `${athleteId}-${year}`, athleteId, year, weeks: {}, tournaments: [] };
-};
+// A plan is the coach's, not one archer's: a name, a level, one season (a calendar year) and the archers who follow
+// it. An archer follows at most one plan a season. Plans from before (one per archer) read as plans with that archer.
+export const LEVELS = { foundation: 400, developing: 600, performance: 900, elite: 1200 }; // the season's biggest week, in arrows
+const upPlan = (p) => (Array.isArray(p.archers) ? p : {
+  ...p, archers: p.athleteId ? [p.athleteId] : [],
+  name: p.name || `${getAthletes().find((a) => a.id === p.athleteId)?.name || "Plan"} ${p.year}`,
+});
+export const getPlans = () => load(KEY.plans, "[]").map(upPlan);
+export const getPlanById = (id) => getPlans().find((p) => p.id === id) || null;
+export const planFor = (athleteId, year) => getPlans().find((p) => p.year === year && p.archers.includes(athleteId)) || null;
 export const savePlan = (plan) => upsert(KEY.plans, plan);
+export const newPlan = ({ name, level = "performance", year }) => {
+  const p = { id: uid(), name: name.trim(), level, year, archers: [], weeks: {}, days: {}, comps: [], targets: {}, edited: [], rules: { peakArrows: LEVELS[level] ?? LEVELS.performance } };
+  savePlan(p);
+  return p;
+};
+export const deletePlan = (id) => store(KEY.plans, load(KEY.plans, "[]").filter((p) => p.id !== id));
+// Who follows a plan. Ticking an archer moves them off any other plan of the same season.
+export const assignArchers = (planId, ids) => {
+  const plans = getPlans(), plan = plans.find((p) => p.id === planId);
+  if (!plan) return;
+  const on = new Set(ids);
+  store(KEY.plans, plans.map((p) => p.id === planId ? { ...p, archers: [...on] } : p.year === plan.year ? { ...p, archers: p.archers.filter((a) => !on.has(a)) } : p));
+};
 
 // ── Goals ──────────────────────────────────────────────────────────────────
 export const getGoals    = () => load(KEY.goals, "[]");

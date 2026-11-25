@@ -12,7 +12,7 @@ export const t = {
         "Anchor inconsistent", "Body sway / canting", "Grip torque", "Early release (no transfer)", "Wrist break (hand off forearm line)", "Hand flips away in follow-through"],
     },
     clips: {
-      title: "Clips", pick: "Choose the archer whose clips to see", loading: "Loading clips…",
+      title: "Clips", pick: "Choose the archer whose clips to see", pickToImport: "Choose an archer below to import clips for them.", whose: "Whose clips", everyone: "Everyone", loading: "Loading clips…",
       lead: "Clips on this device, filmed in the Range or imported. Tap one to watch it, link it to its arrow and tag it; the full analysis is done later on the computer.",
       risk: "{n} clips are only on this phone", riskOne: "1 clip is only on this phone",
       riskHint: " Phones can clear a website's storage. Save them to the gallery or copy them to the computer.",
@@ -87,6 +87,7 @@ export const t = {
     searchAthletes: "Search athletes…",
     langToggle: "عربي",
     nav: {
+      plans: "Plans",
       profile:   "Profile",
       range:     "Plot",
       live:      "Live scores",
@@ -116,7 +117,7 @@ export const t = {
       live: "shooting now", minor: "Under 18 · stays on this phone", none: "No archer matches.",
     },
     today: {
-      shooting: "Shooting now: {names}", shootingSub: "Live scores", planned: "Planned today", nothingPlanned: "Nothing planned for today.",
+      shooting: "Shooting now: {names}", shootingSub: "Live scores", planned: "Planned today", rest: "Rest day", compsSoon: "Competitions soon", nothingPlanned: "Nothing planned for today.",
       allArchers: "All archers", arrows: "{n} arrows",
     },
     home: {
@@ -137,6 +138,7 @@ export const t = {
       topFault: "Most common: {name} ({n})", noFaults: "No faults tagged",
       stage: "Stage {n}", week: "Week {n}", noPlan: "No plan for this week", planHint: "Open the planner to set phases",
       nextEvent: "Next: {name}, week {week}",
+      nextComp: "Next: {name} on {date}",
       noSession: "No sessions yet", noSessionHint: "Start one from the range", sessions30: "{n} sessions in 30 days",
       rubricIs: "Rubric {to}", rubricFrom: "Rubric {to}, was {from}", noRubric: "Not assessed yet", assessed: "Assessed {when}",
       goalsOpen: "{n} open goals", goalOne: "1 open goal", noGoals: "No goals set", due: "Due {when}", overdue: "Overdue: {name}",
@@ -166,7 +168,7 @@ export const t = {
     range: {
       title: "Range", noAthlete: "Select an athlete first.",
       steps: ["Setup", "Range", "Review"],
-      distance: "Distance (m)", face: "Target face", perEnd: "Arrows per end", other: "Other", confirmEnd: "Clear end {n}? Its arrows are removed; the other ends keep their numbers.", swipeEnd: "Swipe an end towards the start of the line to clear it.", zoomOut: "Back to the whole face", zoomHint: "Two fingers zoom the face.", type: "Session type",
+      distance: "Distance (m)", face: "Target face", perEnd: "Arrows per end", other: "Other", who: "Who's shooting?", newSessionTitle: "New session", confirmEnd: "Clear end {n}? Its arrows are removed; the other ends keep their numbers.", swipeEnd: "Swipe an end towards the start of the line to clear it.", zoomOut: "Back to the whole face", zoomHint: "Two fingers zoom the face.", type: "Session type",
       faces: { 122: "122 cm (10 rings)", 80: "80 cm (10 rings)", "80r": "80 cm reduced (5–10)", 40: "40 cm (10 rings)", "40s": "40 cm 3-spot (6–10)" },
       checkIn: "Athlete check-in (optional)", readiness: "Readiness", confidence: "Confidence", focus: "Focus",
       energy: "Body energy / fatigue", sleep: "Sleep last night (h)", goal: "Session goal (process)", goalPh: "e.g. hold expansion",
@@ -301,11 +303,30 @@ export const t = {
       templateName: "Template name", applyTemplate: "Use template",
       noTemplates: "No templates yet.",
     },
+    plans: {
+      title: "Your plans", new: "New plan", none: "No plans yet. Make one, then choose the archers who follow it.",
+      newTitle: "New plan", name: "Name", namePh: "Seniors {year}", forWho: "Who is it for?",
+      levels: { foundation: "Foundation", developing: "Developing", performance: "Performance", elite: "Elite" },
+      levelSub: { foundation: "Form first, low volume", developing: "First competitions", performance: "National level", elite: "International" },
+      levelNote: "Sets how many arrows the biggest week has. You can change it later in the plan's rules.",
+      season: "Season", create: "Make the plan", afterCreate: "Next: add the competitions, build the season, then choose who follows it.",
+      notStarted: "Not started", draft: "Not given to anyone yet", next: "Next: {prio} · {name} in {n} weeks", noComps: "No competitions yet",
+      archersN: "{n} archers", withoutOne: "1 archer has no plan this season", withoutN: "{n} archers have no plan this season",
+      delete: "Delete", confirmDelete: "Delete the plan “{name}”? Archers who follow it keep the copy on their phone until you send them another.",
+      swipe: "Swipe a plan towards the start of the line to delete it.",
+    },
     planner: {
       title: "Season plan", noAthlete: "Select an athlete first.", year: "Year", prevYear: "Previous year", nextYear: "Next year",
       cal: { daysTitle: "Day by day", view: "Season view", calView: "Calendar", weeksView: "Weeks", hint: "Tap a month, then a day, to plan that day's training. Colours are the phases of the plan weeks.", allMonths: "All months", prevMonth: "Previous month", nextMonth: "Next month", key: "Colour: the week's phase · A/B/C: competition · dot: day planned.", openWeek: "Plan week {w} · {phase} — open the week", areasLabel: "Focus areas (pick as many as you need)", areas: { technical: "Technical", mental: "Mental", physical: "Physical", competition: "Competition" }, focus: "Focus details", focusHint: "e.g. Anchor and release, 18 m blank bale", arrows: "Arrows", materials: "Training materials and links", materialsHint: "Drills, videos, documents… one link per line", note: "Notes", clear: "Clear this day", confirmClear: "Remove everything planned for this day?" },
       app: { title: "In {name}'s ERA Lab", intro: "{name} has their own app. Send this plan there: they see each day's plan, and with notifications on they get a reminder on training days.", send: "Send plan to {name}", sent: "Sent. {name} sees it under Plan.", again: "Send the latest version", offline: "No connection. Send it again when this device is online." },
+followers: {
+        title: "Who follows this plan?", none: "Add archers in Archers first.", ownApp: "Own app", minor: "Under 18 · the plan stays on your phone",
+        elsewhere: "On {plan} · ticking moves them here", here: "Follows it on your phone",
+        whatTheySee: "Archers with their own app get the plan in Plan: today's session, the week, their arrow target and the competitions. Changes reach them when you send again.",
+        save: "Save", sendOne: "Save and send to 1 archer", sendN: "Save and send to {n} archers", sending: "Sending…", sent: "Sent to {n} with their own app.", saved: "Saved.",
+      },
       flow: {
+        gone: "This plan no longer exists.", allPlans: "All plans", otherYear: "This plan covers {year}. Make another plan for {y}.", oneArcher: "1 archer", nArchers: "{n} archers", noArchers: "No archers yet",
         now: "Now: {phase} · week {w}", openWeek: "Open this week", timeline: "Timeline", calendar: "Calendar", reviewSend: "Review & send", adjust: "Adjust rules",
         ramadan: "Ramadan weeks {from} – {to}: lighter, with the Ramadan protocol", ramadanNone: "No Ramadan weeks this year",
         weekTitle: "Week {w} · {from} – {to}", planned: "Planned {p} of {t} arrows", plannedOnly: "{p} arrows planned", nothing: "Nothing planned",
@@ -484,6 +505,7 @@ export const t = {
       none: "No archer has their own app yet.", how: "Open an archer's page and choose “Create invite code”. The archer installs ERA Lab, picks “I'm an archer” and types the code.",
       quiet: "Nobody is shooting right now ({n} linked).", quietSub: "An archer appears here the moment they plot their first arrow. Finished sessions are added to their records automatically.",
       line: "avg {avg} · {arrows} arrows · {dist} m", end: "End {n}", watchingNow: "Your coach is watching", fromCoach: "Coach", endSession: "End this session", confirmEnd: "End {name}'s session? It closes on their phone and leaves your board. Arrows shot so far are not kept.", removeSession: "Remove this session", confirmRemove: "Remove {name}'s session from the board and from your records? This can't be undone.", endedByCoach: "Your coach ended this session.", noteTitle: "Quick note to {name}", notePlaceholder: "Type a note…", noteSend: "Send", noteSent: "Sent. It shows on the archer's screen.", noteNotLinked: "This archer isn't linked to you any more.", notePresets: ["Good shot", "Relax the bow hand", "Follow through", "Breathe", "Hold your anchor"], back: "All archers", finished: "Finished today", finishedAt: "Finished {t}", finishedShort: "Finished", secAgo: "{n} s ago", minAgo: "{n} min ago",
+      someoneElse: "Plot for someone else",
       ownPhone: "{name} plots on their own phone. You'll see each arrow in Live scores as they shoot, and the finished session is added here automatically.", watch: "Watch live scores",
       linkTitle: "Archer's own app", inviteIntro: "Let {name} plot arrows on their own phone. You watch the scores live and keep everything else.", invite: "Create invite code",
       codeIntro: "{name} scans this with the phone camera, or you send the link. It opens ERA Lab with the invite filled in; they create an account and they're linked.", share: "Share invite link", shareText: "{name}, join me on ERA Lab: open this link and create your archer account. Invite code {code}.", copied: "Invite copied. Paste it in WhatsApp or a message.", qrAlt: "QR code of the invite link", orCode: "Or they type this code:", expires: "Works once, until {date}.", newCode: "Make a new code",
@@ -572,7 +594,7 @@ export const t = {
         "ارتكاز غير ثابت", "تمايل / ميل الجسم", "التواء القبضة", "إفلات مبكر (دون نقل)", "انكسار الرسغ (اليد خارج خط الساعد)", "ارتداد اليد بعيداً في المتابعة"],
     },
     clips: {
-      title: "المقاطع", pick: "اختر الرامي الذي تريد رؤية مقاطعه", loading: "جارٍ تحميل المقاطع…",
+      title: "المقاطع", pick: "اختر الرامي الذي تريد رؤية مقاطعه", pickToImport: "اختر رامياً بالأسفل لاستيراد مقاطع له.", whose: "مقاطع من", everyone: "الجميع", loading: "جارٍ تحميل المقاطع…",
       lead: "المقاطع على هذا الجهاز، المصوّرة في الميدان أو المستوردة. اضغط على مقطع لمشاهدته وربطه بسهمه ووسمه؛ التحليل الكامل يتم لاحقاً على الحاسوب.",
       risk: "{n} مقاطع موجودة على هذا الهاتف فقط", riskOne: "مقطع واحد موجود على هذا الهاتف فقط",
       riskHint: " قد تمسح الهواتف تخزين المواقع. احفظها في المعرض أو انسخها إلى الحاسوب.",
@@ -647,6 +669,7 @@ export const t = {
     searchAthletes: "بحث…",
     langToggle: "English",
     nav: {
+      plans: "الخطط",
       profile:   "الملف",
       range:     "التسجيل",
       live:      "النتائج المباشرة",
@@ -678,7 +701,7 @@ export const t = {
       live: "يرمي الآن", minor: "أقل من ١٨ · يبقى على هذا الهاتف", none: "لا يوجد رامٍ مطابق.",
     },
     today: {
-      shooting: "يرمي الآن: {names}", shootingSub: "النتائج المباشرة", planned: "المخطط اليوم", nothingPlanned: "لا شيء مخطط لليوم.",
+      shooting: "يرمي الآن: {names}", shootingSub: "النتائج المباشرة", rest: "يوم راحة", compsSoon: "بطولات قريبة", planned: "المخطط اليوم", nothingPlanned: "لا شيء مخطط لليوم.",
       allArchers: "كل الرماة", arrows: "{n} سهماً",
     },
     home: {
@@ -699,6 +722,7 @@ export const t = {
       topFault: "الأكثر تكراراً: {name} ({n})", noFaults: "لا أخطاء مسجلة",
       stage: "المرحلة {n}", week: "الأسبوع {n}", noPlan: "لا خطة لهذا الأسبوع", planHint: "افتح المخطط لتحديد المراحل",
       nextEvent: "التالي: {name}، الأسبوع {week}",
+      nextComp: "التالي: {name} في {date}",
       noSession: "لا توجد جلسات بعد", noSessionHint: "ابدأ جلسة من الميدان", sessions30: "{n} جلسات في ٣٠ يوماً",
       rubricIs: "التقييم {to}", rubricFrom: "التقييم {to}، كان {from}", noRubric: "لم يُقيَّم بعد", assessed: "قُيِّم {when}",
       goalsOpen: "{n} أهداف مفتوحة", goalOne: "هدف واحد مفتوح", noGoals: "لا أهداف محددة", due: "يستحق {when}", overdue: "متأخر: {name}",
@@ -727,7 +751,7 @@ export const t = {
     range: {
       title: "الميدان", noAthlete: "اختر رياضياً أولاً.",
       steps: ["الإعداد", "الميدان", "المراجعة"],
-      distance: "المسافة (م)", face: "وجه الهدف", perEnd: "السهام في كل جولة", other: "غير ذلك", confirmEnd: "مسح الجولة {n}؟ تُحذف سهامها وتحتفظ الجولات الأخرى بأرقامها.", swipeEnd: "اسحب الجولة نحو بداية السطر لمسحها.", zoomOut: "عودة إلى الوجه كاملاً", zoomHint: "إصبعان لتكبير الوجه.", type: "نوع الجلسة",
+      distance: "المسافة (م)", face: "وجه الهدف", perEnd: "السهام في كل جولة", other: "غير ذلك", who: "من يرمي؟", newSessionTitle: "جلسة جديدة", confirmEnd: "مسح الجولة {n}؟ تُحذف سهامها وتحتفظ الجولات الأخرى بأرقامها.", swipeEnd: "اسحب الجولة نحو بداية السطر لمسحها.", zoomOut: "عودة إلى الوجه كاملاً", zoomHint: "إصبعان لتكبير الوجه.", type: "نوع الجلسة",
       faces: { 122: "١٢٢ سم (١٠ حلقات)", 80: "٨٠ سم (١٠ حلقات)", "80r": "٨٠ سم مصغّر (٥–١٠)", 40: "٤٠ سم (١٠ حلقات)", "40s": "٤٠ سم ثلاثي (٦–١٠)" },
       checkIn: "حالة الرياضي قبل الرمي (اختياري)", readiness: "الجاهزية", confidence: "الثقة", focus: "التركيز",
       energy: "طاقة الجسم / التعب", sleep: "ساعات النوم الليلة الماضية", goal: "هدف الجلسة (الأداء)", goalPh: "مثال: الثبات في التمدد",
@@ -859,11 +883,30 @@ export const t = {
       templateName: "اسم القالب", applyTemplate: "استخدم القالب",
       noTemplates: "لا قوالب بعد.",
     },
+    plans: {
+      title: "خططك", new: "خطة جديدة", none: "لا خطط بعد. أنشئ خطة، ثم اختر الرماة الذين يتبعونها.",
+      newTitle: "خطة جديدة", name: "الاسم", namePh: "الكبار {year}", forWho: "لمن هي؟",
+      levels: { foundation: "تأسيس", developing: "تطوير", performance: "أداء", elite: "نخبة" },
+      levelSub: { foundation: "الأسلوب أولاً، حجم قليل", developing: "أولى البطولات", performance: "مستوى وطني", elite: "مستوى دولي" },
+      levelNote: "يحدد عدد سهام أكبر أسبوع. يمكنك تغييره لاحقاً من قواعد الخطة.",
+      season: "الموسم", create: "أنشئ الخطة", afterCreate: "بعدها: أضف البطولات، ابنِ الموسم، ثم اختر من يتبعها.",
+      notStarted: "لم تبدأ", draft: "لم تُعطَ لأحد بعد", next: "التالي: {prio} · {name} بعد {n} أسابيع", noComps: "لا بطولات بعد",
+      archersN: "{n} رماة", withoutOne: "رامٍ واحد بلا خطة هذا الموسم", withoutN: "{n} رماة بلا خطة هذا الموسم",
+      delete: "احذف", confirmDelete: "حذف الخطة «{name}»؟ يحتفظ متبعوها بالنسخة على هواتفهم حتى ترسل لهم غيرها.",
+      swipe: "اسحب الخطة نحو بداية السطر لحذفها.",
+    },
     planner: {
       title: "خطة الموسم", noAthlete: "اختر رياضياً أولاً.", year: "السنة", prevYear: "السنة السابقة", nextYear: "السنة التالية",
       cal: { daysTitle: "يوماً بيوم", view: "عرض الموسم", calView: "التقويم", weeksView: "الأسابيع", hint: "اضغط شهراً ثم يوماً لتخطط تدريب ذلك اليوم. الألوان هي مراحل أسابيع الخطة.", allMonths: "كل الشهور", prevMonth: "الشهر السابق", nextMonth: "الشهر التالي", key: "اللون: مرحلة الأسبوع · A/B/C: بطولة · نقطة: يوم مخطط.", openWeek: "أسبوع الخطة {w} · {phase} — افتح الأسبوع", areasLabel: "مجالات التركيز (اختر ما تحتاج منها)", areas: { technical: "تقني", mental: "نفسي", physical: "بدني", competition: "منافسة" }, focus: "تفاصيل التركيز", focusHint: "مثلاً: التثبيت والإطلاق، ١٨ م على الهدف الفارغ", arrows: "الأسهم", materials: "مواد التدريب والروابط", materialsHint: "تمارين، فيديوهات، ملفات… رابط في كل سطر", note: "ملاحظات", clear: "امسح هذا اليوم", confirmClear: "حذف كل ما خُطط لهذا اليوم؟" },
       app: { title: "في تطبيق {name}", intro: "لدى {name} تطبيقه الخاص. أرسل الخطة إليه: يرى خطة كل يوم، ومع تفعيل الإشعارات يصله تذكير في أيام التدريب.", send: "أرسل الخطة إلى {name}", sent: "أُرسلت. يراها {name} في الخطة.", again: "أرسل آخر نسخة", offline: "لا يوجد اتصال. أرسلها مجددًا عند الاتصال." },
+followers: {
+        title: "من يتبع هذه الخطة؟", none: "أضف الرماة من «الرماة» أولاً.", ownApp: "تطبيقه الخاص", minor: "أقل من 18 · تبقى الخطة على هاتفك",
+        elsewhere: "على {plan} · التحديد ينقله إلى هنا", here: "يتبعها على هاتفك",
+        whatTheySee: "يحصل الرماة الذين لديهم التطبيق على الخطة في «الخطة»: جلسة اليوم والأسبوع وهدف السهام والبطولات. تصلهم التغييرات عند الإرسال مجدداً.",
+        save: "احفظ", sendOne: "احفظ وأرسل لرامٍ واحد", sendN: "احفظ وأرسل إلى {n} رماة", sending: "جارٍ الإرسال…", sent: "أُرسلت إلى {n} لديهم التطبيق.", saved: "حُفظت.",
+      },
       flow: {
+        gone: "هذه الخطة لم تعد موجودة.", allPlans: "كل الخطط", otherYear: "هذه الخطة لموسم {year}. أنشئ خطة أخرى لعام {y}.", oneArcher: "رامٍ واحد", nArchers: "{n} رماة", noArchers: "لا رماة بعد",
         now: "الآن: {phase} · الأسبوع {w}", openWeek: "افتح هذا الأسبوع", timeline: "الخط الزمني", calendar: "التقويم", reviewSend: "راجع وأرسل", adjust: "اضبط القواعد",
         ramadan: "أسابيع رمضان {from} – {to}: أخف، ببروتوكول رمضان", ramadanNone: "لا أسابيع رمضان هذا العام",
         weekTitle: "الأسبوع {w} · {from} – {to}", planned: "مخطط {p} من {t} سهماً", plannedOnly: "{p} سهماً مخططة", nothing: "لا شيء مخطط",
@@ -1042,6 +1085,7 @@ export const t = {
       none: "لا يملك أي رامٍ تطبيقه بعد.", how: "افتح صفحة الرامي واختر «أنشئ رمز دعوة». يثبّت الرامي ERA Lab ويختار «أنا رامٍ» ويكتب الرمز.",
       quiet: "لا أحد يرمي الآن ({n} مرتبطون).", quietSub: "يظهر الرامي هنا لحظة تسجيل سهمه الأول. تُضاف الجلسات المنتهية إلى سجلاته تلقائياً.",
       line: "المعدل {avg} · {arrows} سهماً · {dist} م", end: "الجولة {n}", watchingNow: "مدربك يتابعك الآن", fromCoach: "المدرب", endSession: "إنهاء هذه الجلسة", confirmEnd: "إنهاء جلسة {name}؟ تُغلق على هاتفه وتختفي من لوحتك. لا تُحفظ السهام المرمية حتى الآن.", removeSession: "حذف هذه الجلسة", confirmRemove: "حذف جلسة {name} من اللوحة ومن سجلاتك؟ لا يمكن التراجع.", endedByCoach: "أنهى مدربك هذه الجلسة.", noteTitle: "ملاحظة سريعة إلى {name}", notePlaceholder: "اكتب ملاحظة…", noteSend: "أرسل", noteSent: "أُرسلت. تظهر على شاشة الرامي.", noteNotLinked: "هذا الرامي لم يعد مرتبطاً بك.", notePresets: ["رمية جيدة", "أرخِ يد القوس", "أكمل المتابعة", "تنفّس", "ثبّت الارتكاز"], back: "كل الرماة", finished: "انتهت اليوم", finishedAt: "انتهت {t}", finishedShort: "انتهت", secAgo: "منذ {n} ث", minAgo: "منذ {n} د",
+      someoneElse: "سجّل لرامٍ آخر",
       ownPhone: "{name} يسجّل على هاتفه. سترى كل سهم في النتائج المباشرة وهو يرمي، وتُضاف الجلسة المنتهية هنا تلقائياً.", watch: "تابع النتائج المباشرة",
       linkTitle: "تطبيق الرامي الخاص", inviteIntro: "دع {name} يسجّل سهامه على هاتفه. تتابع النتائج مباشرة وتحتفظ بكل ما عداها.", invite: "أنشئ رمز دعوة",
       codeIntro: "يمسح {name} هذا بكاميرا الهاتف، أو ترسل له الرابط. يفتح ERA Lab والدعوة جاهزة؛ ينشئ حساباً فيُربط بك.", share: "شارك رابط الدعوة", shareText: "{name}، انضم إليّ في ERA Lab: افتح هذا الرابط وأنشئ حساب الرامي. رمز الدعوة {code}.", copied: "نُسخت الدعوة. الصقها في واتساب أو رسالة.", qrAlt: "رمز QR لرابط الدعوة", orCode: "أو يكتب هذا الرمز:", expires: "يصلح مرة واحدة، حتى {date}.", newCode: "أنشئ رمزاً جديداً",
