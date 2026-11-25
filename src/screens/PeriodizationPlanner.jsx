@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { getAthletes, getPlanById, getPlans, savePlan, assignArchers, getSessions, getGoals, getExercises, uid } from "../storage";
 import { PHASES, COLORS, MIX, DEFAULT_RULES, rulesOf, autoPlan, compsIn, weekStart, ramadanWeeks, shotByDay, shotByWeek, loadRatio, warnings, dayFilled } from "../plan";
 import { isoDay, planWeek } from "../stats";
@@ -34,7 +35,6 @@ export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
   const [armed, setArmed] = useState(null);
   const [sel, setSel] = useState(null); // the week open in the editor
   const [comp, setComp] = useState({ name: "", date: "", priority: "A" });
-  const [seasonAs, setSeasonAs] = useState("timeline"); // the season as phase blocks, or as months and days
   const [weekOpen, setWeekOpen] = useState(null); // the plan week open in the week view
 
   const autoRamadan = useMemo(() => ramadanWeeks(year), [year]);
@@ -59,6 +59,15 @@ export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
   const goals = getGoals().filter((g) => plan.archers.includes(g.athleteId));
   const exercises = getExercises().filter((x) => !x.athleteId || plan.archers.includes(x.athleteId)); // the coach's library and the plan's archers' own
   const edited = new Set((plan.edited || []).map(Number));
+  const built = Object.keys(plan.weeks || {}).length > 0;
+  const coming = (() => {
+    const out = comps.filter((c) => c.date >= today).map((c) => ({ key: "c" + c.id, date: c.date, week: c.week, title: `${c.priority} · ${c.name}`, sub: pl.prio[c.priority] }));
+    for (let w = Math.max(2, nowWeek + 1); w <= 52; w++) {
+      const k = plan.weeks?.[w];
+      if (k && k !== plan.weeks?.[w - 1]) out.push({ key: "p" + w, date: weekStart(year, w), week: w, title: fill(pl.flow.phaseStarts, { phase: pl.phases[k] }), sub: `${pl.wk}${w}` });
+    }
+    return out.sort((x, y) => x.date.localeCompare(y.date)).slice(0, 3);
+  })();
 
   const touch = (w, change) => setPlan({ ...plan, ...change, edited: [...new Set([...edited, w])] });
   const rebuildWith = (change, ram = ramadan) => setPlan(autoPlan({ ...plan, ...change }, year, ram));
@@ -105,7 +114,7 @@ export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
         </button>
       </div>
 
-      {view === "season" && <>
+      {view === "season" && !built && <>
         <div className="card">
           <div className="card-header"><div className="card-title">{pl.comps}</div><Help text={pl.help.comps} /></div>
           <p className="muted">{pl.compsIntro}</p>
@@ -130,31 +139,71 @@ export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
         </div>
 
         <p className="muted pz-ramadan"><Icon name="moon" size={16} /> {ramadan.length ? fill(pl.flow.ramadan, { from: short(lang, weekStart(year, Math.min(...ramadan))), to: short(lang, addDays(weekStart(year, Math.max(...ramadan)), 6)) }) : pl.flow.ramadanNone}</p>
-        <div className="btn-row pz-actions">
-          <button className="btn-primary" onClick={build}>{pl.build}</button>
-          <Help text={pl.help.build} />
-        </div>
-        <p className="muted">{edited.size ? fill(pl.editedNote, { n: edited.size }) : pl.buildNote}</p>
-
-        {nowWeek >= 1 && nowWeek <= 52 && (
-          <div className="pz-now">
-            <b>{fill(pl.flow.now, { phase: plan.weeks?.[nowWeek] ? pl.phases[plan.weeks[nowWeek]] : pl.flow.notPlanned, w: nowWeek })}</b>
-            <button className="btn-primary small" onClick={() => openWeek(nowWeek)}>{pl.flow.openWeek}</button>
-          </div>
-        )}
-        <div className="seg pz-view" role="tablist" aria-label={pl.cal.view}>
-          {[["timeline", pl.flow.timeline], ["cal", pl.flow.calendar]].map(([k, label]) => (
-            <button key={k} type="button" role="tab" aria-selected={seasonAs === k} className={seasonAs === k ? "active" : ""} onClick={() => setSeasonAs(k)}>{label}</button>
-          ))}
-        </div>
-        {seasonAs === "timeline" && <Timeline {...{ plan, year, lang, pl, comps, ramadan, warns, nowWeek }} onOpen={openWeek} />}
-        {seasonAs === "cal" && <SeasonCalendar key={year} {...{ plan, year, lang, pl, comps, exercises, today }} onDay={setDay} onWeek={openWeek} />}
-        <div className="btn-row pz-next">
-          <button className="btn-primary" onClick={() => setView("send")}>{pl.flow.reviewSend}</button>
-          <button className="btn-ghost" onClick={() => setView("rules")}>{pl.flow.adjust}</button>
-          <button className="btn-ghost" onClick={() => setView("load")}>{pl.tabs.load}{warns.length ? ` (${warns.length})` : ""}</button>
-        </div>
+        <button className="btn-primary wide-btn" onClick={build}>{pl.build}</button>
+        <p className="muted">{pl.buildNote}</p>
       </>}
+
+      {view === "season" && built && <div className="pz-season">
+        <SeasonChart {...{ plan, year, lang, pl, comps, nowWeek }} onOpen={openWeek} />
+        {nowWeek >= 1 && nowWeek <= 52 && (() => {
+          const k = plan.weeks?.[nowWeek], t = +plan.targets?.[nowWeek]?.arrows || 0, s0 = weekStart(year, nowWeek);
+          const days = Array.from({ length: 7 }, (_, i) => addDays(s0, i)), sum = days.reduce((n, iso) => n + (+plan.days?.[iso]?.arrows || 0), 0);
+          return (
+            <button type="button" className="pz-thisweek" onClick={() => openWeek(nowWeek)}>
+              <small>{fill(pl.flow.thisWeek, { from: short(lang, s0), to: short(lang, days[6]) })}</small>
+              <b>{k ? pl.phases[k] : pl.flow.notPlanned} · {pl.wk}{nowWeek}</b>
+              <span>{t ? fill(pl.flow.planned, { p: sum, t }) : fill(pl.flow.plannedOnly, { p: sum })} · {(() => { const n = days.filter((iso) => dayFilled(plan.days?.[iso])).length; return n === 1 ? pl.flow.trainingDay : fill(pl.flow.trainingDays, { n }); })()}</span>
+              <em>{pl.flow.openWeek}</em>
+            </button>
+          );
+        })()}
+        <section className="pz-coming">
+          <h3>{pl.flow.comingUp}</h3>
+          {coming.length ? coming.map((x) => (
+            <button key={x.key} type="button" className="pz-next-row" onClick={() => openWeek(x.week)}>
+              <small>{short(lang, x.date)}</small><span><b>{x.title}</b><em>{x.sub}</em></span>
+            </button>
+          )) : <p className="muted">{pl.flow.nothingSoon}</p>}
+        </section>
+        <div className="pz-legend" aria-label={pl.legend}>
+          {[...new Set(Object.values(plan.weeks || {}))].map((k) => <span key={k}><i style={{ background: COLORS[k] }} />{pl.phases[k]}</span>)}
+        </div>
+        <button className="btn-primary wide-btn pz-send" onClick={() => setView("send")}>{pl.flow.archersSend}</button>
+        <div className="pz-more">
+          <button className="btn-ghost small" onClick={() => setView("comps")}>{pl.comps} ({comps.length})</button>
+          <button className="btn-ghost small" onClick={() => setView("cal")}>{pl.flow.calendar}</button>
+          <button className="btn-ghost small" onClick={() => setView("load")}>{pl.tabs.load}{warns.length ? ` (${warns.length})` : ""}</button>
+          <button className="btn-ghost small" onClick={() => setView("rules")}>{pl.flow.adjust}</button>
+        </div>
+      </div>}
+
+      {view === "comps" && <>
+        <div className="card">
+          <div className="card-header"><div className="card-title">{pl.comps}</div><Help text={pl.help.comps} /></div>
+          <p className="muted">{pl.compsIntro}</p>
+          {comps.map((c) => (
+            <div key={c.id} className="pz-comp">
+              <select value={c.priority} onChange={(e) => setCompField(c.id, "priority", e.target.value)} aria-label={pl.priority}>
+                {["A", "B", "C"].map((p) => <option key={p} value={p}>{pl.prio[p]}</option>)}
+              </select>
+              <input value={c.name} onChange={(e) => setCompField(c.id, "name", e.target.value)} aria-label={pl.compName} />
+              <input type="date" value={c.date} onChange={(e) => setCompField(c.id, "date", e.target.value)} aria-label={pl.compDate} />
+              <button className="del-btn" onClick={() => removeComp(c.id)} aria-label={pl.remove}><Icon name="x" size={16} /></button>
+            </div>
+          ))}
+          <div className="pz-comp">
+            <select value={comp.priority} onChange={(e) => setComp({ ...comp, priority: e.target.value })} aria-label={pl.priority}>
+              {["A", "B", "C"].map((p) => <option key={p} value={p}>{pl.prio[p]}</option>)}
+            </select>
+            <input value={comp.name} placeholder={pl.compName} onChange={(e) => setComp({ ...comp, name: e.target.value })} />
+            <input type="date" value={comp.date} onChange={(e) => setComp({ ...comp, date: e.target.value })} aria-label={pl.compDate} />
+            <button className="btn-primary small" onClick={addComp} disabled={!comp.name.trim() || !comp.date}>{pl.add}</button>
+          </div>
+        </div>
+
+        <p className="muted pz-ramadan"><Icon name="moon" size={16} /> {ramadan.length ? fill(pl.flow.ramadan, { from: short(lang, weekStart(year, Math.min(...ramadan))), to: short(lang, addDays(weekStart(year, Math.max(...ramadan)), 6)) }) : pl.flow.ramadanNone}</p>
+      </>}
+      {view === "cal" && <SeasonCalendar key={year} {...{ plan, year, lang, pl, comps, exercises, today }} onDay={setDay} onWeek={openWeek} />}
 
       {view === "week" && weekOpen && <WeekDays key={weekOpen} w={weekOpen} {...{ plan, year, lang, pl, comps, exercises, shot, ramadan, goals, edited }}
         onWeek={openWeek} onDay={setDay} onDays={(days) => setPlan({ ...plan, days })} onSend={() => setView("send")}
@@ -210,49 +259,39 @@ export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
   );
 }
 
-// The season as phase blocks: weeks in a row with one phase are one block, with its dates, competitions, Ramadan and
-// load warnings. A block opens its first week, or this week when the block is the current one.
-function Timeline({ plan, year, lang, pl, comps, ramadan, warns, nowWeek, onOpen }) {
-  const blocks = [];
-  for (let w = 1; w <= 52; w++) {
-    const k = plan.weeks?.[w] || null, last = blocks.at(-1);
-    if (last && last.k === k) last.to = w; else blocks.push({ k, from: w, to: w });
-  }
+// The season as a chart: a bar per week, coloured by phase and as tall as the week's planned arrows, the competitions
+// marked above it and this week outlined. A bar opens its week.
+function SeasonChart({ plan, year, lang, pl, comps, nowWeek, onOpen }) {
+  const max = Math.max(1, ...Object.values(plan.targets || {}).map((t) => +t?.arrows || 0));
+  const months = Array.from({ length: 12 }, (_, m) => new Date(year, m, 1).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { month: "short" }));
   return (
-    <ol className="pz-timeline">
-      {blocks.map((b) => {
-        const cs = comps.filter((c) => c.week >= b.from && c.week <= b.to);
-        const ws = warns.filter((x) => x.week >= b.from && x.week <= b.to).length;
-        const now = nowWeek >= b.from && nowWeek <= b.to;
-        return (
-          <li key={b.from}>
-            <button type="button" className={`pz-block ${now ? "now" : ""}`} onClick={() => onOpen(now ? nowWeek : b.from)}>
-              <i style={{ background: b.k ? COLORS[b.k] : "var(--g200)" }} aria-hidden="true" />
-              <span className="grow">
-                <b>{b.k ? pl.phases[b.k] : pl.flow.notPlanned}</b>
-                <span className="muted">{short(lang, weekStart(year, b.from))} – {short(lang, addDays(weekStart(year, b.to), 6))} · {b.to === b.from ? pl.flow.weekOne : fill(pl.flow.weeks, { n: b.to - b.from + 1 })}</span>
-                {cs.map((c) => <span key={c.id} className="pz-block-line"><span className={`wk-comp p${c.priority}`}>{c.priority}</span> {c.name}</span>)}
-                {ramadan.some((w) => w >= b.from && w <= b.to) && <span className="pz-block-line muted"><Icon name="moon" size={12} /> {pl.ramadan}</span>}
-                {ws > 0 && <span className="pz-block-line pz-block-warn">{fill(pl.flow.warnN, { n: ws })}</span>}
-              </span>
-              <Icon name="next" size={18} />
+    <div className="pz-chart" dir="ltr">
+      <div className="pz-flags" aria-hidden="true">
+        {comps.map((c) => <b key={c.id} className={`p${c.priority}`} style={{ left: `${((c.week - 0.5) / 52) * 100}%` }}>{c.priority}</b>)}
+      </div>
+      <div className="pz-bars">
+        {Array.from({ length: 52 }, (_, i) => i + 1).map((w) => {
+          const k = plan.weeks?.[w], n = +plan.targets?.[w]?.arrows || 0;
+          return (
+            <button key={w} type="button" className={w === nowWeek ? "now" : ""} onClick={() => onOpen(w)}
+              aria-label={`${pl.wk}${w} · ${k ? pl.phases[k] : pl.flow.notPlanned}${n ? ` · ${fill(pl.flow.arrowsN, { n })}` : ""}`}>
+              <i style={{ height: `${k ? Math.max(8, (n / max) * 100) : 4}%`, background: k ? COLORS[k] : undefined }} />
             </button>
-          </li>
-        );
-      })}
-    </ol>
+          );
+        })}
+      </div>
+      <div className="pz-months" aria-hidden="true">{months.map((m, i) => <span key={i}>{m}</span>)}</div>
+    </div>
   );
 }
 
-// One plan week, every day in one list: tap a day to edit it in place. The planned arrows are checked against the
-// week's target; the week's targets (mix, physical, goals) fold out underneath.
 function WeekDays({ w, plan, year, lang, pl, comps, exercises, shot, ramadan, goals, edited, onWeek, onDay, onDays, onSend, onTargets, onAuto, onRamadan }) {
   const f = pl.flow;
   const [open, setOpen] = useState(null);
   const [targets, setTargets] = useState(false);
   const [msg, setMsg] = useState("");
   const daysOf = (wk) => { const s0 = weekStart(year, wk), out = []; for (let i = 0; i < 9; i++) { const iso = addDays(s0, i); if (+iso.slice(0, 4) === year && planWeek(iso) === wk) out.push(iso); } return out; };
-  const days = daysOf(w), k = plan.weeks?.[w];
+  const days = daysOf(w), k = plan.weeks?.[w], todayIso = isoDay(new Date());
   const sum = days.reduce((n, iso) => n + (+plan.days?.[iso]?.arrows || 0), 0), target = +plan.targets?.[w]?.arrows || 0;
   const exName = new Map(exercises.map((x) => [x.id, x.name]));
   const label = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { weekday: "short", day: "numeric" }); };
@@ -269,6 +308,7 @@ function WeekDays({ w, plan, year, lang, pl, comps, exercises, shot, ramadan, go
         <div className="grow">
           <h3>{fill(f.weekTitle, { w, from: short(lang, days[0]), to: short(lang, days.at(-1)) })}</h3>
           <p className="muted">{k ? pl.phases[k] : f.notPlanned} · {target ? fill(f.planned, { p: sum, t: target }) : fill(f.plannedOnly, { p: sum })}</p>
+          {target > 0 && <div className="pz-weekbar" role="img" aria-label={fill(f.planned, { p: sum, t: target })}><i style={{ width: `${Math.min(100, (sum / target) * 100)}%` }} /></div>}
         </div>
         <button className="icon-btn" onClick={() => onWeek(w + 1)} disabled={w >= 52} aria-label={f.nextWeek}><Icon name="next" size={18} /></button>
       </div>
@@ -278,8 +318,8 @@ function WeekDays({ w, plan, year, lang, pl, comps, exercises, shot, ramadan, go
           const d = plan.days?.[iso];
           return (
             <Fragment key={iso}>
-              <button type="button" className={`pz-day ${open === iso ? "sel" : ""}`} aria-expanded={open === iso} onClick={() => setOpen(open === iso ? null : iso)}>
-                <b className="pz-day-date">{label(iso)}</b>
+              <button type="button" className={`pz-day ${dayFilled(d) ? "" : "rest"} ${iso === todayIso ? "today" : ""}`} aria-expanded={open === iso} onClick={() => setOpen(iso)}>
+                <b className="pz-day-date"><small>{label(iso).split(" ")[0]}</small>{+iso.slice(8)}</b>
                 <span className="grow">
                   {dayFilled(d) ? <>
                     <span>{[d.focus, +d.arrows ? fill(f.arrowsN, { n: d.arrows }) : ""].filter(Boolean).join(" · ")}</span>
@@ -287,8 +327,13 @@ function WeekDays({ w, plan, year, lang, pl, comps, exercises, shot, ramadan, go
                   </> : <span className="muted">{f.nothing}</span>}
                 </span>
               </button>
-              {open === iso && <DayEditor iso={iso} plan={plan} lang={lang} pl={pl} exercises={exercises} comps={comps.filter((c) => c.date === iso)}
-                onChange={(patch) => onDay(iso, patch)} onWeek={() => setTargets(true)} onClose={() => setOpen(null)} />}
+              {open === iso && createPortal(<div className="pz-sheet-wrap" role="dialog" aria-label={label(iso)} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+                <button type="button" className="pz-scrim" aria-label={pl.flow.closeDay} onClick={() => setOpen(null)} />
+                <div className="pz-sheet"><span className="pz-grip" aria-hidden="true" />
+                  <DayEditor iso={iso} plan={plan} lang={lang} pl={pl} exercises={exercises} comps={comps.filter((c) => c.date === iso)}
+                    onChange={(patch) => onDay(iso, patch)} onWeek={() => { setOpen(null); setTargets(true); }} onClose={() => setOpen(null)} />
+                </div>
+              </div>, document.body)}
             </Fragment>
           );
         })}

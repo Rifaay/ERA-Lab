@@ -677,3 +677,57 @@ button.row:hover .row-name { color: var(--blue); }
 .today-plan-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .form .pz-arch { flex-direction: row; align-items: center; }
 .plans-list .swipe { border-radius: 16px; padding: 1px; }
+
+/* Planner, redone: the season as a chart of weeks, this week, what comes next; the week as day cards with a sheet */
+.pz-season { display: grid; gap: 20px; }
+.pz-chart { position: relative; }
+.pz-flags { position: relative; height: 22px; }
+.pz-flags b { position: absolute; top: 0; transform: translateX(-50%); width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--font-head); background: var(--g500); color: var(--white); }
+.pz-flags b.pA { background: var(--black); color: var(--yellow); }
+.pz-bars { display: grid; grid-template-columns: repeat(52, 1fr); align-items: end; gap: 2px; height: 120px; }
+.pz-bars button { height: 100%; display: flex; align-items: flex-end; padding: 0; border: 0; background: none; cursor: pointer; min-width: 0; }
+.pz-bars i { display: block; width: 100%; border-radius: 2px 2px 0 0; background: var(--g200); transition: opacity var(--t-xs) var(--ease-out); }
+.pz-bars button:hover i { opacity: .75; }
+.pz-bars button.now i { outline: 2px solid var(--black); outline-offset: 1px; }
+.pz-months { display: grid; grid-template-columns: repeat(12, 1fr); margin-top: 6px; font: 600 11px var(--font-body); color: var(--g500); }
+.pz-thisweek { display: grid; gap: 4px; padding: 18px 20px; border-radius: 16px; background: var(--black); color: var(--white); border: 0; text-align: start; font: inherit; cursor: pointer; }
+.pz-thisweek small { color: var(--yellow); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; font-size: 12px; }
+.pz-thisweek b { font: 800 26px var(--font-head); text-transform: uppercase; }
+.pz-thisweek span { color: var(--g300); }
+.pz-thisweek em { justify-self: start; margin-top: 8px; padding: 8px 14px; border-radius: 8px; background: var(--yellow); color: var(--black); font: 700 15px var(--font-head); font-style: normal; text-transform: uppercase; }
+.pz-coming h3 { margin: 0 0 4px; }
+.pz-next-row { width: 100%; display: flex; gap: 12px; align-items: center; padding: 12px 0; border: 0; border-bottom: 1px solid var(--g200); background: none; text-align: start; font: inherit; color: var(--black); cursor: pointer; }
+.pz-next-row small { width: 60px; flex: none; font: 800 15px var(--font-head); text-transform: uppercase; }
+.pz-next-row span { display: grid; }
+.pz-next-row em { font-style: normal; color: var(--g500); font-size: 14px; }
+.pz-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--g500); }
+.pz-legend span { display: flex; align-items: center; gap: 6px; }
+.pz-legend i { width: 10px; height: 10px; border-radius: 3px; display: block; }
+.pz-more { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-weekbar { height: 6px; border-radius: 3px; background: var(--g200); overflow: hidden; margin-top: 6px; }
+.pz-weekbar i { display: block; height: 6px; background: var(--blue); }
+.pz-days { display: grid; gap: 10px; }
+.pz-days .pz-day { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: var(--g50); border: 0; text-align: start; width: 100%; cursor: pointer; font: inherit; color: var(--black); }
+.pz-days .pz-day.rest { background: none; border: 1.5px dashed var(--g200); color: var(--g500); }
+.pz-days .pz-day.today { background: var(--black); color: var(--white); }
+.pz-days .pz-day.today .muted { color: var(--g300); }
+.pz-days .pz-day .grow { display: grid; gap: 2px; }
+.pz-day-date { width: 44px; flex: none; display: grid; text-align: center; font: 800 26px/1 var(--font-head); }
+.pz-day-date small { font: 600 12px var(--font-body); text-transform: uppercase; color: var(--g500); }
+.pz-day.today .pz-day-date small { color: var(--yellow); }
+.pz-sheet-wrap { position: fixed; inset: 0; z-index: 70; }
+.pz-scrim { position: absolute; inset: 0; border: 0; background: rgba(0,0,0,.45); cursor: pointer; animation: fade-in var(--t-s) var(--ease-out); }
+.pz-sheet { position: absolute; inset-inline: 0; bottom: 0; max-height: 88vh; overflow-y: auto; background: var(--white); border-radius: 16px 16px 0 0; padding: 8px 16px calc(24px + env(safe-area-inset-bottom)); animation: rise-small var(--t-m) var(--ease-out); }
+.pz-grip { display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--g200); margin: 4px auto 12px; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (min-width: 900px) {
+  .pz-sheet { inset-inline: auto; inset-inline-end: 0; top: 0; bottom: 0; width: 420px; max-height: none; border-radius: 0; }
+  .pz-season { grid-template-columns: 1fr 1fr; align-items: start; }
+  .pz-season .pz-chart, .pz-season .pz-legend, .pz-season .pz-send, .pz-season .pz-more { grid-column: 1 / -1; }
+  .pz-bars { height: 160px; }
+  .pz-days { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .pz-days .pz-day { flex-direction: column; align-items: flex-start; min-height: 130px; }
+}
+@media (prefers-reduced-motion: reduce) { .pz-sheet, .pz-scrim { animation: none; } }
+.pz-sheet-wrap { z-index: 1000; }
+.pz-sheet .pz-week { border: 0; padding: 0; box-shadow: none; margin: 0; }

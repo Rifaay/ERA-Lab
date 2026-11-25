@@ -325,7 +325,7 @@ followers: {
         whatTheySee: "Archers with their own app get the plan in Plan: today's session, the week, their arrow target and the competitions. Changes reach them when you send again.",
         save: "Save", sendOne: "Save and send to 1 archer", sendN: "Save and send to {n} archers", sending: "Sending…", sent: "Sent to {n} with their own app.", saved: "Saved.",
       },
-      flow: {
+      flow: { thisWeek: "This week · {from} – {to}", trainingDays: "{n} training days", trainingDay: "1 training day", comingUp: "Coming up", nothingSoon: "Nothing planned ahead yet.", phaseStarts: "{phase} starts", archersSend: "Archers & send", closeDay: "Close the day",
         gone: "This plan no longer exists.", allPlans: "All plans", otherYear: "This plan covers {year}. Make another plan for {y}.", oneArcher: "1 archer", nArchers: "{n} archers", noArchers: "No archers yet",
         now: "Now: {phase} · week {w}", openWeek: "Open this week", timeline: "Timeline", calendar: "Calendar", reviewSend: "Review & send", adjust: "Adjust rules",
         ramadan: "Ramadan weeks {from} – {to}: lighter, with the Ramadan protocol", ramadanNone: "No Ramadan weeks this year",
@@ -905,7 +905,7 @@ followers: {
         whatTheySee: "يحصل الرماة الذين لديهم التطبيق على الخطة في «الخطة»: جلسة اليوم والأسبوع وهدف السهام والبطولات. تصلهم التغييرات عند الإرسال مجدداً.",
         save: "احفظ", sendOne: "احفظ وأرسل لرامٍ واحد", sendN: "احفظ وأرسل إلى {n} رماة", sending: "جارٍ الإرسال…", sent: "أُرسلت إلى {n} لديهم التطبيق.", saved: "حُفظت.",
       },
-      flow: {
+      flow: { thisWeek: "هذا الأسبوع · {from} – {to}", trainingDays: "{n} أيام تدريب", trainingDay: "يوم تدريب واحد", comingUp: "القادم", nothingSoon: "لا شيء مخطط بعد.", phaseStarts: "تبدأ {phase}", archersSend: "الرماة والإرسال", closeDay: "أغلق اليوم",
         gone: "هذه الخطة لم تعد موجودة.", allPlans: "كل الخطط", otherYear: "هذه الخطة لموسم {year}. أنشئ خطة أخرى لعام {y}.", oneArcher: "رامٍ واحد", nArchers: "{n} رماة", noArchers: "لا رماة بعد",
         now: "الآن: {phase} · الأسبوع {w}", openWeek: "افتح هذا الأسبوع", timeline: "الخط الزمني", calendar: "التقويم", reviewSend: "راجع وأرسل", adjust: "اضبط القواعد",
         ramadan: "أسابيع رمضان {from} – {to}: أخف، ببروتوكول رمضان", ramadanNone: "لا أسابيع رمضان هذا العام",
