@@ -16,7 +16,7 @@ export const t = {
       lead: "Clips on this device, filmed in the Range or imported. Tap one to watch it, link it to its arrow and tag it; the full analysis is done later on the computer.",
       risk: "{n} clips are only on this phone", riskOne: "1 clip is only on this phone",
       riskHint: " Phones can clear a website's storage. Save them to the gallery or copy them to the computer.",
-      saveAll: "Save all to the device", saveOut: "Save to device", saveAgain: "Save again", delete: "Delete clip", analyse: "Analyse",
+      saveAll: "Save all to the device", saveOut: "Save to device", saveAgain: "Save again", delete: "Delete clip", analyse: "Analyse", record: "Record a shot", toReview: "To review · {n}", filter: { all: "All", todo: "To review", done: "Reviewed" }, noneHere: "No clips here.", swipe: "Swipe a clip towards the start of the line to delete it.",
       confirmDelete: "Delete this clip from this phone? Its tags stay.", confirmDeleteUnsaved: "This clip is only on this phone. Delete it for good?",
       none: "No clips for this archer on this device yet. Film shots from the Range with the Record button, or import them.", toRange: "Go to the Range",
       endArrow: "End {end}, arrow {n}", wholeEnd: "End {end} (whole end)", endVideo: "Link end to video", endVideoLinked: "End {end}: video linked ({n})", endVideoPick: "Tick the clip that shows end {end}. Newest first.", endVideoNone: "No clips of {name} on this device yet. Film with Record, or import them in Clips.", noArrow: "Not linked to an arrow", onlyHere: "only on this phone",
@@ -166,7 +166,7 @@ export const t = {
     range: {
       title: "Range", noAthlete: "Select an athlete first.",
       steps: ["Setup", "Range", "Review"],
-      distance: "Distance (m)", face: "Target face", perEnd: "Arrows per end", other: "Other", type: "Session type",
+      distance: "Distance (m)", face: "Target face", perEnd: "Arrows per end", other: "Other", confirmEnd: "Clear end {n}? Its arrows are removed; the other ends keep their numbers.", swipeEnd: "Swipe an end towards the start of the line to clear it.", zoomOut: "Back to the whole face", zoomHint: "Two fingers zoom the face.", type: "Session type",
       faces: { 122: "122 cm (10 rings)", 80: "80 cm (10 rings)", "80r": "80 cm reduced (5–10)", 40: "40 cm (10 rings)", "40s": "40 cm 3-spot (6–10)" },
       checkIn: "Athlete check-in (optional)", readiness: "Readiness", confidence: "Confidence", focus: "Focus",
       energy: "Body energy / fatigue", sleep: "Sleep last night (h)", goal: "Session goal (process)", goalPh: "e.g. hold expansion",
@@ -204,6 +204,7 @@ export const t = {
       otherAthlete: "A session for {name} is still open. Finish or discard it first.", resume: "Open it", otherOnPhone: "An unfinished session is still open on this phone. Carry on with it as yours, or discard it.", keepMine: "Carry on with it",
     },
     session: {
+      confirmDel: "Delete this session? This can't be undone.",
       title: "Session logger", noAthlete: "Select an athlete first.",
       scoreInvalid: "Score must be between 0 and the out of value.",
       date: "Date", type: "Session type", duration: "Duration (min)",
@@ -396,6 +397,15 @@ export const t = {
       goalsTitle: "Goals", noGoals: "No open goals.", goal: "Goal", progress: "Progress", due: "Due", goalNow: "Now {last}, target {target} {label} · {pct}% of the way from the start", noLog: "No progress logged yet", done: "Done",
       sessionsTitle: "Sessions",
     },
+    results: {
+      title: "My results", week: "Week", month: "Month", all: "All", perArrow: "per arrow", vs_week: "vs the week before", vs_month: "vs the month before", vs_all: "",
+      arrows: "{n} arrows", sessions: "{n} sessions", last: "Last sessions", none: "No sessions yet. Plot your first one in Range.", coach: "Coach",
+      del: "Delete", confirmDel: "Delete this session? It goes from this phone and from your coach's board.", swipe: "Swipe a session towards the start of the line to delete it.", charts: "All charts",
+    },
+    me: {
+      notifySub: "New plan, coach notes", lockOn: "PIN on", lockOff: "PIN off", privacySub: "What your coach sees · contact",
+      del: "Delete my account", delSub: "Removes your account and everything your phone sent", delLong: "Your login, your uploaded sessions and the link to your coach are erased. What is on this phone stays. Tap “Delete my account” below.",
+    },
     welcome: {
       title: "Welcome to ERA Lab", sub: "Who is using this device?",
       coach: "I'm a coach", coachSub: "Plan, assess and review your archers. Watch their scores live.",
@@ -406,6 +416,7 @@ export const t = {
       codeTitle: "Your coach's code", codeIntro: "Ask your coach for your 8-character invite code. It connects this phone to your profile in your coach's ERA Lab.",
       code: "Invite code", join: "Join my coach", badCode: "That code isn't valid. Check it with your coach; codes last 7 days and work once.", already: "This account is already linked to a coach.",
       otherAccount: "Use another account",
+      seeTitle: "What your coach will see", seeBody: "Your arrows, scores and session notes, as you shoot. Not your other apps, not your location. You can leave your coach or delete your account any time from Me.",
       invited: "Your coach invited you. Create your archer account (or sign in) and you're linked straight away.",
       tabs: { range: "Range", plan: "Plan", results: "Results", me: "Me" },
       sent: "Sent to coach", waiting: "{n} to send", sentLong: "Everything you plotted has reached your coach.", waitingLong: "{n} session(s) waiting to be sent. They go as soon as this phone is online.",
@@ -430,7 +441,7 @@ export const t = {
     archerPlan: {
       title: "Your season plan", none: "Your coach hasn't sent you a plan yet. When they do, it shows here.",
       today: "Today", nothingToday: "Nothing planned for today.", next: "Coming up", comps: "Competitions",
-      week: "Week {w} · {phase}", weekTarget: "This week: {n} arrows planned by your coach", arrows: "{n} arrows", sentOn: "Sent by your coach on {date}", offline: "Showing the copy on this phone. It updates when you're online.",
+      week: "Week {w} · {phase}", weekTarget: "This week: {n} arrows planned by your coach", weekDone: "This week: {done} of {n} arrows", startToday: "Start today's session", arrows: "{n} arrows", sentOn: "Sent by your coach on {date}", offline: "Showing the copy on this phone. It updates when you're online.",
     },
     lab: {
       tools: "Video tools", points: "Body points", nextPoint: "Next point", colour: "Colour",
@@ -565,7 +576,7 @@ export const t = {
       lead: "المقاطع على هذا الجهاز، المصوّرة في الميدان أو المستوردة. اضغط على مقطع لمشاهدته وربطه بسهمه ووسمه؛ التحليل الكامل يتم لاحقاً على الحاسوب.",
       risk: "{n} مقاطع موجودة على هذا الهاتف فقط", riskOne: "مقطع واحد موجود على هذا الهاتف فقط",
       riskHint: " قد تمسح الهواتف تخزين المواقع. احفظها في المعرض أو انسخها إلى الحاسوب.",
-      saveAll: "احفظ الكل على الجهاز", saveOut: "احفظ على الجهاز", saveAgain: "احفظ مرة أخرى", delete: "احذف المقطع", analyse: "حلّل",
+      saveAll: "احفظ الكل على الجهاز", saveOut: "احفظ على الجهاز", saveAgain: "احفظ مرة أخرى", delete: "احذف المقطع", analyse: "حلّل", record: "صوّر رمية", toReview: "للمراجعة · {n}", filter: { all: "الكل", todo: "للمراجعة", done: "تمت مراجعتها" }, noneHere: "لا مقاطع هنا.", swipe: "اسحب المقطع نحو بداية السطر لحذفه.",
       confirmDelete: "حذف هذا المقطع من هذا الهاتف؟ تبقى وسومه.", confirmDeleteUnsaved: "هذا المقطع موجود على هذا الهاتف فقط. حذفه نهائياً؟",
       none: "لا توجد مقاطع لهذا الرامي على هذا الجهاز بعد. صوّر الرميات من الميدان بزر التصوير، أو استوردها.", toRange: "اذهب إلى الميدان",
       endArrow: "الجولة {end}، السهم {n}", wholeEnd: "الجولة {end} (كاملة)", endVideo: "اربط الجولة بفيديو", endVideoLinked: "الجولة {end}: فيديو مرتبط ({n})", endVideoPick: "اختر المقطع الذي يُظهر الجولة {end}. الأحدث أولاً.", endVideoNone: "لا توجد مقاطع لـ {name} على هذا الجهاز بعد. صوّر بزر التسجيل، أو استورد المقاطع من صفحة المقاطع.", noArrow: "غير مرتبط بسهم", onlyHere: "على هذا الهاتف فقط",
@@ -716,7 +727,7 @@ export const t = {
     range: {
       title: "الميدان", noAthlete: "اختر رياضياً أولاً.",
       steps: ["الإعداد", "الميدان", "المراجعة"],
-      distance: "المسافة (م)", face: "وجه الهدف", perEnd: "السهام في كل جولة", other: "غير ذلك", type: "نوع الجلسة",
+      distance: "المسافة (م)", face: "وجه الهدف", perEnd: "السهام في كل جولة", other: "غير ذلك", confirmEnd: "مسح الجولة {n}؟ تُحذف سهامها وتحتفظ الجولات الأخرى بأرقامها.", swipeEnd: "اسحب الجولة نحو بداية السطر لمسحها.", zoomOut: "عودة إلى الوجه كاملاً", zoomHint: "إصبعان لتكبير الوجه.", type: "نوع الجلسة",
       faces: { 122: "١٢٢ سم (١٠ حلقات)", 80: "٨٠ سم (١٠ حلقات)", "80r": "٨٠ سم مصغّر (٥–١٠)", 40: "٤٠ سم (١٠ حلقات)", "40s": "٤٠ سم ثلاثي (٦–١٠)" },
       checkIn: "حالة الرياضي قبل الرمي (اختياري)", readiness: "الجاهزية", confidence: "الثقة", focus: "التركيز",
       energy: "طاقة الجسم / التعب", sleep: "ساعات النوم الليلة الماضية", goal: "هدف الجلسة (الأداء)", goalPh: "مثال: الثبات في التمدد",
@@ -754,6 +765,7 @@ export const t = {
       otherAthlete: "توجد جلسة مفتوحة للرياضي {name}. أنهِها أو تجاهلها أولاً.", resume: "افتحها", otherOnPhone: "توجد جلسة غير منتهية مفتوحة على هذا الهاتف. تابعها باسمك أو تجاهلها.", keepMine: "تابعها",
     },
     session: {
+      confirmDel: "حذف هذه الجلسة؟ لا يمكن التراجع.",
       title: "سجل الجلسة", noAthlete: "اختر رياضياً أولاً.",
       scoreInvalid: "يجب أن تكون النتيجة بين 0 والمجموع الكلي.",
       date: "التاريخ", type: "نوع الجلسة", duration: "المدة (دقيقة)",
@@ -943,6 +955,15 @@ export const t = {
       goalsTitle: "الأهداف", noGoals: "لا توجد أهداف مفتوحة.", goal: "الهدف", progress: "التقدم", due: "الموعد", goalNow: "الآن {last}، والهدف {target} {label} · قطع {pct}% من الطريق", noLog: "لم يُسجَّل تقدم بعد", done: "تم",
       sessionsTitle: "الجلسات",
     },
+    results: {
+      title: "نتائجي", week: "أسبوع", month: "شهر", all: "الكل", perArrow: "لكل سهم", vs_week: "مقارنة بالأسبوع السابق", vs_month: "مقارنة بالشهر السابق", vs_all: "",
+      arrows: "{n} سهمًا", sessions: "{n} جلسات", last: "آخر الجلسات", none: "لا جلسات بعد. سجّل أولى جلساتك في الميدان.", coach: "المدرب",
+      del: "احذف", confirmDel: "حذف هذه الجلسة؟ تُحذف من هذا الهاتف ومن لوحة مدربك.", swipe: "اسحب الجلسة نحو بداية السطر لحذفها.", charts: "كل الرسوم",
+    },
+    me: {
+      notifySub: "خطة جديدة، ملاحظات المدرب", lockOn: "رمز PIN مفعّل", lockOff: "لا رمز PIN", privacySub: "ما يراه مدربك · التواصل",
+      del: "احذف حسابي", delSub: "يحذف حسابك وكل ما أرسله هاتفك", delLong: "يُمحى دخولك وجلساتك المرفوعة وارتباطك بمدربك. ما على هذا الهاتف يبقى. اضغط «احذف حسابي» بالأسفل.",
+    },
     welcome: {
       title: "مرحباً بك في ERA Lab", sub: "من يستخدم هذا الجهاز؟",
       coach: "أنا مدرب", coachSub: "خطّط وقيّم وراجع رماتك، وتابع نتائجهم مباشرة.",
@@ -953,6 +974,7 @@ export const t = {
       codeTitle: "رمز مدربك", codeIntro: "اطلب من مدربك رمز الدعوة المكوّن من ٨ خانات. يربط هذا الهاتف بملفك في ERA Lab لدى مدربك.",
       code: "رمز الدعوة", join: "انضم إلى مدربي", badCode: "الرمز غير صالح. راجعه مع مدربك؛ الرموز تصلح ٧ أيام ولمرة واحدة.", already: "هذا الحساب مرتبط بمدرب بالفعل.",
       otherAccount: "استخدم حساباً آخر",
+      seeTitle: "ما سيراه مدربك", seeBody: "سهامك ونتائجك وملاحظات الجلسة أثناء الرمي. لا تطبيقاتك الأخرى ولا موقعك. يمكنك ترك مدربك أو حذف حسابك في أي وقت من «أنا».",
       invited: "دعاك مدربك. أنشئ حساب الرامي (أو سجّل الدخول) وستُربط به فوراً.",
       tabs: { range: "الميدان", plan: "الخطة", results: "النتائج", me: "أنا" },
       sent: "أُرسل للمدرب", waiting: "{n} للإرسال", sentLong: "كل ما سجّلته وصل إلى مدربك.", waitingLong: "{n} جلسة بانتظار الإرسال. تُرسل فور اتصال الهاتف بالإنترنت.",
@@ -977,7 +999,7 @@ export const t = {
     archerPlan: {
       title: "خطة موسمك", none: "لم يرسل مدربك خطة بعد. عندما يفعل تظهر هنا.",
       today: "اليوم", nothingToday: "لا شيء مخطط لليوم.", next: "القادم", comps: "المنافسات",
-      week: "الأسبوع {w} · {phase}", weekTarget: "هذا الأسبوع: {n} سهمًا خططها مدربك", arrows: "{n} سهمًا", sentOn: "أرسلها مدربك في {date}", offline: "تُعرض النسخة المحفوظة على هذا الهاتف. تتحدث عند الاتصال.",
+      week: "الأسبوع {w} · {phase}", weekTarget: "هذا الأسبوع: {n} سهمًا خططها مدربك", weekDone: "هذا الأسبوع: {done} من {n} سهمًا", startToday: "ابدأ جلسة اليوم", arrows: "{n} سهمًا", sentOn: "أرسلها مدربك في {date}", offline: "تُعرض النسخة المحفوظة على هذا الهاتف. تتحدث عند الاتصال.",
     },
     lab: {
       tools: "أدوات الفيديو", points: "نقاط الجسم", nextPoint: "النقطة التالية", colour: "اللون",

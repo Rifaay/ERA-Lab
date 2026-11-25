@@ -72,6 +72,7 @@ export default function Welcome({ tr, lang, setLang, onDone }) {
             <button className="btn-primary wide-btn" disabled={busy || code.length !== 8}>{w.join}</button>
             {err && <p className="error-msg" role="alert">{err}</p>}
           </form>
+          <div className="card"><p><b>{w.seeTitle}</b></p><p className="muted">{w.seeBody}</p></div>
           <p className="muted">{tr.sync.signedIn.replace("{email}", account())}</p>
           <button className="link-btn" onClick={() => turnOff().then(signOut).then(() => setTick((n) => n + 1))}>{w.otherAccount}</button>
         </>}

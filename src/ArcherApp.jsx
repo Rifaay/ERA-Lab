@@ -4,12 +4,13 @@ import { getAthletes, saveAthlete, getRange, saveRange, getSessions } from "./st
 import { account } from "./sync";
 import { myLink, uploadSessions, waiting, leaveCoach, coachWatching, latestNote, endedByCoach, dropUpload } from "./archer";
 import Range from "./screens/Range";
-import Stats from "./screens/Stats";
+import ArcherResults from "./screens/ArcherResults";
 import ArcherPlan from "./screens/ArcherPlan";
 import Notifications from "./screens/Notifications";
 import Legal from "./screens/Legal";
 import Account from "./screens/Account";
 import { LockSettings } from "./DeviceLock";
+import { hasPin } from "./lock";
 import Logo from "./Logo";
 import Icon from "./icons";
 
@@ -18,9 +19,9 @@ const TABS = [["range", "target"], ["plan", "calendar"], ["results", "chart"], [
 // The archer's own app: plot arrows, see your own results. Every arrow is sent to the coach as it is plotted;
 // with no signal it waits on the phone and goes when the connection is back.
 export default function ArcherApp({ tr, lang, setLang, onLeft }) {
-  const w = tr.welcome, link = myLink();
+  const w = tr.welcome, m = tr.me, link = myLink();
   const [tab, setTab] = useState("range");
-  const [legal, setLegal] = useState(false);
+  const [me, setMe] = useState(null); // Me: null is the list; otherwise the one screen open
   const [left, setLeft] = useState(0); // sessions still to send
   const [, setTick] = useState(0);
   const [watched, setWatched] = useState(false); // the coach has Live scores open
@@ -104,42 +105,47 @@ export default function ArcherApp({ tr, lang, setLang, onLeft }) {
         <div className="app-body">
           <div className="main-area">
             {tab === "range" && <Range key={rangeKey} tr={tr} lang={lang} selectedId={link.athlete_id} />}
-            {tab === "plan" && <ArcherPlan tr={tr} lang={lang} />}
-            {tab === "results" && <Stats tr={tr} lang={lang} selectedId={link.athlete_id} onGo={() => {}} />}
-            {tab === "me" && !legal && (
+            {tab === "plan" && <ArcherPlan tr={tr} lang={lang} onStart={() => setTab("range")} />}
+            {tab === "results" && <ArcherResults tr={tr} lang={lang} selectedId={link.athlete_id} />}
+            {tab === "me" && !me && (
               <div className="screen">
                 <h2>{link.name}</h2>
-                <div className="card settings-section">
-                  <div className="settings-label">{w.coachLink}</div>
-                  <p>{w.linked}</p>
-                  <p className="muted">{left ? w.waitingLong.replace("{n}", left) : w.sentLong}</p>
-                  <button className="btn-ghost small danger" style={{ alignSelf: "flex-start", marginTop: 8 }} onClick={leave}>{w.leave}</button>
-                </div>
-                <div className="card settings-section">
-                  <div className="settings-label">{tr.push.title}</div>
-                  <Notifications tr={tr} />
-                </div>
-                <div className="card settings-section">
-                  <div className="settings-label">{tr.settings.security}</div>
-                  <h3 className="settings-sub">{tr.lock.title}</h3>
-                  <LockSettings tr={tr} />
-                  <h3 className="settings-sub">{w.account}</h3>
-                  <Account tr={tr} as="archer" onChange={() => { setTick((n) => n + 1); if (!account()) onLeft(); }} />
-                </div>
-                <div className="card settings-section">
-                  <div className="settings-label">{tr.settings.legal}</div>
-                  <button className="btn-ghost small" onClick={() => setLegal(true)}>{tr.settings.legalOpen}</button>
+                <div className="list settings-list">
+                  {[["coach", w.coachLink, left ? w.waiting.replace("{n}", left) : w.sentLong], ["notify", tr.push.title, m.notifySub],
+                    ["lock", tr.lock.title, hasPin() ? m.lockOn : m.lockOff], ["account", w.account, account()], ["legal", tr.settings.legal, m.privacySub],
+                    ["delete", m.del, m.delSub]].map(([k, name, line]) => (
+                    <button key={k} className={`row ${k === "delete" ? "danger-row" : ""}`} onClick={() => setMe(k)}>
+                      <span><span className="row-name" style={{ display: "block" }}>{name}</span><span className="row-line">{line}</span></span>
+                      <Icon name="next" size={18} />
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
-            {tab === "me" && legal && <>
-              <div className="backbar"><button className="btn-ghost small" onClick={() => setLegal(false)}><Icon name="prev" size={16} />{w.back}</button></div>
-              <Legal lang={lang} />
+            {tab === "me" && me && <>
+              <div className="backbar"><button className="btn-ghost small" onClick={() => setMe(null)}><Icon name="prev" size={16} />{w.tabs.me}</button></div>
+              {me === "legal" ? <Legal lang={lang} /> : (
+                <div className="screen">
+                  {me === "coach" && <div className="card settings-section">
+                    <div className="settings-label">{w.coachLink}</div>
+                    <p>{w.linked}</p>
+                    <p className="muted">{left ? w.waitingLong.replace("{n}", left) : w.sentLong}</p>
+                    <button className="btn-ghost small danger" style={{ alignSelf: "flex-start", marginTop: 8 }} onClick={leave}>{w.leave}</button>
+                  </div>}
+                  {me === "notify" && <div className="card settings-section"><div className="settings-label">{tr.push.title}</div><Notifications tr={tr} /></div>}
+                  {me === "lock" && <div className="card settings-section"><div className="settings-label">{tr.lock.title}</div><LockSettings tr={tr} onChange={() => setTick((n) => n + 1)} /></div>}
+                  {(me === "account" || me === "delete") && <div className="card settings-section">
+                    <div className="settings-label">{me === "delete" ? m.del : w.account}</div>
+                    {me === "delete" && <p className="muted">{m.delLong}</p>}
+                    <Account tr={tr} as="archer" onChange={() => { setTick((n) => n + 1); if (!account()) onLeft(); }} />
+                  </div>}
+                </div>
+              )}
             </>}
           </div>
           <nav className="stage-nav four" aria-label="ERA Lab">
             {TABS.map(([k, icon]) => (
-              <button key={k} className={`stage-btn ${k === "range" ? "go" : ""} ${tab === k ? "active" : ""}`} aria-current={tab === k ? "page" : undefined} onClick={() => { setTab(k); setLegal(false); }}>
+              <button key={k} className={`stage-btn ${k === "range" ? "go" : ""} ${tab === k ? "active" : ""}`} aria-current={tab === k ? "page" : undefined} onClick={() => { setTab(k); setMe(null); }}>
                 {k === "range" ? <span className="disc"><Icon name={icon} size={26} /></span> : <Icon name={icon} size={24} />}
                 {w.tabs[k]}
               </button>

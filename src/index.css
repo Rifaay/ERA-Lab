@@ -388,7 +388,7 @@ button.row:hover .row-name { color: var(--blue); }
 /* One segmented control for every view switch inside a screen (stage screens use the .subnav pills).
    A grey track; the chosen view is black with white text, as every selected choice in ERA Lab. */
 .seg, .st-kinds, .tabs { gap: 4px; padding: 4px; background: var(--g100); border-radius: var(--r-md); }
-.seg { display: grid; grid-template-columns: 1fr 1fr; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 .tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-bottom: 16px; }
 .seg button, .st-kinds button, .tabs .tab { min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--r-sm); background: none; color: var(--g600); font: 600 14px var(--font-body); cursor: pointer; }
 .seg button:hover, .st-kinds button:hover, .tabs .tab:hover { color: var(--black); }
@@ -603,3 +603,26 @@ button.row:hover .row-name { color: var(--blue); }
 .settings-list .row .icon-next { color: var(--muted, currentColor); flex: none; }
 .rg-other { width: 88px; min-height: 40px; }
 .range-plot { margin: 4px 0 8px; }
+
+/* Swipe to delete (SwipeRow.jsx): the row slides towards the start of the line over a red Delete */
+.swipe { position: relative; overflow: hidden; touch-action: pan-y; }
+.swipe-row { position: relative; background: var(--bg); will-change: transform; }
+.swipe-del { visibility: hidden; position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding-inline-end: 18px; border: 0; background: var(--red-text); color: var(--white); font: 700 16px var(--font-head); text-transform: uppercase; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .swipe-row { transition: none !important; } }
+/* Archer app: results */
+.res-sum { background: var(--black); color: var(--white); border-radius: 16px; padding: 18px 20px; display: grid; gap: 4px; margin: 12px 0; }
+.res-big { font: 800 56px/1 var(--font-head); font-variant-numeric: tabular-nums; }
+.res-sum .down { color: #ff8a80; }
+.res-list { border-top: 1px solid var(--bd); }
+.res-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--bd); min-height: 64px; }
+.res-row .grow { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.res-row small { color: var(--txm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.res-score { font: 800 28px var(--font-head); font-variant-numeric: tabular-nums; }
+.swipe-hint { font-size: 13px; margin: 8px 0; }
+.danger-row .row-name { color: var(--red-text); }
+.rg-ends { font-variant-numeric: tabular-nums; }
+.rg-end { display: grid; grid-template-columns: 44px repeat(var(--per), minmax(0, 1fr)) 48px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--g200); text-align: center; }
+.rg-end.head { color: var(--g500); font-size: 13px; min-height: 32px; }
+.swipe-card { margin-bottom: 6px; border-radius: var(--r-lg); }
+.rg-zoom { position: absolute; top: 28px; inset-inline-end: 8px; min-height: 36px; min-width: 48px; border-radius: 18px; border: 0; background: var(--black); color: var(--white); font: 700 14px var(--font-body); cursor: pointer; }
+.swipe.on .swipe-del { visibility: visible; }

@@ -2,7 +2,7 @@
 // (MediaPipe's numbering, x and y as fractions of the picture, s the confidence). Each frame is cropped round where
 // the archer was in the last one, so the model sees the body at full detail even in a wide range shot.
 // Engines: "mediapipe" (Google's Pose Landmarker, heavy model) or "rtm" (OpenMMLab's RTMPose-m, sharper on joints).
-import { boxFrom, wholeBox, toTensor, decodeSimcc, fromCrop, COCO_TO_MP, IN_W, IN_H } from "./crop.js";
+import { boxFrom, wholeBox, toTensor, decodeSimcc, fromCrop, sane, COCO_TO_MP, IN_W, IN_H } from "./crop.js";
 
 const MP_MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task";
 let run = null, last = null; // the engine's frame → points function; the points of the last frame
@@ -25,8 +25,8 @@ async function mediapipe(base) {
     return box ? fromCrop(pts, box, bmp.width, bmp.height) : pts;
   };
   return async (bmp) => {
-    const box = boxFrom(last, bmp.width, bmp.height);
-    return (box && (await detect(bmp, box))) || detect(bmp, null); // lost in the crop: look at the whole picture
+    const box = boxFrom(last, bmp.width, bmp.height), near = box && (await detect(bmp, box));
+    return sane(near, last, 8) ? near : detect(bmp, null); // lost or half-seen in the crop: look at the whole picture
   };
 }
 
@@ -49,9 +49,9 @@ async function rtm(base) {
   };
   return async (bmp) => {
     const W = bmp.width, H = bmp.height;
-    let box = boxFrom(last, W, H), pts = null;
+    let box = boxFrom(last, W, H), pts = box && (await once(bmp, box));
     // No detector: from the whole picture, the rough points place a closer crop; twice is enough to settle.
-    for (let i = 0; i < (box ? 1 : 3); i++) { pts = await once(bmp, box || wholeBox(W, H)); box = boxFrom(pts, W, H); if (!box) break; }
+    if (!sane(pts, last, 6)) { box = null; for (let i = 0; i < 3; i++) { pts = await once(bmp, box || wholeBox(W, H)); box = boxFrom(pts, W, H); if (!box) break; } }
     if (!pts || pts.filter((p) => p.s >= 0.3).length < 4) return null;
     const full = Array.from({ length: 33 }, () => ({ x: 0, y: 0, s: 0 }));
     pts.forEach((p, i) => { full[COCO_TO_MP[i]] = p; });

@@ -45,7 +45,7 @@
 .clip-list { list-style: none; }
 .clip-list li { border-top: 1px solid var(--g200); }
 .clip-list li:last-child { border-bottom: 1px solid var(--g200); }
-.clip-row { width: 100%; display: grid; grid-template-columns: 44px 1fr 20px; gap: 12px; align-items: center; padding: 12px 0; background: none; border: 0; text-align: start; color: var(--black); font: inherit; cursor: pointer; }
+.clip-row { width: 100%; display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; padding: 12px 0; background: none; border: 0; text-align: start; color: var(--black); font: inherit; cursor: pointer; }
 .clip-badge { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--g300); font: 800 18px var(--font-head); }
 .clip-badge.good { border-color: var(--green-text); color: var(--green-text); }
 .clip-badge.fault { border-color: var(--red-text); color: var(--red-text); }
@@ -58,3 +58,9 @@
 
 .clips-result { display: grid; gap: 10px; margin-top: 24px; }
 .clips-result label { display: grid; gap: 4px; }
+.clip-thumb { width: 64px; height: 48px; border-radius: 8px; background: var(--black); color: var(--white); display: grid; place-items: center; align-content: center; gap: 0; }
+.clip-thumb small { font: 700 12px var(--font-body); font-variant-numeric: tabular-nums; }
+.clips-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0 4px; border-top: 2px solid var(--black); padding-top: 12px; }
+.clips-head h3 { margin: 0; }
+.clips-filter { min-width: 260px; }
+.rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); display: inline-block; }

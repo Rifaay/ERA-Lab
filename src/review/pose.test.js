@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bowSide, smooth, toPoints } from "./pose.js";
+import { bowSide, smooth, toPoints, unswap, despike } from "./pose.js";
+import { sane } from "./crop.js";
 
 // A fake MediaPipe frame: 33 points at the centre, then the ones a test cares about.
 const frame = (set = {}) => {
@@ -45,4 +46,28 @@ test("unsure points are kept faded instead of dropped", () => {
   frames[2][16] = { x: 0.9, y: 0.4, visibility: 0.1 };
   const pts = toPoints(frames, 30);
   assert.ok(Object.values(pts.bow_wrist).some((q) => q[2] === "i") || Object.values(pts.draw_wrist).some((q) => q[2] === "i"), "a faded point, not a hole");
+});
+
+test("a left/right swap for one frame is put back, so two joints never jump onto each other", () => {
+  const frames = [rightHanded(), rightHanded(), rightHanded()];
+  [frames[1][15], frames[1][16]] = [frames[1][16], frames[1][15]]; // the model swapped the wrists on frame 1
+  const fixed = unswap(frames);
+  assert.ok(fixed[1][15].x > 0.85 && fixed[1][16].x < 0.6, "wrists back on their own sides");
+  assert.ok(frames[1][15].x < 0.6, "the model's frames are left as they were");
+  const pts = toPoints(frames, 30);
+  assert.ok(pts.bow_wrist[1][0] > 0.85, "the bow wrist stays at the bow");
+});
+
+test("a one-frame leap off the body becomes a hole; a real move stays", () => {
+  const at = (x) => ({ x, y: 0.5 });
+  assert.equal(despike([at(0.5), at(0.5), at(0.9), at(0.5), at(0.5)], 0.05)[2], null, "out and straight back: a wrong guess");
+  assert.deepEqual(despike([at(0.5), at(0.6), at(0.7), at(0.8)], 0.05).map((q) => q.x), [0.5, 0.6, 0.7, 0.8], "steady movement is kept");
+});
+
+test("a crop that caught only part of the archer is not trusted", () => {
+  const body = (y0, y1, s = 0.9) => Array.from({ length: 10 }, (_, i) => ({ x: 0.5, y: y0 + ((y1 - y0) * i) / 9, s }));
+  assert.equal(sane(body(0.2, 0.9), body(0.2, 0.9), 8), true);
+  assert.equal(sane(body(0.2, 0.4), body(0.2, 0.9), 8), false, "the body shrank to a third: look at the whole picture");
+  assert.equal(sane(body(0.2, 0.9, 0.3), null, 8), false, "too few sure points");
+  assert.equal(sane(null, null, 8), false);
 });

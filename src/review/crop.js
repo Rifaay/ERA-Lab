@@ -21,6 +21,14 @@ export function boxFrom(points, W, H, { pad = 1.5, aspect = IN_W / IN_H } = {}) 
   return { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h };
 }
 
+// Is a result from a crop believable? Enough sure points, and the body still about as tall as in the last frame:
+// a crop that caught only part of the archer (or someone else) must not steer the next crop.
+export function sane(points, last, minSure) {
+  if (!points) return false;
+  const tall = (ps) => { const ys = (ps || []).filter((p) => p && p.s >= SEEN).map((p) => p.y); return ys.length >= 4 ? Math.max(...ys) - Math.min(...ys) : 0; };
+  return points.filter((p) => p && p.s >= 0.5).length >= minSure && (!last || tall(points) >= 0.6 * tall(last));
+}
+
 // The whole picture as a box of the model's shape, centred (the rest is padded black).
 export function wholeBox(W, H, aspect = IN_W / IN_H) {
   let w = W, h = H;

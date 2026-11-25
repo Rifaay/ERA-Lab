@@ -108,6 +108,7 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
   const athleteId = clip?.athleteId || selectedId;
   const athlete = getAthletes().find((a) => a.id === athleteId);
   const frameNow = () => Math.round((vid.current?.currentTime || 0) * fps.current);
+  const gap = () => Math.max(2, Math.round(fps.current / 4)); // fill a hole between two marks only if it lasts a quarter second or less
   const say = (t) => { setMsg(t); clearTimeout(msgTimer.current); msgTimer.current = setTimeout(() => setMsg(""), 2600); };
 
   // ---- the clip ----
@@ -183,7 +184,7 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
     for (const p of POINTS) {
       if (fall.current?.kind === "pt" && fall.current.k === p.k) continue;
       if (g?.mode === "lift" && g.hit.kind === "pt" && g.hit.k === p.k) { P[p.k] = [...g.pos, "m"]; continue; }
-      const q = ptAt(x.points, p.k, f); if (q) P[p.k] = q;
+      const q = ptAt(x.points, p.k, f, gap()); if (q) P[p.k] = q;
     }
     c.lineCap = "round";
     c.strokeStyle = "rgba(100,150,255,.9)"; c.lineWidth = 2.5 * s;
@@ -289,7 +290,7 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
     const sh = hitShape(x.drawings, cx - r.left, cy - r.top, rad, r.width, r.height);
     if (sh >= 0) return { kind: "shape", i: sh };
     const P = {};
-    for (const p of POINTS) { const q = ptAt(x.points, p.k, f); if (q) P[p.k] = [r.left + q[0] * r.width, r.top + q[1] * r.height]; }
+    for (const p of POINTS) { const q = ptAt(x.points, p.k, f, gap()); if (q) P[p.k] = [r.left + q[0] * r.width, r.top + q[1] * r.height]; }
     const k = hitPoint(P, cx, cy, rad);
     return k ? { kind: "pt", k } : null;
   };
@@ -309,7 +310,7 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
     if (!g || g.mode !== "press") return;
     g.mode = "lift"; vid.current.pause(); navigator.vibrate?.(12);
     const at = pic(g.x0, g.y0);
-    if (g.hit.kind === "pt") { const q = ptAt(L.current.points, g.hit.k, frameNow()); g.pos = [q[0], q[1]]; g.off = [at[0] - q[0], at[1] - q[1]]; drawLoupe(g.x0, g.y0, g.pos); }
+    if (g.hit.kind === "pt") { const q = ptAt(L.current.points, g.hit.k, frameNow(), gap()); g.pos = [q[0], q[1]]; g.off = [at[0] - q[0], at[1] - q[1]]; drawLoupe(g.x0, g.y0, g.pos); }
     else { g.orig = L.current.drawings[g.hit.i]; g.shape = g.orig; g.at = at; }
     paint();
   };
@@ -317,7 +318,7 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
     const x = L.current, f = frameNow();
     if (hit.kind === "shape") { const shape = x.drawings[hit.i]; fall.current = { kind: "shape", shape, t0: performance.now() }; x.drawings = x.drawings.filter((_, i) => i !== hit.i); say(l.removed); }
     else {
-      const m = x.points[hit.k], q = ptAt(x.points, hit.k, f);
+      const m = x.points[hit.k], q = ptAt(x.points, hit.k, f, gap());
       if (!m?.[f]) { say(l.betweenMarks); return; }
       delete m[f]; fall.current = { kind: "pt", k: hit.k, pos: q, c: POINTS.find((p) => p.k === hit.k).c, t0: performance.now() }; say(l.removedFrame);
     }
@@ -518,7 +519,8 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
       for (const k of keys) {
         const s = st[k]; if (!s) continue;
         const px = s.x + s.vx, py = s.y + s.vy;
-        let a = search(g, W, H, s.t, px, py, R, SR); if (a.score < 0.7) { const b = search(g, W, H, s.t0, px, py, R, SR); if (b.score > a.score) a = b; }
+        // The picture first placed is checked every frame: a renewed one drifts a pixel at a time, the first never does
+        let a = search(g, W, H, s.t, px, py, R, SR); const b = search(g, W, H, s.t0, px, py, R, SR); if (b.score >= a.score - 0.05) a = b;
         const mk = pts[k][f];
         if (mk && mk[2] === "m") { pts[k][f] = [+(a.x / W).toFixed(5), +(a.y / H).toFixed(5), "t"]; blendCorrection(pts[k], f, mk[0], mk[1]); s.x = mk[0] * W; s.y = mk[1] * H; s.vx = s.vy = 0; s.t = s.t0 = template(g, W, H, s.x, s.y, R); s.miss = 0; continue; }
         if (a.score < 0.5) { if (++s.miss > 5) { delete st[k]; continue; } s.x = px; s.y = py; pts[k][f] = [+(px / W).toFixed(5), +(py / H).toFixed(5), "i"]; continue; }
@@ -539,7 +541,12 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
     stopRun.current = run.stop;
     try {
       const out = await run.done;
-      if (L.current === L0) { for (const k in out) { const m = (L0.points[k] ||= {}); for (const f in out[k]) if (!(m[f]?.[2] === "m")) m[f] = out[k][f]; } edited(); say(l.aiDone); }
+      if (L.current === L0) {
+        // A new run replaces the last one's points entirely (mixing two runs flickers); the coach's own marks stay
+        for (const k in L0.points) for (const f in L0.points[k]) if (L0.points[k][f][2] !== "m") delete L0.points[k][f];
+        for (const k in out) { const m = (L0.points[k] ||= {}); for (const f in out[k]) if (m[f]?.[2] !== "m") m[f] = out[k][f]; }
+        edited(); say(l.aiDone);
+      }
     } catch { say(location.protocol === "file:" ? l.aiOffline : l.aiFail); }
     stopRun.current = null; setBusy(null);
   };

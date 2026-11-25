@@ -13,6 +13,7 @@ import Scorecard from "./Scorecard";
 import { scorecardFile, scorecardPdf } from "../scorecardFile";
 import EndVideo from "../EndVideo";
 import { localize } from "../digits";
+import SwipeRow from "../SwipeRow";
 
 // Stored values stay in English whatever the screen language; labels come from the translations by position.
 const WINDS = ["Calm", "Light", "Moderate", "Strong", "Gusty"];
@@ -76,12 +77,20 @@ function Pick({ values, value, onChange, max, other }) {
 // Only a touch that starts on the face plots: one that starts on the white around it scrolls the page as usual.
 const GAP = 220; // 3-spot: centre to centre, in the same units as a spot's radius (100)
 const ON_FACE = 1.04; // a little past the edge, for a finger on the outer line
-function Target({ face, label, arrows, pick, onHit }) {
+export const FACE_ZOOM = 4; // the most the face zooms in with two fingers
+function Target({ face, label, zoomOut, arrows, pick, onHit }) {
   const ref = useRef(null);
   const [aim, setAim] = useState(null);
-  const n = rings(face), spots = spotsOf(face), Z = 15, g = 1.4;
+  const [view, setView] = useState({ k: 1, x: 0, y: 0 }); // two-finger zoom: how far in, and the centre shown
+  const fingers = useRef(new Map()), pinch = useRef(null);
+  const n = rings(face), spots = spotsOf(face), g = 1.4 / view.k;
+  const Z = 15 / view.k; // the loupe always shows 3× what the screen shows, however far the face is zoomed
   const top = -(spots - 1) * GAP / 2; // centre of the first spot
   const spotY = (k) => top + k * GAP;
+  const W = 220, H = 220 + (spots - 1) * GAP, bx = -110, by = top - 110; // the whole face, in drawing units
+  const vb = (v) => { const w = W / v.k, h = H / v.k; return [v.x - w / 2, v.y - h / 2, w, h]; };
+  const fit = (v) => { const k = Math.min(FACE_ZOOM, Math.max(1, v.k)), w = W / k / 2, h = H / k / 2;
+    return { k, x: Math.min(bx + W - w, Math.max(bx + w, v.x)), y: Math.min(by + H - h, Math.max(by + h, v.y)) }; };
 
   // Screen point → the nearest spot and the position on it, in spot radii (y up).
   const local = (clientX, clientY) => {
@@ -101,17 +110,40 @@ function Target({ face, label, arrows, pick, onHit }) {
   // The page may scroll (touch-action: pan-y), so a touch that starts on the face cancels scrolling for that touch.
   useEffect(() => {
     const svg = ref.current;
-    const stop = (e) => { const t = e.touches[0]; if (t && onFace(t.clientX, t.clientY)) e.preventDefault(); };
+    const stop = (e) => { const t = e.touches[0]; if (e.touches.length > 1 || (t && onFace(t.clientX, t.clientY))) e.preventDefault(); }; // two fingers: our zoom, not the page's
     svg.addEventListener("touchstart", stop, { passive: false });
     return () => svg.removeEventListener("touchstart", stop);
   });
 
+  // Where a screen point falls in the drawing, as a share of the box (0–1) and in drawing units.
+  const share = (cx, cy) => { const b = ref.current.getBoundingClientRect(); return [(cx - b.left) / b.width, (cy - b.top) / b.height]; };
   const down = (ev) => {
-    if (!onFace(ev.clientX, ev.clientY)) return;
-    ev.preventDefault(); ref.current.setPointerCapture(ev.pointerId); setAim(at(ev));
+    const fs = fingers.current;
+    fs.set(ev.pointerId, [ev.clientX, ev.clientY]);
+    if (fs.size === 2) { // a second finger: zoom instead of plotting
+      setAim(null);
+      const [a, b] = [...fs.values()], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], [fx, fy] = share(...m), [x0, y0, w, h] = vb(view);
+      pinch.current = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), k: view.k, p: [x0 + fx * w, y0 + fy * h] };
+      return;
+    }
+    if (fs.size > 2 || !onFace(ev.clientX, ev.clientY)) return;
+    ev.preventDefault(); try { ref.current.setPointerCapture(ev.pointerId); } catch { /* a pointer the browser no longer knows */ } setAim(at(ev));
   };
-  const move = (ev) => { if (aim) setAim(at(ev)); };
+  const move = (ev) => {
+    const fs = fingers.current;
+    if (fs.has(ev.pointerId)) fs.set(ev.pointerId, [ev.clientX, ev.clientY]);
+    const p = pinch.current;
+    if (p && fs.size >= 2) { // keep the spot first pinched under the fingers' middle
+      const [a, b] = [...fs.values()], [fx, fy] = share((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      const k = Math.min(FACE_ZOOM, Math.max(1, p.k * Math.hypot(a[0] - b[0], a[1] - b[1]) / p.d)), w = W / k, h = H / k;
+      setView(fit({ k, x: p.p[0] - fx * w + w / 2, y: p.p[1] - fy * h + h / 2 }));
+      return;
+    }
+    if (aim) setAim(at(ev));
+  };
+  const lift = (ev) => { fingers.current.delete(ev.pointerId); if (fingers.current.size < 2) pinch.current = null; };
   const up = (ev) => {
+    lift(ev);
     if (!aim) return;
     const p = at(ev), x = +p.x.toFixed(4), y = +p.y.toFixed(4);
     setAim(null); onHit({ x, y, score: scoreOf(face, x, y), ...(spots > 1 && { spot: p.k }) });
@@ -129,11 +161,11 @@ function Target({ face, label, arrows, pick, onHit }) {
       ))}
       {arrows.map((a, i) => (a.x == null || (aim && i === pick) ? null : (
         <g key={i}>
-          <circle cx={a.x * 100} cy={rest(a) - a.y * 100} r={i === pick ? 4.5 : 3.4} fill={i === pick ? "#00e0c6" : "#00b8a3"} stroke="#000" strokeWidth="1" />
-          <text x={a.x * 100 + 5} y={rest(a) - a.y * 100 - 5} fontSize="8" fill="#000" fontFamily="monospace">{a.arrow}</text>
+          <circle cx={a.x * 100} cy={rest(a) - a.y * 100} r={(i === pick ? 4.5 : 3.4) / Math.sqrt(view.k)} fill={i === pick ? "#00e0c6" : "#00b8a3"} stroke="#000" strokeWidth={1 / Math.sqrt(view.k)} />
+          <text x={a.x * 100 + 5 / view.k} y={rest(a) - a.y * 100 - 5 / view.k} fontSize={8 / Math.sqrt(view.k)} fill="#000" fontFamily="monospace">{a.arrow}</text>
         </g>
       )))}
-      {aim && <><circle cx={aim.x * 100} cy={spotY(aim.k) - aim.y * 100} r="2.2" fill="none" stroke="#f2c40c" strokeWidth="1.1" /><circle cx={aim.x * 100} cy={spotY(aim.k) - aim.y * 100} r="3.3" fill="none" stroke="#000" strokeWidth=".6" /></>}
+      {aim && <><circle cx={aim.x * 100} cy={spotY(aim.k) - aim.y * 100} r={2.2 / view.k} fill="none" stroke="#f2c40c" strokeWidth={1.1 / view.k} /><circle cx={aim.x * 100} cy={spotY(aim.k) - aim.y * 100} r={3.3 / view.k} fill="none" stroke="#000" strokeWidth={0.6 / view.k} /></>}
     </>
   );
   const cx = aim ? aim.x * 100 : 0, cy = aim ? spotY(aim.k) - aim.y * 100 : 0;
@@ -147,11 +179,12 @@ function Target({ face, label, arrows, pick, onHit }) {
   return (
     <div className={`rg-target ${spots > 1 ? "spots" : ""}`} dir="ltr">
       <p className="rg-face">{label}</p>
-      <svg ref={ref} viewBox={`-110 ${top - 110} 220 ${220 + (spots - 1) * GAP}`} role="img" aria-label={label} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => setAim(null)}>{drawing}</svg>
+      <svg ref={ref} viewBox={view.k === 1 ? `${bx} ${by} ${W} ${H}` : vb(view).join(" ")} role="img" aria-label={label} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={(ev) => { lift(ev); setAim(null); }}>{drawing}</svg>
+      {view.k > 1 && <button type="button" className="rg-zoom" onClick={() => setView({ k: 1, x: 0, y: 0 })} aria-label={zoomOut}>{view.k.toFixed(1).replace(/\.0$/, "")}×</button>}
       {aim && (
         <svg className="rg-loupe" style={{ left: aim.lx, top: aim.ly, width: aim.size }} viewBox={`${cx - Z} ${cy - Z} ${2 * Z} ${2 * Z}`} aria-hidden="true">
-          {drawing}{cross(0.7, "#000")}{cross(0.3, "#fff")}
-          <text x={cx} y={cy + Z - 3} fontSize="5.5" fontWeight="700" textAnchor="middle" fill="#f2c40c" stroke="#000" strokeWidth=".5" paintOrder="stroke" fontFamily="monospace">{scoreOf(face, aim.x, aim.y)}</text>
+          {drawing}{cross(0.7 / view.k, "#000")}{cross(0.3 / view.k, "#fff")}
+          <text x={cx} y={cy + Z - 3 / view.k} fontSize={5.5 / view.k} fontWeight="700" textAnchor="middle" fill="#f2c40c" stroke="#000" strokeWidth={0.5 / view.k} paintOrder="stroke" fontFamily="monospace">{scoreOf(face, aim.x, aim.y)}</text>
         </svg>
       )}
     </div>
@@ -364,14 +397,16 @@ export default function Range({ tr, lang, selectedId }) {
         </div>
         <div className="card rg-scroll">
           <h3>{r.ends}</h3>
-          <table className="rg-table">
-            <thead><tr><th>{r.end}</th>{Array.from({ length: per }, (_, i) => <th key={i}>{i + 1}</th>)}<th>{r.sum}</th><th>{r.focus}</th></tr></thead>
-            <tbody>
-              {live.ends.filter((x) => x.arrows.length).map((x) => (
-                <tr key={x.end}><td>{x.end}</td>{Array.from({ length: per }, (_, i) => <td key={i}>{x.arrows[i]?.score ?? ""}</td>)}<td><b>{endSum(x)}</b></td><td>{x.focus ?? ""}</td></tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="rg-ends" style={{ "--per": per }}>
+            <div className="rg-end head"><span>{r.end}</span>{Array.from({ length: per }, (_, i) => <span key={i}>{i + 1}</span>)}<span>{r.sum}</span></div>
+            {live.ends.filter((x) => x.arrows.length).map((x) => (
+              // An end is cleared, not removed: the ends after it keep their numbers, so linked clips stay right
+              <SwipeRow key={x.end} label={tr.results.del} onDelete={() => { if (!window.confirm(fill(r.confirmEnd, { n: x.end }))) return false; change((s) => { s.ends.find((y) => y.end === x.end).arrows = []; }); }}>
+                <div className="rg-end"><span>{x.end}</span>{Array.from({ length: per }, (_, i) => <span key={i}>{x.arrows[i]?.score ?? ""}</span>)}<b>{endSum(x)}</b></div>
+              </SwipeRow>
+            ))}
+          </div>
+          <p className="muted swipe-hint">{r.swipeEnd}</p>
         </div>
         <div className="card">
           <h3>{r.after}</h3>
@@ -416,7 +451,7 @@ export default function Range({ tr, lang, selectedId }) {
             <button className="link-btn" onClick={() => change((s) => { delete s.pendingClip; })}>{r.dontLink}</button></p>
         )}
       </div>
-      <Target face={face} label={r.faces[face] || face} arrows={e.arrows} pick={pick} onHit={hit} />
+      <Target face={face} label={r.faces[face] || face} zoomOut={r.zoomOut} arrows={e.arrows} pick={pick} onHit={hit} />
       {tagId && <QuickTag key={tagId} id={tagId} tr={tr} onClose={() => setTagId(null)} />}
       {filming && <Recorder tr={tr} onDone={clipDone} onClose={() => setFilming(false)} />}
       <div className="rg-row3">

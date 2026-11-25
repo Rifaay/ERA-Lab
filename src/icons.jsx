@@ -17,6 +17,7 @@ const PATHS = {
   x: "<path d=\"M18 6L6 18M6 6l12 12\"/>", // tabler:x
   flip: "<path d=\"M5 7h1a2 2 0 0 0 2-2a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2\"/><path d=\"M11.245 15.904A3 3 0 0 0 15 13m-2.25-2.905A3 3 0 0 0 9 13\"/><path d=\"M14 13h2v2m-6-2H8v-2\"/>", // tabler:camera-rotate
   check: "<path d=\"m5 12l5 5L20 7\"/>", // tabler:check
+  play: "<path d=\"M7 4v16l13-8z\"/>", // tabler:player-play
   down: "<path d=\"m6 9l6 6l6-6\"/>", // tabler:chevron-down
   next: "<path d=\"m9 6l6 6l-6 6\"/>", // tabler:chevron-right
   prev: "<path d=\"m15 6l-6 6l6 6\"/>", // tabler:chevron-left

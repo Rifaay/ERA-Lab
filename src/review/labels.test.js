@@ -4,10 +4,11 @@ import { ptAt, enforceOrder, finishMotion, suggestPhases, isSwipeDown, hitPoint,
 
 test("a point between two marks is drawn on the line between them, faded", () => {
   const pts = { head: { 0: [0, 0, "m"], 10: [1, 1, "m"] } };
-  assert.deepEqual(ptAt(pts, "head", 5), [0.5, 0.5, "i"]);
+  assert.deepEqual(ptAt(pts, "head", 5, 10), [0.5, 0.5, "i"]);
+  assert.equal(ptAt(pts, "head", 5), null, "a gap longer than a quarter second is left empty");
   assert.deepEqual(ptAt(pts, "head", 10), [1, 1, "m"]);
   assert.equal(ptAt(pts, "head", 11), null);
-  assert.equal(ptAt({ head: { 0: [0, 0], 40: [1, 1] } }, "head", 20), null, "too far apart to guess");
+  assert.equal(ptAt({ head: { 0: [0, 0], 40: [1, 1] } }, "head", 20, 30), null, "too far apart to guess");
 });
 
 test("phases stay in order and the one on screen is found", () => {

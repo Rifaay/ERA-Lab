@@ -9,6 +9,7 @@ import EndVideo from "../EndVideo";
 import { localize } from "../digits";
 import { configured, signedIn } from "../sync";
 import { forgetArcherSession } from "../archer";
+import SwipeRow from "../SwipeRow";
 
 const TYPES = ["Technical", "Physical", "Mental", "Competition", "Mixed"];
 const DOMAINS = ["Technical", "Physical", "Mental", "Competition"];
@@ -167,7 +168,8 @@ export default function SessionLogger({ lang, tr, selectedId }) {
         <>
           <h3 style={{ color: "var(--txm)", marginBottom: 8, marginTop: 4 }}>{s.history}</h3>
           {sessions.map((sess) => (
-            <div key={sess.id} className="card" style={{ padding: "10px 12px", marginBottom: 6 }}>
+            <SwipeRow key={sess.id} className="swipe-card" label={tr.results.del} onDelete={async () => { if (!window.confirm(s.confirmDel)) return false; await handleDelete(sess.id); }}>
+            <div className="card" style={{ padding: "10px 12px", marginBottom: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "space-between", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
                   <span className="badge gray">{sess.date}</span>
@@ -188,6 +190,7 @@ export default function SessionLogger({ lang, tr, selectedId }) {
               {sess.notes && <p style={{ fontSize: 11, color: "var(--txm)", marginTop: 4 }}>{sess.notes}</p>}
               {videos === sess.id && sess.range.ends.filter((e) => e.arrows.length).map((e) => <EndVideo key={e.end} tr={tr} athlete={athlete} sessionId={sess.range.session_id} end={e.end} />)}
             </div>
+            </SwipeRow>
           ))}
         </>
       )}

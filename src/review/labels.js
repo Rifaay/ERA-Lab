@@ -22,15 +22,15 @@ export const blank = (clip, fps = 30, duration = null) => ({
   points: {}, drawings: [],
 });
 
-// A body point on frame f: the mark itself, else a straight line between the nearest marks up to 30 frames apart
-// (kind "i", drawn faded), else nothing.
-export function ptAt(points, k, f) {
+// A body point on frame f: the mark itself, else a straight line between the nearest marks up to `gap` frames apart
+// (kind "i", drawn faded), else nothing. Keep gap short (a quarter second): a line across a fast release leaves the arm.
+export function ptAt(points, k, f, gap = 8) {
   const m = points?.[k];
   if (!m) return null;
   if (m[f]) return m[f];
   let a = null, b = null;
   for (const s in m) { const i = +s; if (i < f && (a == null || i > a)) a = i; if (i > f && (b == null || i < b)) b = i; }
-  if (a != null && b != null && b - a <= 30) { const u = (f - a) / (b - a), A = m[a], B = m[b]; return [A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u, "i"]; }
+  if (a != null && b != null && b - a <= gap) { const u = (f - a) / (b - a), A = m[a], B = m[b]; return [A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u, "i"]; }
   return null;
 }
 

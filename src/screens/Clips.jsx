@@ -12,6 +12,7 @@ import { useApp } from "../context";
 import QuickTag from "../QuickTag";
 import Icon from "../icons";
 import { setUi } from "../ui";
+import SwipeRow from "../SwipeRow";
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 // How long a video file runs, read from the file itself; 0 when the browser cannot tell.
@@ -80,6 +81,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
   const [, setTick] = useState(0); // review records live in storage; this re-reads them after a change
   const fileRef = useRef(null);
   const [resultSid, setResultSid] = useState("");
+  const [show, setShow] = useState("all"); // all | todo | done
 
   const load = () => listClips().then((all) => setClips(all.sort((a, b) => b.recordedAt - a.recordedAt))).catch(() => setClips([]));
   useEffect(() => {
@@ -97,6 +99,9 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
 
   const reviews = Object.fromEntries(getReviews().map((r) => [r.id, r]));
   const mine = (clips || []).filter((x) => x.athleteId === selectedId);
+  const isDone = (x) => { const rv = reviews[x.id]; return !!(rv && (rv.verdict || rv.faults?.length || rv.phasesMarked)); };
+  const todo = mine.filter((x) => !isDone(x)).length;
+  const shown = mine.filter((x) => show === "all" || (show === "todo" ? !isDone(x) : isDone(x)));
   const atRisk = (clips || []).filter((x) => !x.savedOut);
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const when = (t) => new Date(t).toLocaleString(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -104,7 +109,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
   const save = async (clip) => { if (await saveOut(clip)) { await updateClip(clip.id, { savedOut: true }); load(); } };
   const saveAll = async () => { setBusy(true); for (const x of atRisk) await save(x); setBusy(false); };
   const remove = async (clip) => {
-    if (!window.confirm(clip.savedOut ? c.confirmDelete : c.confirmDeleteUnsaved)) return;
+    if (!window.confirm(clip.savedOut ? c.confirmDelete : c.confirmDeleteUnsaved)) return false;
     await deleteClip(clip.id);
     const rv = reviews[clip.id];
     if (rv && !rv.shot && !rv.verdict && !rv.faults.length) deleteReview(rv.id); // an empty record goes with its video
@@ -175,12 +180,12 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
   return (
     <div className="screen clips">
       <h2>{c.title}</h2>
-      <p className="muted">{c.lead}</p>
       <div className="clips-actions">
+        <button className="btn-primary" onClick={() => onGo("range")}><span className="rec-dot" />{c.record}</button>
         <button className="btn-ghost" disabled={busy} onClick={() => fileRef.current.click()}><Icon name="import" size={18} />{busy ? c.importing : c.import}</button>
         <input ref={fileRef} type="file" accept="video/*,.mp4,.mov,.m4v,.webm" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ""; if (f.length) importFiles(f); }} />
-        <small>{c.importHint}</small>
       </div>
+      <small className="muted">{c.importHint}</small>
 
       {atRisk.length > 0 && (
         <div className="clips-risk" role="status">
@@ -193,20 +198,29 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
       {clips == null ? <p className="muted">{c.loading}</p> : !mine.length ? (
         <div className="card"><p>{c.none}</p><button className="btn-primary" style={{ marginTop: 12 }} onClick={() => onGo("range")}><Icon name="target" size={20} />{c.toRange}</button></div>
       ) : (
+        <>
+        <div className="clips-head">
+          <h3>{fill(c.toReview, { n: todo })}</h3>
+          <div className="seg clips-filter" role="tablist">
+            {["all", "todo", "done"].map((k) => <button key={k} role="tab" aria-selected={show === k} className={show === k ? "active" : ""} onClick={() => setShow(k)}>{c.filter[k]}</button>)}
+          </div>
+        </div>
         <ul className="clip-list">
-          {mine.map((x) => {
+          {shown.map((x) => {
             const rv = reviews[x.id], tagged = rv && (rv.verdict || rv.faults.length);
             return (
               <li key={x.id} className={open === x.id ? "open" : ""}>
+                <SwipeRow label={c.delete} onDelete={() => remove(x)}>
                 <button className="clip-row" onClick={() => setOpen(open === x.id ? null : x.id)} aria-expanded={open === x.id}>
-                  <span className={`clip-badge ${rv?.verdict || "none"}`}>{rv?.shot?.score ?? "–"}</span>
+                  <span className="clip-thumb" aria-hidden="true"><Icon name="play" size={18} /><small>{Math.floor(x.durationS / 60)}:{String(Math.round(x.durationS % 60)).padStart(2, "0")}</small></span>
                   <span className="clip-what">
                     <b>{rv?.shot?.whole ? fill(c.wholeEnd, rv.shot) : rv?.shot ? fill(c.endArrow, { end: rv.shot.end, n: rv.shot.arrow }) : c.noArrow}</b>
-                    <small>{when(x.recordedAt)} · {Math.round(x.durationS)} s · {mb(x.size)} MB{!x.savedOut && ` · ${c.onlyHere}`}</small>
+                    <small>{when(x.recordedAt)} · {mb(x.size)} MB{!x.savedOut && ` · ${c.onlyHere}`}</small>
                     {tagged ? <small className="clip-tags">{rv.verdict === "good" ? c.good : rv.faults.map((f) => tr.quick.faults[FAULTS.indexOf(f)] || f).join(", ") || c.fault}</small> : <small className="clip-tags none">{c.untagged}</small>}
                   </span>
-                  <Icon name="down" size={18} />
+                  {rv?.shot?.score != null && <span className={`clip-badge ${rv?.verdict || "none"}`}>{rv.shot.score}</span>}
                 </button>
+                </SwipeRow>
                 {open === x.id && (
                   <div className="clip-body">
                     <Player id={x.id} />
@@ -240,6 +254,9 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
             );
           })}
         </ul>
+        {!shown.length && <p className="muted">{c.noneHere}</p>}
+        <p className="muted swipe-hint">{c.swipe}</p>
+        </>
       )}
 
       {resultSessions.length > 0 && (
