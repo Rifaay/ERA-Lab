@@ -7,7 +7,7 @@ import { saveHtmlFile } from "../scorecardFile";
 import { getSettings } from "../storage";
 import Help from "../Help";
 import Icon from "../icons";
-import SeasonCalendar, { DayEditor } from "./SeasonCalendar";
+import { DayEditor } from "./SeasonCalendar";
 import { configured, signedIn, isAdult } from "../sync";
 import { isLinked, sharePlan, unsharePlan } from "../archer";
 
@@ -139,8 +139,9 @@ export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
         </div>
 
         <p className="muted pz-ramadan"><Icon name="moon" size={16} /> {ramadan.length ? fill(pl.flow.ramadan, { from: short(lang, weekStart(year, Math.min(...ramadan))), to: short(lang, addDays(weekStart(year, Math.max(...ramadan)), 6)) }) : pl.flow.ramadanNone}</p>
-        <button className="btn-primary wide-btn" onClick={build}>{pl.build}</button>
-        <p className="muted">{pl.buildNote}</p>
+        <button className="btn-primary wide-btn" onClick={() => setView("cal")}>{pl.cyc.planCal}</button>
+        <button className="btn-ghost wide-btn" onClick={() => { build(); setView("cal"); }}>{pl.cyc.fillAuto}</button>
+        <p className="muted">{pl.cyc.buildNote}</p>
       </>}
 
       {view === "season" && built && <div className="pz-season">
@@ -171,7 +172,7 @@ export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
         <button className="btn-primary wide-btn pz-send" onClick={() => setView("send")}>{pl.flow.archersSend}</button>
         <div className="pz-more">
           <button className="btn-ghost small" onClick={() => setView("comps")}>{pl.comps} ({comps.length})</button>
-          <button className="btn-ghost small" onClick={() => setView("cal")}>{pl.flow.calendar}</button>
+          <button className="btn-ghost small" onClick={() => setView("cal")}>{pl.cyc.title}</button>
           <button className="btn-ghost small" onClick={() => setView("load")}>{pl.tabs.load}{warns.length ? ` (${warns.length})` : ""}</button>
           <button className="btn-ghost small" onClick={() => setView("rules")}>{pl.flow.adjust}</button>
         </div>
@@ -203,7 +204,8 @@ export default function PeriodizationPlanner({ lang, tr, planId, onBack }) {
 
         <p className="muted pz-ramadan"><Icon name="moon" size={16} /> {ramadan.length ? fill(pl.flow.ramadan, { from: short(lang, weekStart(year, Math.min(...ramadan))), to: short(lang, addDays(weekStart(year, Math.max(...ramadan)), 6)) }) : pl.flow.ramadanNone}</p>
       </>}
-      {view === "cal" && <SeasonCalendar key={year} {...{ plan, year, lang, pl, comps, exercises, today }} onDay={setDay} onWeek={openWeek} />}
+      {view === "cal" && <CycleCalendar {...{ plan, year, lang, pl, comps, exercises, shot, ramadan, goals, edited, today }} onPlan={setPlan} onTouch={touch} onDay={setDay}
+        onAuto={(w) => rebuildWith({ edited: [...edited].filter((x) => x !== w) })} onRamadan={setRamadan} />}
 
       {view === "week" && weekOpen && <WeekDays key={weekOpen} w={weekOpen} {...{ plan, year, lang, pl, comps, exercises, shot, ramadan, goals, edited }}
         onWeek={openWeek} onDay={setDay} onDays={(days) => setPlan({ ...plan, days })} onSend={() => setView("send")}
@@ -281,6 +283,96 @@ function SeasonChart({ plan, year, lang, pl, comps, nowWeek, onOpen }) {
         })}
       </div>
       <div className="pz-months" aria-hidden="true">{months.map((m, i) => <span key={i}>{m}</span>)}</div>
+    </div>
+  );
+}
+
+// The season calendar: months, their weeks, the weeks' days, with the three cycles on one page.
+// Macrocycle: the season's goal and its phases (painted onto weeks: pick a phase, tap a block's first and last week).
+// Mesocycle: each run of weeks with one phase is a block, with its dates and the goal the coach writes for it.
+// Microcycle: a week opens to its days and its requirements (arrow target, mix, physical and mental sessions).
+// A day opens as a sheet.
+function CycleCalendar({ plan, year, lang, pl, comps, exercises, shot, ramadan, goals, edited, today, onPlan, onTouch, onDay, onAuto, onRamadan }) {
+  const c = pl.cyc, loc = lang === "ar" ? "ar-EG" : "en-GB";
+  const [paint, setPaint] = useState(null); // a phase key, "none" to clear, or null when not painting
+  const [anchor, setAnchor] = useState(null); // the first week tapped of a block being painted
+  const [open, setOpen] = useState(() => planWeek(today) <= 52 && +today.slice(0, 4) === year ? planWeek(today) : null);
+  const [day, setDay] = useState(null);
+  const weeks = plan.weeks || {};
+  const date = (iso, o = { day: "numeric", month: "short" }) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(loc, o); };
+  const daysOf = (w) => { const s0 = weekStart(year, w), out = []; for (let i = 0; i < 7; i++) { const iso = addDays(s0, i); if (+iso.slice(0, 4) === year && planWeek(iso) === w) out.push(iso); } return out; };
+  // blocks: runs of weeks with the same phase
+  const blocks = [];
+  for (let w = 1; w <= 52; w++) { const k = weeks[w] || null; const last = blocks.at(-1); if (last && last.k === k) last.to = w; else blocks.push({ k, from: w, to: w }); }
+  const blockAt = Object.fromEntries(blocks.flatMap((b) => Array.from({ length: b.to - b.from + 1 }, (_, i) => [b.from + i, b])));
+  const tap = (w) => {
+    if (!paint) { setOpen(open === w ? null : w); return; }
+    const from = anchor ?? w, lo = Math.min(from, w), hi = Math.max(from, w), next = { ...weeks };
+    for (let x = lo; x <= hi; x++) { if (paint === "none") delete next[x]; else next[x] = paint; }
+    onPlan({ ...plan, weeks: next, edited: [...new Set([...(plan.edited || []).map(Number), ...Array.from({ length: hi - lo + 1 }, (_, i) => lo + i)])] });
+    setAnchor(anchor == null ? w : null);
+  };
+  const setMeso = (from, goal) => onPlan({ ...plan, meso: { ...plan.meso, [from]: goal } });
+  const monthOf = (w) => +weekStart(year, w).slice(5, 7) - 1;
+  const rows = [];
+  for (let w = 1; w <= 52; w++) {
+    const b = blockAt[w];
+    if (w === 1 || monthOf(w) !== monthOf(w - 1)) rows.push(<h3 key={"m" + w} className="cy-month">{new Date(year, monthOf(w), 1).toLocaleDateString(loc, { month: "long", year: "numeric" })}</h3>);
+    if (b.from === w && b.k) rows.push(
+      <div key={"b" + w} className="cy-block" style={{ borderColor: COLORS[b.k] }}>
+        <span className="cy-block-head"><i style={{ background: COLORS[b.k] }} /><b>{pl.phases[b.k]}</b><small>{fill(c.blockLen, { n: b.to - b.from + 1, from: date(weekStart(year, b.from)), to: date(addDays(weekStart(year, b.to), 6)) })}</small></span>
+        <input className="cy-goal" value={plan.meso?.[b.from] || ""} placeholder={c.mesoPh} aria-label={c.mesoGoal} onChange={(e) => setMeso(b.from, e.target.value)} />
+      </div>
+    );
+    const k = weeks[w], t = +plan.targets?.[w]?.arrows || 0, cs = comps.filter((x) => x.week === w), isOpen = open === w && !paint;
+    rows.push(
+      <div key={"w" + w} className={"cy-week" + (isOpen ? " open" : "") + (anchor === w ? " anchor" : "")}>
+        <button type="button" className="cy-week-row" aria-expanded={isOpen} onClick={() => tap(w)}>
+          <i className="cy-band" style={{ background: k ? COLORS[k] : undefined }} />
+          <span className="cy-wk">{pl.wk}{w}</span>
+          <span className="cy-dates">{date(weekStart(year, w))} – {date(addDays(weekStart(year, w), 6))}</span>
+          {cs.map((x) => <span key={x.id} className={`wk-comp p${x.priority}`}>{x.priority}</span>)}
+          {ramadan.includes(w) && <Icon name="moon" size={14} />}
+          <span className="cy-target">{t ? fill(pl.flow.arrowsN, { n: t }) : ""}</span>
+        </button>
+        {isOpen && <div className="cy-open">
+          <div className="cy-days">
+            {daysOf(w).map((iso) => { const d = plan.days?.[iso]; return (
+              <button key={iso} type="button" className={`cy-day ${dayFilled(d) ? "f" : ""} ${iso === today ? "t" : ""}`} onClick={() => setDay(iso)}>
+                <small>{date(iso, { weekday: "short" })}</small><b>{+iso.slice(8)}</b><em>{dayFilled(d) ? (d.focus || (d.arrows ? d.arrows : "•")) : ""}</em>
+              </button>); })}
+          </div>
+          <WeekEditor w={w} {...{ plan, year, lang, pl, shot, comps, ramadan, goals, exercises, edited }} onChange={(change) => onTouch(w, change)} onAuto={() => onAuto(w)} onRamadan={(on) => onRamadan(w, on)} onClose={() => setOpen(null)} />
+        </div>}
+      </div>
+    );
+  }
+  return (
+    <div className="cy">
+      <section className="cy-macro">
+        <h3>{c.macro}</h3>
+        <textarea rows={2} value={plan.macro || ""} placeholder={c.macroPh} aria-label={c.macro} onChange={(e) => onPlan({ ...plan, macro: e.target.value })} />
+        <span className="plan-strip" aria-hidden="true">{Array.from({ length: 52 }, (_, i) => <i key={i} style={{ background: weeks[i + 1] ? COLORS[weeks[i + 1]] : undefined }} />)}</span>
+        <small className="muted">{(() => { const n = blocks.filter((b) => b.k).length; return n === 1 ? c.blockOne : fill(c.blocksN, { n }); })()}</small>
+      </section>
+      <div className={`cy-paint ${paint ? "on" : ""}`}>
+        {paint ? <>
+          <p>{anchor == null ? c.paintFirst : c.paintLast}</p>
+          <div className="cy-palette" role="radiogroup" aria-label={c.paint}>
+            {PHASES.map((k) => <button key={k} type="button" role="radio" aria-checked={paint === k} className={paint === k ? "on" : ""} style={{ "--ph": COLORS[k] }} onClick={() => { setPaint(k); setAnchor(null); }}>{pl.phases[k]}</button>)}
+            <button type="button" role="radio" aria-checked={paint === "none"} className={paint === "none" ? "on" : ""} onClick={() => { setPaint("none"); setAnchor(null); }}>{c.erase}</button>
+          </div>
+          <button className="btn-primary small" onClick={() => { setPaint(null); setAnchor(null); }}>{c.done}</button>
+        </> : <button className="btn-ghost small" onClick={() => setPaint(PHASES[0])}>{c.paint}</button>}
+      </div>
+      <div className="cy-list">{rows}</div>
+      {day && createPortal(<div className="pz-sheet-wrap" role="dialog" aria-label={day} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+        <button type="button" className="pz-scrim" aria-label={pl.flow.closeDay} onClick={() => setDay(null)} />
+        <div className="pz-sheet"><span className="pz-grip" aria-hidden="true" />
+          <DayEditor iso={day} plan={plan} lang={lang} pl={pl} exercises={exercises} comps={comps.filter((x) => x.date === day)}
+            onChange={(patch) => onDay(day, patch)} onWeek={() => setDay(null)} onClose={() => setDay(null)} />
+        </div>
+      </div>, document.body)}
     </div>
   );
 }

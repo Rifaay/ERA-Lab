@@ -316,6 +316,13 @@ export const t = {
       swipe: "Swipe a plan towards the start of the line to delete it.",
     },
     planner: {
+      cyc: {
+        title: "Season calendar", macro: "Season goal (macrocycle)", macroPh: "What this season is for, e.g. peak for the National championship in December",
+        mesoGoal: "Block goal", mesoPh: "Block goal (mesocycle): what these weeks build", blockLen: "{n} weeks · {from} – {to}", blockOne: "1 block (mesocycle). Tap a week for its days and targets (microcycle).", blocksN: "{n} blocks (mesocycles). Tap a week for its days and targets (microcycle).",
+        paint: "Paint phases", paintFirst: "Pick a phase, then tap the first week of the block.", paintLast: "Now tap the last week of the block (the same week for a one-week block).",
+        erase: "Clear", done: "Done", planCal: "Plan the season in the calendar", fillAuto: "Fill it in for me from the competitions",
+        buildNote: "In the calendar you write the season goal, paint the phases onto weeks (the blocks), give each block its goal, then set each week's targets and days. Filling it in for you starts from the competitions and rules; whatever you change stays yours.",
+      },
       title: "Season plan", noAthlete: "Select an athlete first.", year: "Year", prevYear: "Previous year", nextYear: "Next year",
       cal: { daysTitle: "Day by day", view: "Season view", calView: "Calendar", weeksView: "Weeks", hint: "Tap a month, then a day, to plan that day's training. Colours are the phases of the plan weeks.", allMonths: "All months", prevMonth: "Previous month", nextMonth: "Next month", key: "Colour: the week's phase · A/B/C: competition · dot: day planned.", openWeek: "Plan week {w} · {phase} — open the week", areasLabel: "Focus areas (pick as many as you need)", areas: { technical: "Technical", mental: "Mental", physical: "Physical", competition: "Competition" }, focus: "Focus details", focusHint: "e.g. Anchor and release, 18 m blank bale", arrows: "Arrows", materials: "Training materials and links", materialsHint: "Drills, videos, documents… one link per line", note: "Notes", clear: "Clear this day", confirmClear: "Remove everything planned for this day?" },
       app: { title: "In {name}'s ERA Lab", intro: "{name} has their own app. Send this plan there: they see each day's plan, and with notifications on they get a reminder on training days.", send: "Send plan to {name}", sent: "Sent. {name} sees it under Plan.", again: "Send the latest version", offline: "No connection. Send it again when this device is online." },
@@ -896,6 +903,13 @@ followers: {
       swipe: "اسحب الخطة نحو بداية السطر لحذفها.",
     },
     planner: {
+      cyc: {
+        title: "تقويم الموسم", macro: "هدف الموسم (الدورة الكبرى)", macroPh: "لماذا هذا الموسم، مثل: الذروة في البطولة الوطنية في ديسمبر",
+        mesoGoal: "هدف المرحلة", mesoPh: "هدف المرحلة (الدورة المتوسطة): ما تبنيه هذه الأسابيع", blockLen: "{n} أسابيع · {from} – {to}", blockOne: "مرحلة واحدة (دورة متوسطة). اضغط أسبوعاً لأيامه وأهدافه (الدورة الصغرى).", blocksN: "{n} مراحل (دورات متوسطة). اضغط أسبوعاً لأيامه وأهدافه (الدورة الصغرى).",
+        paint: "لوّن المراحل", paintFirst: "اختر مرحلة، ثم اضغط أول أسبوع فيها.", paintLast: "الآن اضغط آخر أسبوع في المرحلة (الأسبوع نفسه لمرحلة من أسبوع واحد).",
+        erase: "امسح", done: "تم", planCal: "خطّط الموسم في التقويم", fillAuto: "املأه لي من البطولات",
+        buildNote: "في التقويم تكتب هدف الموسم، وتلوّن المراحل على الأسابيع، وتعطي كل مرحلة هدفها، ثم تحدد أهداف كل أسبوع وأيامه. الملء التلقائي يبدأ من البطولات والقواعد؛ وكل ما تغيّره يبقى لك.",
+      },
       title: "خطة الموسم", noAthlete: "اختر رياضياً أولاً.", year: "السنة", prevYear: "السنة السابقة", nextYear: "السنة التالية",
       cal: { daysTitle: "يوماً بيوم", view: "عرض الموسم", calView: "التقويم", weeksView: "الأسابيع", hint: "اضغط شهراً ثم يوماً لتخطط تدريب ذلك اليوم. الألوان هي مراحل أسابيع الخطة.", allMonths: "كل الشهور", prevMonth: "الشهر السابق", nextMonth: "الشهر التالي", key: "اللون: مرحلة الأسبوع · A/B/C: بطولة · نقطة: يوم مخطط.", openWeek: "أسبوع الخطة {w} · {phase} — افتح الأسبوع", areasLabel: "مجالات التركيز (اختر ما تحتاج منها)", areas: { technical: "تقني", mental: "نفسي", physical: "بدني", competition: "منافسة" }, focus: "تفاصيل التركيز", focusHint: "مثلاً: التثبيت والإطلاق، ١٨ م على الهدف الفارغ", arrows: "الأسهم", materials: "مواد التدريب والروابط", materialsHint: "تمارين، فيديوهات، ملفات… رابط في كل سطر", note: "ملاحظات", clear: "امسح هذا اليوم", confirmClear: "حذف كل ما خُطط لهذا اليوم؟" },
       app: { title: "في تطبيق {name}", intro: "لدى {name} تطبيقه الخاص. أرسل الخطة إليه: يرى خطة كل يوم، ومع تفعيل الإشعارات يصله تذكير في أيام التدريب.", send: "أرسل الخطة إلى {name}", sent: "أُرسلت. يراها {name} في الخطة.", again: "أرسل آخر نسخة", offline: "لا يوجد اتصال. أرسلها مجددًا عند الاتصال." },

@@ -731,3 +731,50 @@ button.row:hover .row-name { color: var(--blue); }
 @media (prefers-reduced-motion: reduce) { .pz-sheet, .pz-scrim { animation: none; } }
 .pz-sheet-wrap { z-index: 1000; }
 .pz-sheet .pz-week { border: 0; padding: 0; box-shadow: none; margin: 0; }
+
+/* Season calendar: the season goal, blocks of weeks, weeks that open to their days and targets */
+.cy { display: grid; gap: 16px; }
+.cy-macro { display: grid; gap: 8px; padding: 16px; border-radius: 16px; background: var(--g50); }
+.cy-macro h3 { margin: 0; }
+.cy-macro textarea { font: 15px var(--font-body); border: 1.5px solid var(--edge); border-radius: 4px; padding: 10px 12px; resize: vertical; background: var(--white); }
+.cy-paint { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--white); padding: 8px 0; }
+.cy-paint.on { padding: 12px; border: 2px solid var(--black); border-radius: 12px; }
+.cy-paint p { flex-basis: 100%; margin: 0; font-weight: 600; }
+.cy-palette { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
+.cy-palette button { min-height: 36px; padding: 0 10px; border-radius: 8px; border: 2px solid var(--ph, var(--g300)); background: var(--white); font: 600 13px var(--font-body); cursor: pointer; }
+.cy-palette button.on { background: var(--ph, var(--black)); color: var(--white); }
+.cy-list { display: grid; }
+.cy-month { margin: 18px 0 6px; padding-top: 10px; border-top: 2px solid var(--black); }
+.cy-block { display: grid; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border-inline-start: 4px solid; background: var(--g50); border-radius: 0 8px 8px 0; }
+[dir="rtl"] .cy-block { border-radius: 8px 0 0 8px; }
+.cy-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.cy-block-head i { width: 10px; height: 10px; border-radius: 3px; }
+.cy-block-head small { color: var(--g500); }
+.cy-goal { border: 0; border-bottom: 1.5px solid var(--g300); background: none; padding: 6px 0; font: 15px var(--font-body); }
+.cy-goal:focus { outline: none; border-color: var(--blue); }
+.cy-week { border-bottom: 1px solid var(--g200); }
+.cy-week.anchor .cy-week-row { background: var(--blue-tint); }
+.cy-week-row { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 4px; border: 0; background: none; font: inherit; color: var(--black); text-align: start; cursor: pointer; }
+.cy-band { width: 6px; align-self: stretch; border-radius: 3px; background: var(--g200); flex: none; }
+.cy-wk { font: 800 16px var(--font-head); width: 40px; flex: none; }
+.cy-dates { flex: 1; color: var(--g600); font-size: 14px; }
+.cy-target { color: var(--g500); font-size: 13px; font-variant-numeric: tabular-nums; }
+.cy-week .wk-comp { position: static; display: inline-grid; }
+.cy-open { display: grid; gap: 12px; padding: 4px 0 16px; }
+.cy-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cy-day { display: grid; justify-items: center; gap: 2px; padding: 8px 2px; border-radius: 10px; border: 1.5px dashed var(--g200); background: none; cursor: pointer; font: inherit; min-width: 0; }
+.cy-day small { font-size: 11px; color: var(--g500); text-transform: uppercase; }
+.cy-day b { font: 800 20px var(--font-head); }
+.cy-day em { font-style: normal; font-size: 10px; color: var(--g600); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cy-day.f { border: 0; background: var(--g50); }
+.cy-day.t { background: var(--black); color: var(--white); border-color: var(--black); }
+.cy-day.t small, .cy-day.t em { color: var(--yellow); }
+/* while painting, the palette is one row that scrolls sideways, so the weeks stay in view */
+.cy-paint.on { padding: 8px 10px; gap: 6px; }
+.cy-paint.on p { font-size: 13px; }
+.cy-paint.on .cy-palette { flex-wrap: nowrap; overflow-x: auto; flex: 1 1 0; flex-basis: auto; min-width: 0; padding-bottom: 2px; }
+.cy-paint.on .cy-palette button { flex: none; }
+.cy { grid-template-columns: minmax(0, 1fr); }
+.cy-paint { position: static; }
+.cy-paint.on { position: sticky; top: 0; }
+.cy-paint.on .cy-palette { flex-basis: 100%; width: 100%; }
