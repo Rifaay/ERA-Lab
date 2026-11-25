@@ -11,6 +11,8 @@ import { configured, signedIn } from "../sync";
 import { forgetArcherSession } from "../archer";
 import SwipeRow from "../SwipeRow";
 
+const PHONE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches; // phones get the PDF only: the web file opens plain there
+
 const TYPES = ["Technical", "Physical", "Mental", "Competition", "Mixed"];
 const DOMAINS = ["Technical", "Physical", "Mental", "Competition"];
 const BLANK = {
@@ -183,7 +185,7 @@ export default function SessionLogger({ lang, tr, selectedId }) {
                 <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   {sess.range && <button className="btn-ghost small" aria-expanded={videos === sess.id} onClick={() => setVideos(videos === sess.id ? null : sess.id)}><Icon name="clip" size={14} />{tr.clips.endVideo}</button>}
                   {sess.range && <button className="btn-ghost small" onClick={() => downloadPdf(sess.range)}>{tr.range.pdf}</button>}
-                  {sess.range && <button className="btn-ghost small" onClick={() => downloadScorecard(sess.range)}>{tr.range.file}</button>}
+                  {sess.range && !PHONE && <button className="btn-ghost small" onClick={() => downloadScorecard(sess.range)}>{tr.range.file}</button>}
                   <button className="del-btn" onClick={() => handleDelete(sess.id)}><Icon name="x" size={16} /></button>
                 </span>
               </div>

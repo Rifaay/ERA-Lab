@@ -36,6 +36,7 @@ const downloadScorecard = (host, s, lang) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+const PHONE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches; // a touch screen: phone or tablet
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 
 function Scale({ n, value, onChange }) {
@@ -368,11 +369,12 @@ export default function Range({ tr, lang, selectedId }) {
       {header}
       <div className="card">
         <p className="success-msg">{r.saved}</p>
-        <p style={{ margin: "10px 0" }}>{archer ? r.pdfNote : r.fileNote}</p>
+        <p style={{ margin: "10px 0" }}>{archer || PHONE ? r.pdfNote : r.fileNote}</p>
         <div className="btn-row">
-          <button className="btn-ghost" onClick={savePdf} disabled={pdfBusy}><Icon name="download" size={18} />{pdfBusy ? r.pdfMaking : r.pdf}</button>
-          {!archer && <button className="btn-ghost" onClick={() => downloadScorecard(cardRef.current, savedEntry.range, lang)}>{r.file}</button>}
-          <button className="btn-primary" onClick={() => setStep("setup")}>{r.newSession}</button>
+          <button className="btn-primary" onClick={savePdf} disabled={pdfBusy}><Icon name="download" size={18} />{pdfBusy ? r.pdfMaking : r.pdf}</button>
+          {/* a phone opens the downloaded web file in viewers that drop its design (and print it plain): there, the PDF only */}
+          {!archer && !PHONE && <button className="btn-ghost" onClick={() => downloadScorecard(cardRef.current, savedEntry.range, lang)}>{r.file}</button>}
+          <button className="btn-ghost" onClick={() => setStep("setup")}>{r.newSession}</button>
         </div>
       </div>
       <div hidden ref={cardRef}><Scorecard s={savedEntry.range} tr={tr} lang={lang} /></div>

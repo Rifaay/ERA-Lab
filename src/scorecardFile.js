@@ -68,7 +68,9 @@ export async function scorecardPdf(sheetHtml, { lang, title }) {
   try {
     const d = frame.contentDocument;
     d.open(); d.write(scorecardFile(sheetHtml, { lang, title }).replace(/<script>[\s\S]*?<\/script>/, "")); d.close();
-    await Promise.race([d.fonts?.ready, new Promise((r) => setTimeout(r, 2500))]); // fonts when online; never wait long
+    // The brand fonts, asked for by name (a font nobody has used yet never starts loading), then laid out; never wait long
+    const fonts = Promise.all(["800 28px 'Barlow Condensed'", "700 15px 'Barlow Condensed'", "400 15px Inter", "600 15px Inter", "500 15px 'Noto Kufi Arabic'"].map((f) => d.fonts?.load(f).catch(() => null)));
+    await Promise.race([fonts.then(() => d.fonts?.ready), new Promise((r) => setTimeout(r, 4000))]);
     const sheet = d.querySelector(".sc-sheet");
     const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: "#ffffff", ignoreElements: (el) => el.classList?.contains("sc-bar-top") || el.classList?.contains("sc-pdf") });
     const pdf = new jsPDF({ unit: "pt", format: "a4" }), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 24;
