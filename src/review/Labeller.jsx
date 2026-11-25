@@ -513,9 +513,10 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
     const gray = (b) => { cx.drawImage(b, 0, 0, W, H); b.close(); const d = cx.getImageData(0, 0, W, H).data, g = new Float32Array(W * H); for (let i = 0, j = 0; i < d.length; i += 4, j++) g[j] = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11; return g; };
     const R = Math.max(8, Math.round(W / 64)), SR = Math.max(12, Math.round(W / 40)), st = {}, ctl = {}, end = Math.round(v.duration * fps.current);
     setBusy("track"); stopRun.current = () => { ctl.stopped = true; };
+    let first = true; // the first frame read may be one off from f0 on a phone clip; the points start from it
     for await (const { f, bmp } of readFrames(v, fps.current, f0, end, ctl)) {
       const g = gray(bmp);
-      if (f === f0) { for (const k of keys) { const q = pts[k][f0], px = q[0] * W, py = q[1] * H, tp = template(g, W, H, px, py, R); st[k] = { x: px, y: py, vx: 0, vy: 0, t: tp, t0: tp, miss: 0 }; } continue; }
+      if (first) { first = false; for (const k of keys) { const q = pts[k][f0], px = q[0] * W, py = q[1] * H, tp = template(g, W, H, px, py, R); st[k] = { x: px, y: py, vx: 0, vy: 0, t: tp, t0: tp, miss: 0 }; } continue; }
       for (const k of keys) {
         const s = st[k]; if (!s) continue;
         const px = s.x + s.vx, py = s.y + s.vy;
