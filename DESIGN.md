@@ -67,8 +67,7 @@ Sizes: page heading 30 px (home and archer headings scale 34 to 52 px), section 
 
 Video review is a dark room: black ground, white text, light blue `#6496FF` for actions on black, and the brand's yellow
 for the next phase to mark, which is allowed because everything there sits on black. Phase colours are data, not brand.
-Its styles are generated into `src/review/review.css` and scoped to `.lab`, so they neither reach the rest of the app nor inherit from it.
-It keeps its own three-pane layout (clips, video, phases). On a phone the Clips / Video / Phases switch sits at the top, the app's stage bar steps aside while a clip is open, and a one-tap dock (Play, Phases, Points, Draw, More) opens one tray at a time; a second tap closes it. The video zooms and pans without losing quality, and body points shrink as it zooms in.
+Its styles are `src/review/labeller.css`, scoped to `.lb`. The Labeller covers the whole screen: a header (back to Clips, the shot, Phases & notes), the picture, a phase timeline, one tray of tools, and a dock of five (Play, Phases, Points, Draw, More). Phases & notes is a sheet on a phone and a side panel from 1000 px. Anything on the picture is moved by pressing and holding it (a loupe shows the spot under the finger) and removed only by flicking it down; it drops and fades as it goes. Pinch zooms the picture and its overlay together.
 
 ## States and behaviour
 

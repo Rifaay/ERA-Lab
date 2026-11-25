@@ -1,0 +1,95 @@
+/* The Labeller: a black screen that gives the picture all the room it can. One tray of tools at a time above a dock
+   of five; Phases & notes slide up as a sheet on a phone and sit beside the video on a wide screen. Yellow on black
+   for the one main action, as everywhere in ERA Lab. */
+.lb { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; background: #000; color: #fff; font: 15px/1.4 Inter, system-ui, sans-serif; }
+.lb button { font: inherit; color: inherit; }
+.lb-hd { flex: none; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-bottom: 1px solid #222; }
+.lb-back { display: flex; align-items: center; gap: 6px; background: none; border: 0; min-height: 44px; padding: 0 4px; font: 700 17px "Barlow Condensed", sans-serif !important; text-transform: uppercase; cursor: pointer; }
+.lb-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #ccc; font-size: 14px; }
+.lb-link { background: none; border: 0; color: #8fb0ff !important; font-weight: 600; min-height: 44px; cursor: pointer; }
+.lb-err { padding: 24px 16px; color: #ff8a80; }
+
+.lb-body { flex: 1; min-height: 0; display: flex; }
+.lb-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lb-viewer { position: relative; flex: 1; min-height: 160px; overflow: hidden; background: #111; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.lb-stage { position: absolute; transform-origin: 0 0; will-change: transform; }
+.lb-stage video, .lb-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.lb-stage video { object-fit: fill; pointer-events: none; }
+.lb-hud, .lb-wrist, .lb-zoom, .lb-msg, .lb-loading { position: absolute; background: rgba(0,0,0,.66); border-radius: 6px; padding: 4px 8px; font-size: 12px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.lb-hud { top: 10px; inset-inline-start: 12px; }
+.lb-hud:empty { display: none; }
+.lb-wrist { bottom: 10px; inset-inline-start: 12px; }
+.lb-zoom { bottom: 10px; inset-inline-end: 12px; border: 0; pointer-events: auto; min-height: 32px; cursor: pointer; }
+.lb-loading { top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; }
+.lb-msg { top: 10px; inset-inline-end: 12px; max-width: 70%; background: #ffff00; color: #000; font-weight: 600; animation: lb-in 160ms var(--ease-out, ease-out); }
+.lb-loupe { position: absolute; left: 0; top: 0; width: 128px; height: 128px; border-radius: 50%; border: 2px solid #ffff00; background: #000; pointer-events: none; }
+.lb-loupe[hidden], .lb-wrist[hidden], .lb-zoom[hidden] { display: none; }
+
+.lb-tl { position: relative; flex: none; height: 44px; margin: 0 12px; touch-action: none; cursor: pointer; }
+.lb-tl canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.lb-head { position: absolute; top: 0; bottom: 4px; left: -1px; width: 2px; background: #ffff00; pointer-events: none; will-change: transform; }
+
+.lb-tray { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; background: #111; border-top: 1px solid #222; min-height: 64px; animation: lb-in 200ms var(--ease-out, ease-out); }
+.lb-b { min-height: 44px; padding: 0 14px; border-radius: 8px; background: #222; border: 0; font-weight: 600 !important; font-size: 14px !important; cursor: pointer; }
+.lb-b:disabled { opacity: .4; cursor: default; }
+.lb-b.y { background: #ffff00; color: #000 !important; }
+.lb-b.wide { flex: 1; min-width: 120px; }
+.lb-b.ico { width: 44px; padding: 0; display: grid; place-items: center; }
+select.lb-b { color: #fff; }
+.lb-seg { display: inline-flex; background: #222; border-radius: 8px; padding: 3px; gap: 2px; }
+.lb-seg button { min-height: 38px; min-width: 40px; border: 0; border-radius: 6px; background: none; color: #aaa !important; font-weight: 600; cursor: pointer; }
+.lb-seg button.on { background: #fff; color: #000 !important; }
+.lb-pick { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #aaa; }
+.lb-pick select { min-height: 44px; border-radius: 8px; background: #222; color: #fff; border: 0; padding: 0 10px; font: 600 14px Inter, sans-serif; }
+.lb-tools, .lb-colors { display: inline-flex; gap: 4px; }
+.lb-tools button { width: 44px; height: 44px; border: 0; border-radius: 8px; background: #222; display: grid; place-items: center; cursor: pointer; }
+.lb-tools button.on { background: #ffff00; color: #000 !important; }
+.lb-colors button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #333; cursor: pointer; }
+.lb-colors button.on { outline: 2px solid #fff; outline-offset: 2px; }
+.lb-hint { flex-basis: 100%; margin: 0; color: #9a9a9a; font-size: 13px; }
+.lb-busy { flex: 1; color: #ccc; font-variant-numeric: tabular-nums; }
+.lb-seen { flex-basis: 100%; font-size: 13px; color: #ccc; display: grid; gap: 4px; }
+.lb-seen p { margin: 0; }
+
+.lb-dock { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); background: #000; border-top: 1px solid #222; padding: 4px 0 calc(6px + env(safe-area-inset-bottom)); }
+.lb-dock button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; justify-content: center; background: none; border: 0; color: #9a9a9a !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer; transition: color var(--t-xs, 120ms) var(--ease-out, ease-out); }
+.lb-dock button.on { color: #ffff00 !important; }
+
+/* Phases & notes */
+.lb-side { background: #fff; color: #000; overflow-y: auto; }
+.lb-notes { padding: 8px 16px 24px; display: grid; gap: 10px; }
+.lb-notes h3 { margin: 8px 0 0; font: 700 15px "Barlow Condensed", sans-serif; text-transform: uppercase; color: #333; border-top: 2px solid #000; padding-top: 10px; }
+.lb-phases { list-style: none; margin: 0; padding: 0; }
+.lb-phases button { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px; background: none; border: 0; border-bottom: 1px solid #e0e0e0; text-align: start; cursor: pointer; color: #000 !important; }
+.lb-phases button.on { background: #f6f7ff; }
+.lb-phases i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.lb-phases span { flex: 1; }
+.lb-phases b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.lb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lb-chips button { min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1.5px solid #767676; background: #fff; color: #000 !important; font-weight: 600 !important; font-size: 14px !important; cursor: pointer; }
+.lb-chips button.on { background: #000; color: #fff !important; border-color: #000; }
+.lb-field { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: #333; }
+.lb-field textarea, .lb-field select { font: 15px Inter, sans-serif; border: 1.5px solid #767676; border-radius: 4px; padding: 10px 12px; min-height: 48px; background: #fff; color: #000; }
+.lb-kept { margin: 0; color: #606060; font-size: 13px; }
+.lb-grip { display: none; }
+
+.lb-snap { position: fixed; inset: 0; z-index: 61; background: rgba(0,0,0,.9); display: grid; place-items: center; align-content: center; gap: 12px; padding: 16px; }
+.lb-snap img { max-width: 100%; max-height: 70vh; border-radius: 8px; }
+.lb-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
+@media (max-width: 999px) {
+  .lb-side { position: fixed; inset-inline: 0; bottom: 0; max-height: 78vh; border-radius: 16px 16px 0 0; z-index: 62; transform: translateY(105%); transition: transform var(--t-m, 340ms) var(--ease-out, ease-out); box-shadow: 0 -4px 24px rgba(0,0,0,.35); }
+  .lb.sheet-open .lb-side { transform: none; }
+  .lb-grip { display: block; width: 40px; height: 4px; border-radius: 2px; background: #e0e0e0; margin: 10px auto 0; cursor: pointer; }
+}
+@media (min-width: 1000px) {
+  .lb-side { width: 380px; flex: none; border-inline-start: 1px solid #222; }
+  .lb-link { display: none; }
+}
+@keyframes lb-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .lb-tray, .lb-msg { animation: none; }
+  .lb-side { transition: none; }
+}
+.lb-pick { flex-basis: 100%; }
+.lb-pick .lb-next { flex: 1; }

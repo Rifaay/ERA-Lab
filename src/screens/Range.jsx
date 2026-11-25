@@ -57,6 +57,21 @@ function Choice({ values, labels, value, onChange }) {
   );
 }
 
+// The usual values as chips, and "Other" for any whole number from 1 to max (a 4-arrow end, a 25 m line).
+function Pick({ values, value, onChange, max, other }) {
+  const [typing, setTyping] = useState(() => !values.includes(value));
+  return (
+    <div className="rg-chips">
+      {values.map((v) => (
+        <button key={v} type="button" className={`chip ${!typing && value === v ? "active" : ""}`} aria-pressed={!typing && value === v} onClick={() => { setTyping(false); onChange(v); }}>{v}</button>
+      ))}
+      <button type="button" className={`chip ${typing ? "active" : ""}`} aria-pressed={typing} onClick={() => setTyping(true)}>{other}</button>
+      {typing && <input className="rg-other" type="number" inputMode="numeric" min={1} max={max} step={1} value={value} aria-label={other}
+        autoFocus onChange={(e) => onChange(e.target.value)} onBlur={() => onChange(String(Math.min(max, Math.max(1, Math.round(+value) || 1))))} />}
+    </div>
+  );
+}
+
 // Press, slide, lift. A fingertip covers about three rings on a phone, so the loupe shows the spot under the finger at 3x.
 // Only a touch that starts on the face plots: one that starts on the white around it scrolls the page as usual.
 const GAP = 220; // 3-spot: centre to centre, in the same units as a spot's radius (100)
@@ -268,20 +283,10 @@ export default function Range({ tr, lang, selectedId }) {
       {header}
       <div className="card">
         <div className="form">
-          <div className="form-row">
-            <label>{r.distance}
-              <select value={setup.distance} onChange={(e) => set("distance", e.target.value)}>{[18, 30, 50, 70, 10, 20, 40, 60, 90].map((d) => <option key={d}>{d}</option>)}</select>
-            </label>
-            <label>{r.face}
-              <select value={setup.face} onChange={(e) => set("face", e.target.value)}>{FACES.map((f) => <option key={f} value={f}>{r.faces[f]}</option>)}</select>
-            </label>
-            <label>{r.perEnd}
-              <select value={setup.perEnd} onChange={(e) => set("perEnd", e.target.value)}>{[6, 3, 4, 5].map((d) => <option key={d}>{d}</option>)}</select>
-            </label>
-            <label>{r.type}
-              <select value={setup.type} onChange={(e) => set("type", e.target.value)}>{TYPES.map((t, i) => <option key={t} value={t}>{tr.session.types[i]}</option>)}</select>
-            </label>
-          </div>
+          <div><label>{r.distance}</label><Pick values={["18", "30", "50", "70", "90"]} value={setup.distance} onChange={(v) => set("distance", v)} max={150} other={r.other} /></div>
+          <div><label>{r.face}</label><Choice values={FACES} labels={FACES.map((f) => r.faces[f])} value={setup.face} onChange={(v) => v && set("face", v)} /></div>
+          <div><label>{r.perEnd}</label><Pick values={["3", "6"]} value={setup.perEnd} onChange={(v) => set("perEnd", v)} max={12} other={r.other} /></div>
+          <div><label>{r.type}</label><Choice values={TYPES} labels={tr.session.types} value={setup.type} onChange={(v) => v && set("type", v)} /></div>
         </div>
       </div>
 

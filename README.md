@@ -50,9 +50,8 @@ and link the clip to its arrow. Range sessions recorded in the app are offered a
 Saving writes `clip.labels.json` next to the clip and a short record into the app (verdict, faults, hold time, linked arrow),
 which the archer screen shows. On a phone it opens single clips and downloads the labels instead of saving beside the clip.
 
-The Review tool is the stand-alone RACM Labeller, ported by `scripts/port-labeller.py` into `src/review/`.
-Those three files are generated: change the Labeller or the script, then run
-`py scripts/port-labeller.py "<path to RACM Labeller.html>"`.
+The Labeller is `src/review/Labeller.jsx` (screen) and `src/review/labels.js` (phases, points, motion, gestures; tested).
+It opens clips kept on the device (Video → Clips → Analyse) and keeps every change on the clip as it goes.
 
 ## Where things are
 

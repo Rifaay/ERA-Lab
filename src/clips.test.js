@@ -1,14 +1,11 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { FAULTS, pickMime, clipName, quickReview, shotOf, toggleFault, setVerdict, refreshShots, suggestShot, arrowChoices } from "./clips.js";
 import { mergeReview, reviewFacts } from "./review.js";
 import { t } from "./i18n.js";
 
-test("the phone's fault tags are the Labeller's, and both languages name every one", () => {
-  const engine = readFileSync(new URL("./review/engine.js", import.meta.url), "utf8");
-  assert.deepEqual(FAULTS, JSON.parse(engine.match(/DEFAULT_FAULTS = (\[.*?\]);/)[1].replace(/'/g, '"')));
+test("both languages name every fault tag", () => {
   assert.equal(t.en.quick.faults.length, FAULTS.length);
   assert.equal(t.ar.quick.faults.length, FAULTS.length);
 });
@@ -58,14 +55,3 @@ test("a clip from another camera finds its arrow by time, shot by shot or end by
   assert.equal(arrowChoices(sessions, "a1", new Date("2027-01-15T10:00").getTime()).length, 4);
 });
 
-test("the Labeller's Arabic: every translated layout piece still exists, and its messages translate", async () => {
-  const { MARKUP } = await import("./review/markup.js");
-  const { MARKUP_AR, translateMarkup, reviewText } = await import("./review/i18n.js");
-  for (const [en] of MARKUP_AR) assert.ok(MARKUP.includes(en), `layout text changed: ${en.slice(0, 60)}`);
-  assert.ok(!/>Open athlete folder</.test(translateMarkup(MARKUP, "ar")));
-  const t = reviewText("ar");
-  assert.equal(t("Loading clip.mp4…"), "جارٍ تحميل clip.mp4…");
-  assert.equal(t("End 2 · arrow 3 · 9"), "الجولة 2 · السهم 3 · 9");
-  assert.equal(t("12 clips · read-only (labels download)"), "12 مقاطع · للقراءة فقط (تُنزَّل العلامات)");
-  assert.equal(reviewText("en")("Loading clip.mp4…"), "Loading clip.mp4…");
-});

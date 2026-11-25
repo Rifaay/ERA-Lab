@@ -43,7 +43,7 @@ const endTotal = (e) => e.arrows.reduce((t, a) => t + scoreValue(a.score), 0);
 
 // Coach → Range → Live: every linked archer who is shooting right now, refreshed every few seconds, as small cards
 // so many archers fit on one screen. Tapping a card opens that archer's target, every end, and the video links.
-export default function LiveBoard({ tr, onCopied }) {
+export default function LiveBoard({ tr, onCopied, onPlot }) {
   const l = tr.live;
   const [rows, setRows] = useState([]);
   const [state, setState] = useState("loading"); // loading | ok | offline
@@ -68,7 +68,9 @@ export default function LiveBoard({ tr, onCopied }) {
     return () => { live = false; clearInterval(t); clearInterval(tick); document.removeEventListener("visibilitychange", pull); };
   }, [on]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!on) return <div className="screen"><h2>{l.title}</h2><div className="card"><p>{configured ? l.signIn : l.noCloud}</p></div></div>;
+  // Range home: plotting for an archer comes first, then who is shooting on their own phone.
+  const plot = <button className="btn-primary wide-btn range-plot" onClick={onPlot}><Icon name="target" size={22} />{l.plot}</button>;
+  if (!on) return <div className="screen"><h2>{l.home}</h2>{plot}<h3 className="live-sub">{l.title}</h3><div className="card"><p>{configured ? l.signIn : l.noCloud}</p></div></div>;
   const athletes = getAthletes(), linked = athletes.filter((a) => isLinked(a.id)), shooting = liveOf(rows, athletes), finished = finishedOf(rows, athletes);
   const opened = [...shooting, ...finished].find((x) => x.session.session_id === open);
   const gone = (id) => { setRows((rs) => rs.filter((r) => r.session_id !== id)); setOpen(null); };
@@ -87,7 +89,9 @@ export default function LiveBoard({ tr, onCopied }) {
   };
   return (
     <div className="screen">
-      <h2>{l.title}</h2>
+      <h2>{l.home}</h2>
+      {plot}
+      <h3 className="live-sub">{shooting.length ? l.shootingN.replace("{n}", shooting.length) : l.title}</h3>
       {state === "offline" && <p className="error-msg" role="status">{l.offline}</p>}
       {!linked.length && <div className="card"><p>{l.none}</p><p className="muted">{l.how}</p></div>}
       {linked.length > 0 && !shooting.length && state !== "loading" && <div className="card"><p>{l.quiet.replace("{n}", linked.length)}</p><p className="muted">{l.quietSub}</p></div>}

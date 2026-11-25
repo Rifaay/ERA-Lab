@@ -32,7 +32,7 @@ export const newSession = ({ athlete, setup, now = Date.now() }) => {
     athlete: athlete.name, athlete_id: athlete.id, type: setup.type,
     start_ms: now, end_ms: null, tz_offset_min: -d.getTimezoneOffset(),
     context: {
-      distance_m: +setup.distance, face: setup.face, arrows_per_end: +setup.perEnd, place: setup.place || "",
+      distance_m: Math.min(150, Math.max(1, Math.round(+setup.distance) || 70)), face: setup.face, arrows_per_end: Math.min(12, Math.max(1, Math.round(+setup.perEnd) || 6)), place: setup.place || "",
       wind: setup.wind || null, wind_from: setup.windFrom || null, temp_c: num(setup.temp), light: setup.light || "",
     },
     equipment: { bow: setup.bow || "", draw_weight_lb: num(setup.drawWeight), arrows: setup.arrows || "", draw_length_in: num(setup.drawLength), notes: setup.eqNotes || "" },

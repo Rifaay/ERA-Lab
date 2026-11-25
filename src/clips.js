@@ -1,7 +1,7 @@
 // Clips filmed on the phone: their names, the short review record each one gets, and the quick tags.
 // The video itself lives in clipStore.js; this file is plain logic so it can be tested.
 
-// The Labeller's fault tags (src/review/engine.js is generated, so the list is repeated here; a test keeps them equal).
+// The fault tags, shared by the phone's quick tags and the Labeller.
 export const FAULTS = ["Collapsed draw elbow", "Plucked release", "Head moved", "Bow arm dropped", "Raised bow shoulder", "Short draw",
   "Anchor inconsistent", "Body sway / canting", "Grip torque", "Early release (no transfer)", "Wrist break (hand off forearm line)", "Hand flips away in follow-through"];
 

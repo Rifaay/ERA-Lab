@@ -44,7 +44,7 @@ const SCREENS = STAGES.flatMap((s) => s.screens);
 // Screens about one archer. With none chosen they show the list of archers instead of a dead end.
 const NEEDS_ARCHER = ["archer", "range", "session", "exercises", "planner"];
 // Screens with no tabs of their own get a way back: screen → where "back" goes.
-const UP = { profile: "archer", stats: "archer", report: "archer", settings: "dashboard", legal: "settings" };
+const UP = { range: "live", profile: "archer", stats: "archer", report: "archer", settings: "dashboard", legal: "settings" };
 
 function ArcherPicker({ athletes, selectedId, tr, onPick, onNew, onClose }) {
   const [q, setQ] = useState("");
@@ -83,11 +83,8 @@ export default function App({ tr, lang, setLang, open }) {
   const athletes = useMemo(() => getAthletes(), [athletesTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = athletes.find((a) => a.id === selectedId) || null;
   const stage = stageOf(screen);
-  const reviewDirty = useRef(null); // set by the Review screen while it is open
-  const leaving = (next) => screen === "review" && next !== "review" && reviewDirty.current?.() && !window.confirm(tr.review.leave);
   const go = (next) => {
     if (next === screen) { setPicking(false); return; }
-    if (leaving(next)) return;
     history.pushState({ screen: next }, ""); // the phone's Back button steps through screens instead of closing the app
     setPicking(false); setScreen(next);
   };
@@ -102,12 +99,11 @@ export default function App({ tr, lang, setLang, open }) {
     history.replaceState({ screen: screenRef.current }, "");
     const back = (e) => {
       const to = SCREENS.includes(e.state?.screen) ? e.state.screen : "dashboard";
-      if (screenRef.current === "review" && to !== "review" && reviewDirty.current?.() && !window.confirm(tr.review.leave)) { history.pushState({ screen: "review" }, ""); return; }
       setPicking(false); setScreen(to);
     };
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const openArcher = (id) => { setSelectedId(id); go("archer"); };
   const pickArcher = (id) => { setSelectedId(id); setPicking(false); if (["dashboard", "settings", "roster"].includes(screen)) go("archer"); };
@@ -151,7 +147,7 @@ export default function App({ tr, lang, setLang, open }) {
   }, []);
 
   const ctx = { selectedId, setSelectedId, lang, setLang };
-  const subs = stage.key === "today" || stage.key === "archers" ? [] : stage.screens;
+  const subs = ["today", "archers", "range", "review"].includes(stage.key) ? [] : stage.screens; // Range and Video open their own next step, no tabs
   const hub = HUB.includes(screen) && selected;
   const live = liveOf(liveRows, athletes);
   const linked = isLinked(selectedId); // read each time: an archer may have joined since the last screen
@@ -197,7 +193,7 @@ export default function App({ tr, lang, setLang, open }) {
                 <button className="btn-ghost" onClick={newArcher}><Icon name="plus" size={18} />{tr.shell.newArcher}</button>
               </div>
             )}
-            {screen === "live"      && <LiveBoard tr={tr} onCopied={() => setAthletesTick((n) => n + 1)} />}
+            {screen === "live"      && <LiveBoard tr={tr} onCopied={() => setAthletesTick((n) => n + 1)} onPlot={() => go("range")} />}
             {screen === "range" && selected && linked && (
               <div className="screen">
                 <h2>{selected.name}</h2>
@@ -211,7 +207,7 @@ export default function App({ tr, lang, setLang, open }) {
             {screen === "profile"   && <AthleteProfile    lang={lang} tr={tr} selectedId={selectedId} onSelect={setSelectedId} onSaved={handleAthleteSaved} />}
             {screen === "range"     && selected && !linked && <Range key={selectedId} tr={tr} lang={lang} selectedId={selectedId} />}
             {screen === "clips"     && <Clips key={selectedId} tr={tr} lang={lang} selectedId={selectedId} onGo={go} />}
-            {screen === "review"    && <Review selectedId={selectedId} guardRef={reviewDirty} lang={lang} tr={tr} />}
+            {screen === "review"    && <Review selectedId={selectedId} tr={tr} onBack={() => go("clips")} />}
             {screen === "session"   && selected && <SessionLogger key={selectedId} lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "rubric"    && <RubricAssessment key={selectedId} lang={lang} tr={tr} selectedId={selectedId} />}
             {screen === "exercises" && selected && <Exercises lang={lang} tr={tr} selectedId={selectedId} />}

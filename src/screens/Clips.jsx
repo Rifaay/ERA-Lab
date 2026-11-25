@@ -11,6 +11,7 @@ import { localize } from "../digits";
 import { useApp } from "../context";
 import QuickTag from "../QuickTag";
 import Icon from "../icons";
+import { setUi } from "../ui";
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 // How long a video file runs, read from the file itself; 0 when the browser cannot tell.
@@ -229,6 +230,7 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
                     })()}
                     {rv && <QuickTag key={`${x.id}-${rv.shot ? keyOf(rv.shot) : ""}`} id={x.id} tr={tr} />}
                     <div className="btn-row">
+                      <button className="btn-primary" onClick={() => { setUi({ labClip: x.id }); onGo("review"); }}><Icon name="clip" size={18} />{c.analyse}</button>
                       <button className="btn-ghost" onClick={() => save(x)}><Icon name="download" size={18} />{x.savedOut ? c.saveAgain : c.saveOut}</button>
                       <button className="btn-ghost danger" onClick={() => remove(x)}>{c.delete}</button>
                     </div>

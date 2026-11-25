@@ -601,3 +601,5 @@ button.row:hover .row-name { color: var(--blue); }
 .check-row input { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--p); }
 .check-row .link-btn { display: inline; padding: 0; }
 .settings-list .row .icon-next { color: var(--muted, currentColor); flex: none; }
+.rg-other { width: 88px; min-height: 40px; }
+.range-plot { margin: 4px 0 8px; }
