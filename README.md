@@ -2,8 +2,7 @@
 
 ERA Lab (Egyptian Recurve Archery) is one app for the coach, in six stages that follow the coaching cycle:
 **Home** (who needs you), **Plan**, **Range** (arrow-by-arrow scoring), **Review** (video: shot phases, faults, body points),
-**Assess** and **Report**. It applies RACM, the Rifaay Archery Coaching Methodology. English and Arabic. No server and no accounts: all data
-stays in the browser on the device.
+**Assess** and **Report**. It applies RACM, the Rifaay Archery Coaching Methodology. English and Arabic. Coaches and archers sign in first; data stays in the browser on the device, and adults' records are also copied to the coach's private cloud copy.
 
 ## Use it
 
@@ -63,3 +62,7 @@ It opens clips kept on the device (Video → Clips → Analyse) and keeps every 
 - `src/storage.js`: everything saved in the browser, with backup and restore
 - `public/sw.js`: offline support for the hosted app
 - `scripts/single-file.mjs`: builds the one-file copy
+
+## Licence
+
+Copyright (c) 2026 Ahmed Rifaay. All rights reserved: see [LICENSE](LICENSE). The code is visible, not reusable.
