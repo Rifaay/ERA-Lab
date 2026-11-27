@@ -10,6 +10,6 @@ const read = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch 
 // in to, so a device holding a coach's archers just opens.
 export const appRole = (cloud = true) => {
   if (read("racm_auth")) return read("racm_auth").role || "coach";
-  if (getUi().local || (!cloud && read("racm_athletes")?.length)) return "coach";
+  if (!cloud && (getUi().local || read("racm_athletes")?.length)) return "coach"; // with a cloud copy there is no skipping the sign-in
   return "";
 };

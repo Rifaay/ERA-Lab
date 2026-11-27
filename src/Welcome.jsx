@@ -9,8 +9,8 @@ import { claim, loadLink, myLink, INVITE_RE } from "./archer";
 import { getUi, setUi } from "./ui";
 
 // The sign-in page on a device nobody is signed in to. Signing in needs no role: the account says whether this is a
-// coach or an archer and the right app opens. Creating an account asks which. A coach may also skip the account (the
-// app then works on this device alone); an archer needs one, plus the coach's invite code.
+// coach or an archer and the right app opens. Creating an account asks which. With a cloud copy configured, everyone signs in or
+// creates an account first; only a build with no cloud copy opens straight into the device-only app. An archer also needs the coach's invite code.
 export default function Welcome({ tr, lang, setLang, onDone }) {
   const w = tr.welcome;
   const [, setTick] = useState(0);
@@ -55,9 +55,8 @@ export default function Welcome({ tr, lang, setLang, onDone }) {
           {configured
             ? <div className="card"><Account tr={tr} onChange={changed} invited={Boolean(invited)} onLegal={() => { setLegal(true); scrollTo(0, 0); }} /></div>
             : <p className="muted">{w.noCloud}</p>}
-          {!account() && <div className="welcome-local">
-            <button className="btn-ghost wide-btn" onClick={() => finish("coach", true)}>{configured ? w.skip : w.open}</button>
-            {configured && <p className="muted">{w.skipNote}</p>}
+          {!configured && <div className="welcome-local">
+            <button className="btn-ghost wide-btn" onClick={() => finish("coach", true)}>{w.open}</button>
           </div>}
         </>}
 
