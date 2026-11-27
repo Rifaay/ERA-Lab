@@ -35,7 +35,7 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 15px; background: var(--white); color: var(--black); -webkit-text-size-adjust: 100%; }
-body { font-family: var(--font-body); line-height: 1.5; min-height: 100svh; }
+body { font-family: var(--font-body); line-height: 1.5; min-height: 100svh; overflow-wrap: break-word; } /* a pasted link or long word wraps instead of widening the page */
 #root { display: flex; flex-direction: column; min-height: 100svh; }
 ::selection { background: var(--blue); color: var(--white); }
 :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: var(--r-sm); }

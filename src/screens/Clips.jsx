@@ -12,6 +12,7 @@ import QuickTag from "../QuickTag";
 import Icon from "../icons";
 import { setUi } from "../ui";
 import SwipeRow from "../SwipeRow";
+import { isoDay } from "../stats";
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 // How long a video file runs, read from the file itself; 0 when the browser cannot tell.
@@ -111,11 +112,11 @@ export default function Clips({ tr, lang, selectedId, onGo }) {
 
   // This archer's range sessions, the one being shot now included, and the arrows that already have a clip.
   const sessions = getSessions(), live = getRange().live;
-  const liveHere = live?.athlete_id === selectedId ? [{ athleteId: selectedId, date: new Date().toISOString().slice(0, 10), range: live }] : [];
+  const liveHere = live?.athlete_id === selectedId ? [{ athleteId: selectedId, date: isoDay(new Date()), range: live }] : [];
   const ranges = [...sessions.filter((x) => x.athleteId === selectedId && x.range).map((x) => x.range), ...liveHere.map((x) => x.range)];
   const taken = new Set(Object.values(reviews).filter((r) => r.shot).map((r) => `${r.shot.session_id}/${r.shot.end}/${r.shot.arrow}`));
   const keyOf = (a) => `${a.session_id}/${a.end}/${a.arrow}`;
-  const choicesFor = (x) => { const here = live?.athlete_id === x.athleteId ? [{ athleteId: x.athleteId, date: new Date().toISOString().slice(0, 10), range: live }] : [];
+  const choicesFor = (x) => { const here = live?.athlete_id === x.athleteId ? [{ athleteId: x.athleteId, date: isoDay(new Date()), range: live }] : [];
     return [...arrowChoices(sessions, x.athleteId, x.recordedAt), ...arrowChoices(here, x.athleteId, x.recordedAt)]; };
   const link = (id, shot) => {
     const rv = reviews[id];

@@ -10,7 +10,7 @@ import { watchDigits } from './digits'
 
 // Who is using this device decides which app opens: the coach's, the archer's, or the welcome screen that asks.
 export default function Root() {
-  const [lang, setLangState] = useState(() => (getUi().lang === 'ar' ? 'ar' : 'en'))
+  const [lang, setLangState] = useState(() => ((getUi().lang || navigator.language || '').startsWith('ar') ? 'ar' : 'en')) // no choice made yet: follow the phone
   const setLang = (l) => { setUi({ lang: l }); setLangState(l) }
   const [, setTick] = useState(0)
   const again = () => setTick((n) => n + 1)

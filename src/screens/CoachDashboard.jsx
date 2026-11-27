@@ -82,7 +82,7 @@ export default function CoachDashboard({ tr, lang, tick, live = [], onOpen, onGo
         <h3>{t.planned}</h3>
         {planned.map(({ p, d, who }) => (
           <button key={p.id} className="today-plan" onClick={() => onPlan(p.id)}>
-            <span className="today-plan-top"><b>{p.name}</b><span className="today-ppl" aria-label={who.join(", ")}>{who.slice(0, 4).map((n) => <i key={n}>{n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</i>)}</span></span>
+            <span className="today-plan-top"><b>{p.name}</b><span className="today-ppl" aria-label={who.join(", ")}>{who.slice(0, 4).map((n) => <i key={n}>{n.split(/\s+/).map((w) => [...w][0]).slice(0, 2).join("").toUpperCase()}</i>)}</span></span>
             <span className={dayFilled(d) ? "" : "muted"}>{dayFilled(d) ? [d.focus, +d.arrows ? fill(t.arrows, { n: d.arrows }) : ""].filter(Boolean).join(" · ") || d.note : t.rest}</span>
           </button>
         ))}

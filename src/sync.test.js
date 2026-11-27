@@ -212,3 +212,20 @@ test("a password typed with the other keyboard's digits still signs in", async (
   await assert.rejects(signIn("s@x", "nodigits", f), (e) => e.code === "invalid_credentials");
   assert.equal(sent.filter((p) => p === "nodigits").length, 1, "no retry without digits");
 });
+
+test("a new account on this phone (or the same email after deleting) starts without the last archer's coach link", async () => {
+  const { signIn } = await import("./sync.js");
+  const as = (id) => async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ access_token: "a.e30.s", refresh_token: "r", expires_in: 3600, user: { id, email: "s@x", user_metadata: { role: "archer" } } }) });
+  await signIn("s@x", "pw", as("old"));
+  localStorage.setItem("racm_link", JSON.stringify({ coach_id: "c1", athlete_id: "a1" }));
+  await signIn("s@x", "pw", as("old"));
+  assert.ok(localStorage.getItem("racm_link"), "same account signing in again keeps its link");
+  await signIn("s@x", "pw", as("new"));
+  assert.equal(localStorage.getItem("racm_link"), null);
+});
+
+test("a request that hangs on slow data gives up as 'offline'", async () => {
+  const { api } = await import("./sync.js");
+  const stalled = async () => { throw Object.assign(new Error("signal timed out"), { name: "TimeoutError" }); };
+  await assert.rejects(api("/x", {}, stalled), (e) => e instanceof TypeError);
+});

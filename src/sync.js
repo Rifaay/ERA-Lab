@@ -76,11 +76,15 @@ export const plan = (local, remote, base) => {
 
 // ── Supabase calls (plain fetch: password sign-in, an authenticator app and one table need no client library) ──
 const call = async (path, { method = "GET", body, token, prefer } = {}, f = fetch) => {
-  const res = await f(URL_ + path, {
-    method,
-    headers: { apikey: KEY, "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }), ...(prefer && { Prefer: prefer }) },
-    body: body && JSON.stringify(body),
-  });
+  let res;
+  try {
+    res = await f(URL_ + path, {
+      method,
+      headers: { apikey: KEY, "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }), ...(prefer && { Prefer: prefer }) },
+      body: body && JSON.stringify(body),
+      signal: AbortSignal.timeout?.(60_000), // a stalled connection on slow data would otherwise hang sync for good
+    });
+  } catch (e) { throw e.name === "TimeoutError" ? new TypeError("timed out") : e; } // TypeError: shown as "offline" everywhere
   const text = await res.text();
   if (!res.ok) {
     let j = {}; try { j = JSON.parse(text); } catch { /* not JSON: a proxy or outage page */ }
@@ -110,7 +114,10 @@ export const signedIn = () => get(AUTH, null)?.aal === "aal2"; // both steps don
 export const resetting = () => Boolean(get(AUTH, null)?.recovery);
 const here = () => location.href.split("#")[0];
 const keep = (s, extra = {}) => {
-  if (get(STATE, {}).user !== s.user.id) { put(STATE, { user: s.user.id, base: {} }); } // another account: compare from scratch
+  if (get(STATE, {}).user !== s.user.id) { // another account (or the same email after deleting): compare from scratch,
+    put(STATE, { user: s.user.id, base: {} }); // and drop the last archer's coach link so this one doesn't upload into it
+    for (const k of ["racm_link", "racm_uploaded", "racm_shared_plans"]) localStorage.removeItem(k);
+  }
   put(AUTH, { email: s.user.email, token: s.access_token, refresh: s.refresh_token, expires: Date.now() + s.expires_in * 1000, aal: claims(s.access_token).aal || "aal1", uid: s.user.id, role: s.user.user_metadata?.role === "archer" ? "archer" : "coach", ...extra });
 };
 

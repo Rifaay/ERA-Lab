@@ -9,6 +9,7 @@ import { blendCorrection, template, search } from "./markers";
 import { frames as readFrames } from "./frames";
 import { trackPose } from "./pose";
 import { angleOf } from "./draw";
+import { isoDay } from "../stats";
 import Icon from "../icons";
 import "./labeller.css";
 
@@ -134,7 +135,7 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
       const rv = getReviews().find((r) => r.id === clipId);
       if (rv) { x.verdict = rv.verdict; x.faults = [...(rv.faults || [])]; x.notes = rv.notes || ""; if (rv.shot) x.shot = { ...rv.shot }; }
     }
-    x.athlete = athlete?.name || x.athlete; x.date ||= new Date(clip.recordedAt || Date.now()).toISOString().slice(0, 10);
+    x.athlete = athlete?.name || x.athlete; x.date ||= isoDay(new Date(clip.recordedAt || Date.now()));
     L.current = x;
     setSelPhase(Math.max(0, x.phases.findIndex((p) => p.start_s == null)));
     v.playbackRate = rate;
@@ -572,7 +573,7 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
   const nextPhase = x?.phases[selPhase] ? l.phases[x.phases[selPhase].key] : "";
   const shot = x?.shot;
   const sessions = getSessions(), live = getRange().live;
-  const liveHere = live?.athlete_id === athleteId ? [{ athleteId, date: new Date().toISOString().slice(0, 10), range: live }] : [];
+  const liveHere = live?.athlete_id === athleteId ? [{ athleteId, date: isoDay(new Date()), range: live }] : [];
   const choices = clip ? [...arrowChoices(sessions, athleteId, clip.recordedAt), ...arrowChoices(liveHere, athleteId, clip.recordedAt)] : [];
   const keyOf = (a) => `${a.session_id}/${a.end}/${a.arrow}`;
   const at = x ? Object.fromEntries(x.phases.filter((p) => p.start_s != null).map((p) => [p.key, p.start_s])) : null;

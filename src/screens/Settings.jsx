@@ -22,7 +22,7 @@ export default function Settings({ tr, onDataCleared, onGo }) {
 
   const [, setTick] = useState(0); // the status chips re-read the lock and sign-in after a change below
   const changed = () => setTick((n) => n + 1);
-  const initials = (settings.coachName || "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  const initials = (settings.coachName || "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => [...w][0]).join("").toUpperCase();
   const set = (k, v) => setSettings((x) => ({ ...x, [k]: v }));
 
   const handleSave = () => {

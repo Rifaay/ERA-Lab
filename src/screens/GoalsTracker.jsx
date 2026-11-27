@@ -100,14 +100,14 @@ function GoalForm({ athleteId, existing, templates, tr, onSaved, onCancel }) {
 function ProgressPanel({ goal, tr, onUpdate }) {
   const g = tr.goals;
   const [logs, setLogs] = useState(() => getProgressLogs().filter((l) => l.goalId === goal.id));
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), value: "", note: "" });
+  const [form, setForm] = useState({ date: isoDay(new Date()), value: "", note: "" });
   const [open, setOpen] = useState(false);
 
   const handleSave = () => {
     if (!form.value) return;
     saveProgressLog({ goalId: goal.id, date: form.date, value: Number(form.value), note: form.note });
     setLogs(getProgressLogs().filter((l) => l.goalId === goal.id));
-    setForm({ date: new Date().toISOString().slice(0, 10), value: "", note: "" });
+    setForm({ date: isoDay(new Date()), value: "", note: "" });
     setOpen(false);
     onUpdate && onUpdate();
   };
@@ -175,7 +175,7 @@ function ProgressPanel({ goal, tr, onUpdate }) {
 function CheckInPanel({ goal, tr }) {
   const g = tr.goals;
   const [cis, setCis] = useState(() => getCheckIns().filter((c) => c.goalId === goal.id));
-  const blank = { date: new Date().toISOString().slice(0, 10), status: "on_track", improved: "", needsWork: "", action: "" };
+  const blank = { date: isoDay(new Date()), status: "on_track", improved: "", needsWork: "", action: "" };
   const [form, setForm] = useState(blank);
   const [open, setOpen] = useState(false);
 

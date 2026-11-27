@@ -70,7 +70,7 @@ function Who({ label, selectedId, onPick }) {
     <div className="rg-who" role="radiogroup" aria-label={label}>
       {list.map((a) => (
         <button key={a.id} type="button" role="radio" aria-checked={a.id === selectedId} className={a.id === selectedId ? "on" : ""} onClick={() => onPick(a.id)}>
-          <i aria-hidden="true">{a.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</i><span>{a.name.split(/\s+/)[0]}</span>
+          <i aria-hidden="true">{a.name.split(/\s+/).map((w) => [...w][0]).slice(0, 2).join("").toUpperCase()}</i><span>{a.name.split(/\s+/)[0]}</span>
         </button>
       ))}
     </div>

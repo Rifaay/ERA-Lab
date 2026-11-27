@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getAthletes, getAssessments, saveAssessment, uid } from "../storage";
 import { useApp } from "../context";
+import { isoDay } from "../stats";
 
 const DOMAIN_MAP = {
   recurve: {
@@ -26,7 +27,7 @@ export default function RubricAssessment({ tr, selectedId }) {
   const discipline = athlete?.discipline || "recurve";
 
   const [tab, setTab] = useState("technical");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(isoDay(new Date()));
   const [scores, setScores] = useState({});
   const [saved, setSaved] = useState(false);
   const [history, setHistory] = useState(() => getAssessments().filter((a) => a.athleteId === selectedId).reverse().slice(0, 5));

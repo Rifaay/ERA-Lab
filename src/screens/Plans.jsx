@@ -6,7 +6,7 @@ import SwipeRow from "../SwipeRow";
 import Icon from "../icons";
 
 const fill = (t, v) => t.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
-const initials = (name) => name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const initials = (name) => name.split(/\s+/).map((w) => [...w][0]).slice(0, 2).join("").toUpperCase();
 
 // Plan tab: every plan the coach has made, each with its season at a glance, who follows it and what comes next.
 // A plan is made once (name, level, season) and then given to archers from inside it.

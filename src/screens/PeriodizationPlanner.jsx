@@ -647,7 +647,7 @@ function Followers({ plan, pl, lang, exercises, onSent, onArchers }) {
         {athletes.map((a) => (
           <label key={a.id} className="pz-arch">
             <input type="checkbox" checked={on.has(a.id)} onChange={() => { const n = new Set(on); if (n.has(a.id)) n.delete(a.id); else n.add(a.id); setOn(n); setState(""); }} />
-            <span className="pz-av" aria-hidden="true">{a.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>
+            <span className="pz-av" aria-hidden="true">{a.name.split(/\s+/).map((w) => [...w][0]).slice(0, 2).join("").toUpperCase()}</span>
             <span className="pz-arch-text"><b>{a.name}</b>{tag(a)}</span>
           </label>
         ))}

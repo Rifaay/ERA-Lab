@@ -1,5 +1,5 @@
 import { RING_FILL, rings } from "../range";
-import { groupOf } from "../stats";
+import { groupOf, isoDay } from "../stats";
 import { findingText } from "../findingText";
 import { FAULTS } from "../clips";
 
@@ -77,7 +77,7 @@ export default function ReportDoc({ d, athlete, tr, lang, show, coach, waCategor
           <h1>{athlete.name}</h1>
           <p className="rd-period">{d.period.label}</p>
           <p>{meta.join(" · ")}</p>
-          <p>{[coach && fill(rp.coach, { name: coach }), fill(rp.made, { date: date(new Date().toISOString().slice(0, 10)) })].filter(Boolean).join(" · ")}</p>
+          <p>{[coach && fill(rp.coach, { name: coach }), fill(rp.made, { date: date(isoDay(new Date())) })].filter(Boolean).join(" · ")}</p>
         </div>
       </header>
 

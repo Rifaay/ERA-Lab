@@ -46,7 +46,7 @@ export default function Account({ tr, as, onChange, invited = false, onLegal }) 
   const why = (e) => {
     if (e.status === 429) return s.tooMany;
     if (navigator.onLine === false || e instanceof TypeError) return s.offline;
-    return { invalid_credentials: s.badLogin, email_not_confirmed: s.notConfirmed, weak_password: s.weak, mfa_verification_failed: s.badCode, otp_expired: s.oldCode, signup_disabled: s.signupOff }[e.code]
+    return { invalid_credentials: s.badLogin, email_not_confirmed: s.notConfirmed, weak_password: s.weak, mfa_verification_failed: s.badCode, otp_expired: s.oldCode, signup_disabled: s.signupOff, user_banned: s.banned }[e.code]
       || (stage === "step2" && /totp|code/i.test(e.message) ? s.badCode : e.message);
   };
   const run = async (fn) => {
@@ -174,7 +174,15 @@ export default function Account({ tr, as, onChange, invited = false, onLegal }) 
             else { await sameRole(); refresh(); }
           });
         }
-        run(async () => { await signIn(em, pw); setPw(""); await sameRole(); refresh(); });
+        run(async () => {
+          try { await signIn(em, pw); } catch (e) {
+            if (e.code !== "email_not_confirmed") throw e;
+            // left sign-up before typing the emailed code: send a fresh one and go back to that step
+            await resendSignup(em).catch((x) => { if (x.status !== 429) throw x; }); // 429: one went out under a minute ago
+            setPw(""); setMode("signup"); setWait(60); return;
+          }
+          setPw(""); await sameRole(); refresh();
+        });
       }}>
         <label>{s.email}
           <input type="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck="false" value={email} onChange={(e) => setEmail(e.target.value)} required />

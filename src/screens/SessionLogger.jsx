@@ -10,13 +10,14 @@ import { localize } from "../digits";
 import { configured, signedIn } from "../sync";
 import { forgetArcherSession } from "../archer";
 import SwipeRow from "../SwipeRow";
+import { isoDay } from "../stats";
 
 const PHONE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches; // phones get the PDF only: the web file opens plain there
 
 const TYPES = ["Technical", "Physical", "Mental", "Competition", "Mixed"];
 const DOMAINS = ["Technical", "Physical", "Mental", "Competition"];
 const BLANK = {
-  date: new Date().toISOString().slice(0, 10),
+  date: isoDay(new Date()),
   type: "Technical", duration: "", arrows: "", distance: "",
   round: "", score: "", outOf: "",
   condition: "", quality: "", archerReport: "",
