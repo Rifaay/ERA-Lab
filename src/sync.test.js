@@ -59,7 +59,7 @@ test("under-18s and athletes with no birth date stay on the device, with everyth
   const s = shareable(lists, today);
   assert.deepEqual(Object.keys(s.athletes), ["a1"]);
   assert.deepEqual(Object.keys(s.sessions), ["s1"]);
-  assert.deepEqual([s.goals, s.progressLogs, s.reviews], [{}, {}, {}]);
+  assert.deepEqual([s.goals, s.progressLogs, s.reviews].map((x) => Object.keys(x)), [[], [], []]);
   assert.deepEqual(Object.keys(s.exercises), ["e1"]);
   assert.equal(s.settings.main.coachName, "Coach");
 });
@@ -228,4 +228,13 @@ test("a request that hangs on slow data gives up as 'offline'", async () => {
   const { api } = await import("./sync.js");
   const stalled = async () => { throw Object.assign(new Error("signal timed out"), { name: "TimeoutError" }); };
   await assert.rejects(api("/x", {}, stalled), (e) => e instanceof TypeError);
+});
+
+test("a record id of __proto__ is an ordinary key and pollutes nothing", () => {
+  const local = Object.create(null), remote = Object.create(null);
+  local["__proto__"] = { n: 1 }; remote["__proto__"] = { n: 2 };
+  const p = plan(local, remote, Object.create(null));
+  assert.deepEqual(p.conflicts, ["__proto__"]);
+  assert.equal(Object.getPrototypeOf(p.next), null);
+  assert.equal({}.n, undefined);
 });

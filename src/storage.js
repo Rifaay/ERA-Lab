@@ -54,7 +54,7 @@ const upsert = (k, item) => {
   store(k, list);
 };
 
-export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 10));
+export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(36).padStart(2, "0")).join(""));
 
 // ── Athletes ──────────────────────────────────────────────────────────────
 export const getAthletes  = () => load(KEY.athletes, "[]");

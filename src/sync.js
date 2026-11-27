@@ -51,7 +51,7 @@ export const shareable = (lists, today) => {
   };
   const out = {};
   for (const kind of KINDS) {
-    out[kind] = {};
+    out[kind] = Object.create(null); // no prototype: a record id like "__proto__" is then just a key
     const items = kind === "settings" ? [{ ...lists.settings, id: "main" }] : lists[kind];
     for (const x of items) if (x && typeof x.id === "string" && x.id && ok(kind, x)) out[kind][x.id] = x;
   }
@@ -60,7 +60,7 @@ export const shareable = (lists, today) => {
 
 // Three-way comparison of one kind. local/remote: {id: record}; base: {id: hash at last sync}.
 export const plan = (local, remote, base) => {
-  const push = [], drop = [], take = [], remove = [], conflicts = [], next = {};
+  const push = [], drop = [], take = [], remove = [], conflicts = [], next = Object.create(null);
   for (const id of new Set([...Object.keys(local), ...Object.keys(remote), ...Object.keys(base)])) {
     const L = id in local ? hash(JSON.stringify(local[id])) : null;
     const R = id in remote ? hash(JSON.stringify(remote[id])) : null;
@@ -260,7 +260,7 @@ const runSync = async (f, today) => {
   const t = await token(f);
   const lists = Object.fromEntries(KINDS.map((k) => [k, readKind(k)]));
   const local = shareable(lists, today);
-  const remote = Object.fromEntries(KINDS.map((k) => [k, {}]));
+  const remote = Object.fromEntries(KINDS.map((k) => [k, Object.create(null)]));
   for (const r of await pullAll(t, f)) if (remote[r.kind]) remote[r.kind][r.id] = r.data;
 
   const state = get(STATE, { base: {} });

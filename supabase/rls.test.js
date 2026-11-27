@@ -31,11 +31,11 @@ await db.exec(`
   create function net.http_post(url text, headers jsonb, body jsonb) returns bigint language sql as $$ insert into net.calls values (url, headers, body); select 1::bigint $$;
   create schema cron; create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ select 1::bigint $$;
 `);
-for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql", "0009_end_session.sql", "0010_unlinked_sessions.sql", "0011_delete_account.sql"])
+for (const m of ["0001_records.sql", "0002_reviews_and_ping.sql", "0003_require_second_step.sql", "0004_archers.sql", "0005_roles.sql", "0006_push.sql", "0007_watching.sql", "0008_coach_notes.sql", "0009_end_session.sql", "0010_unlinked_sessions.sql", "0011_delete_account.sql", "0012_claim_limit.sql"])
   await db.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), "utf8").replace(/^create extension .*$/gm, ""));
 
 // Every test starts from an empty table with both coaches present, even if an earlier one failed midway.
-test.beforeEach(() => db.exec(`delete from coach_notes; delete from net.calls; delete from push_subs; delete from shared_plans; delete from archer_sessions; delete from invites; delete from records; insert into auth.users values ('${A}', null), ('${B}', '{"role":"coach"}'), ('${R}', '{"role":"archer"}'), ('${R2}', '{"role":"archer"}') on conflict do nothing`));
+test.beforeEach(() => db.exec(`delete from claim_attempts; delete from coach_notes; delete from net.calls; delete from push_subs; delete from shared_plans; delete from archer_sessions; delete from invites; delete from records; insert into auth.users values ('${A}', null), ('${B}', '{"role":"coach"}'), ('${R}', '{"role":"archer"}'), ('${R2}', '{"role":"archer"}') on conflict do nothing`));
 
 // Each call runs as the given visitor and is rolled back, so tests can't leak into each other.
 const as = async (who, sql, params, aal = "aal2") => {
@@ -338,4 +338,18 @@ test("delete my account: a coach needs both steps, an archer one; the login and 
   assert.equal(await left(`select 1 from auth.users where id = '${A}'`), 1, "the coach is untouched");
   await assert.rejects(as(null, "select public.delete_my_account()"), /permission denied/);
   await db.query(`insert into auth.users values ($1, '{"role":"archer"}') on conflict do nothing`, [R]); // back for later tests
+});
+
+test("10 wrong invite codes in an hour lock guessing; the right code is then refused too, until the hour passes", async () => {
+  await invite();
+  try {
+    await db.exec("begin");
+    await db.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: R, aal: "aal1" })]);
+    await db.exec("set local role authenticated");
+    for (let i = 0; i < 10; i++) assert.equal((await db.query("select * from claim_invite($1)", ["WRONGCDE"])).rows.length, 0);
+    await assert.rejects(db.query("select * from claim_invite($1)", ["ABCDEFGH"]), /too many tries/);
+  } finally { await db.exec("rollback"); }
+  assert.equal((await claim(R)).rows.length, 1, "a rolled-back run left nothing behind: the real code still works");
+  // anyone can't read the attempts
+  await assert.rejects(as(R, "select * from claim_attempts", [], "aal1"), /permission denied/);
 });
