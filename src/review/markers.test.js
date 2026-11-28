@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { template, search, blendCorrection } from "./markers.js";
+import { template, search, blendCorrection, canFollow } from "./markers.js";
 
 // A grey picture with one bright square, and the same square moved and lit differently.
 const picture = (W, H, cx, cy, gain = 1, base = 40) => {
@@ -31,4 +31,12 @@ test("one fix by the coach carries to the tracked frames on either side", () => 
   assert.deepEqual([ai[0], ai[2]], [[.1, .1, "t"], [.3, .1, "t"]], "with no mark on a side, that side is left alone");
   const fresh = {}; blendCorrection(fresh, 4, .5, .5);
   assert.deepEqual(fresh, { 4: [.5, .5, "m"] }, "a new point is just placed");
+});
+
+test("the marker tracker never replaces the AI's sure points or the coach's marks", () => {
+  assert.equal(canFollow(undefined), true);
+  assert.equal(canFollow([0.5, 0.5, "f"]), true);
+  assert.equal(canFollow([0.5, 0.5, "i"]), true);
+  assert.equal(canFollow([0.5, 0.5, "t"]), false);
+  assert.equal(canFollow([0.5, 0.5, "m"]), false);
 });

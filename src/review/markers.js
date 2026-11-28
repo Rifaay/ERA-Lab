@@ -58,3 +58,7 @@ export function blendCorrection(m, f, x, y) {
   if (next != null) after.forEach((g) => shift(g, (next - g) / (next - f)));
   return m;
 }
+
+// May the marker tracker write on a frame that already holds point cur? Only where it left its own mark (kind "f"),
+// an unsure guess ("i") or nothing: the AI's sure points ("t") and the coach's marks ("m") are never replaced.
+export const canFollow = (cur) => !cur || cur[2] === "i" || cur[2] === "f";

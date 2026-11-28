@@ -5,7 +5,7 @@ import { reviewFromLabels, mergeReview } from "../review";
 import { FAULTS, arrowChoices } from "../clips";
 import { PHASES, POINTS, BONES, blank, ptAt, phaseAt, enforceOrder, motionScore, finishMotion, suggestPhases, HOLD_MS, SLOP, isSwipeDown, hitPoint, hitShape, moveShape } from "./labels";
 import { adjust, timing, getStart, setStart, STARTS, notice } from "./learn";
-import { blendCorrection, template, search } from "./markers";
+import { blendCorrection, template, search, canFollow } from "./markers";
 import { frames as readFrames } from "./frames";
 import { trackPose } from "./pose";
 import { angleOf } from "./draw";
@@ -525,10 +525,10 @@ export default function Labeller({ clipId, tr, selectedId, onBack }) {
         let a = search(g, W, H, s.t, px, py, R, SR); const b = search(g, W, H, s.t0, px, py, R, SR); if (b.score >= a.score - 0.05) a = b;
         const mk = pts[k][f];
         if (mk && mk[2] === "m") { pts[k][f] = [+(a.x / W).toFixed(5), +(a.y / H).toFixed(5), "t"]; blendCorrection(pts[k], f, mk[0], mk[1]); s.x = mk[0] * W; s.y = mk[1] * H; s.vx = s.vy = 0; s.t = s.t0 = template(g, W, H, s.x, s.y, R); s.miss = 0; continue; }
-        if (a.score < 0.5) { if (++s.miss > 5) { delete st[k]; continue; } s.x = px; s.y = py; pts[k][f] = [+(px / W).toFixed(5), +(py / H).toFixed(5), "i"]; continue; }
+        if (a.score < 0.5) { if (++s.miss > 5) { delete st[k]; continue; } s.x = px; s.y = py; if (canFollow(pts[k][f])) pts[k][f] = [+(px / W).toFixed(5), +(py / H).toFixed(5), "i"]; continue; }
         s.miss = 0; s.vx = (a.x - s.x) * 0.7 + s.vx * 0.3; s.vy = (a.y - s.y) * 0.7 + s.vy * 0.3; s.x = a.x; s.y = a.y;
         if (a.score > 0.85) s.t = template(g, W, H, a.x, a.y, R);
-        pts[k][f] = [+(a.x / W).toFixed(5), +(a.y / H).toFixed(5), "t"];
+        if (canFollow(pts[k][f])) pts[k][f] = [+(a.x / W).toFixed(5), +(a.y / H).toFixed(5), "f"];
       }
       if ((f - f0) % 10 === 0) { tick(); setMsg(fill(l.tracking, { d: f - f0, t: end - f0 })); }
       if (!Object.keys(st).length) ctl.stopped = true;
